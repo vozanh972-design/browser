@@ -80,26 +80,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest"
-            args: "--target aarch64-apple-darwin --verbose"
-            arch: "aarch64"
-            target: "aarch64-apple-darwin"
-            pkg_target: "latest-macos-arm64"
-          - platform: "macos-latest"
-            args: "--target x86_64-apple-darwin --verbose"
-            arch: "x86_64"
-            target: "x86_64-apple-darwin"
-            pkg_target: "latest-macos-x64"
-          - platform: "ubuntu-22.04"
-            args: "--target x86_64-unknown-linux-gnu --verbose"
-            arch: "x86_64"
-            target: "x86_64-unknown-linux-gnu"
-            pkg_target: "latest-linux-x64"
-          - platform: "ubuntu-22.04-arm"
-            args: "--target aarch64-unknown-linux-gnu --verbose"
-            arch: "aarch64"
-            target: "aarch64-unknown-linux-gnu"
-            pkg_target: "latest-linux-arm64"
           - platform: "windows-latest"
             args: "--target x86_64-pc-windows-msvc --verbose"
             arch: "x86_64"
@@ -197,7 +177,7 @@ jobs:
         run: node src-tauri/download-xray.mjs --target ${{ matrix.target }}
 
       - name: Import Apple certificate
-        if: matrix.platform == 'macos-latest'
+        if: matrix.platform == 'macos-latest' && secrets.APPLE_CERTIFICATE != ''
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_KEY: ${{ secrets.APPLE_CERTIFICATE_KEY }}
@@ -384,22 +364,12 @@ jobs:
           sha256sum Donut* > SHA256SUMS.txt
           gh release upload "$NIGHTLY_TAG" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
 
-          # Rename versioned filenames to stable nightly names
-          for f in Donut_*_aarch64.dmg; do [ -f "$f" ] && mv "$f" Donut_nightly_aarch64.dmg; done
-          for f in Donut_*_x64.dmg; do [ -f "$f" ] && mv "$f" Donut_nightly_x64.dmg; done
+          # Rename versioned filename to stable nightly name
           for f in Donut_*_x64-setup.exe; do [ -f "$f" ] && mv "$f" Donut_nightly_x64-setup.exe; done
-          for f in Donut_*_aarch64.AppImage; do [ -f "$f" ] && mv "$f" Donut_nightly_aarch64.AppImage; done
-          for f in Donut_*_amd64.AppImage; do [ -f "$f" ] && mv "$f" Donut_nightly_amd64.AppImage; done
-          for f in Donut_*_amd64.deb; do [ -f "$f" ] && mv "$f" Donut_nightly_amd64.deb; done
-          for f in Donut_*_arm64.deb; do [ -f "$f" ] && mv "$f" Donut_nightly_arm64.deb; done
-          for f in Donut-*.x86_64.rpm; do [ -f "$f" ] && mv "$f" Donut_nightly_x86_64.rpm; done
-          for f in Donut-*.aarch64.rpm; do [ -f "$f" ] && mv "$f" Donut_nightly_aarch64.rpm; done
-          for f in Donut_*_aarch64.app.tar.gz; do [ -f "$f" ] && mv "$f" Donut_aarch64.app.tar.gz; done
-          for f in Donut_*_x64.app.tar.gz; do [ -f "$f" ] && mv "$f" Donut_x64.app.tar.gz; done
 
           # Checksums for the rolling release (renamed filenames), restricted
           # to exactly the assets uploaded below.
-          sha256sum Donut_nightly_* Donut_aarch64.app.tar.gz Donut_x64.app.tar.gz > SHA256SUMS.txt
+          sha256sum Donut_nightly_* > SHA256SUMS.txt
           cd "$GITHUB_WORKSPACE"
 
           # Delete existing rolling nightly release and tag
@@ -409,52 +379,9 @@ jobs:
           # Create new rolling nightly release with all assets
           gh release create nightly \
             "$ASSETS_DIR"/Donut_nightly_* \
-            "$ASSETS_DIR"/Donut_aarch64.app.tar.gz \
-            "$ASSETS_DIR"/Donut_x64.app.tar.gz \
             "$ASSETS_DIR"/SHA256SUMS.txt \
             --title "Donut Browser Nightly" \
             --notes-file /tmp/nightly-notes.md \
             --prerelease
 
-  deploy-website:
-    if: github.repository == 'vozanh972-design/browser'
-    needs: [update-nightly-release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Cloudflare Pages deployment
-        env:
-          DEPLOYMENT_HOOK: ${{ secrets.CLOUDFLARE_WEB_DEPLOYMENT_HOOK }}
-        run: curl -fsSL -X POST "$DEPLOYMENT_HOOK"
 
-  notify-discord:
-    if: github.repository == 'vozanh972-design/browser'
-    needs: [update-nightly-release]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send Discord notification
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_NIGHTLY_WEBHOOK_URL }}
-        run: |
-          COMMIT_SHORT=$(echo "${GITHUB_SHA}" | cut -c1-7)
-          RELEASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/nightly"
-          COMMIT_URL="https://github.com/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}"
-
-          PAYLOAD=$(jq -n \
-            --arg title "Donut Browser Nightly (${COMMIT_SHORT})" \
-            --arg url "$RELEASE_URL" \
-            --arg commit_url "$COMMIT_URL" \
-            --arg commit_short "$COMMIT_SHORT" \
-            '{
-              embeds: [{
-                title: $title,
-                url: $url,
-                color: 16752128,
-                fields: [
-                  { name: "Commit", value: ("[" + $commit_short + "](" + $commit_url + ")"), inline: true },
-                  { name: "Download", value: ("[Nightly Release](" + $url + ")"), inline: true }
-                ],
-                footer: { text: "donutbrowser.com" }
-              }]
-            }')
-
-          curl -fsSL -H "Content-Type: application/json" -d "$PAYLOAD" "$DISCORD_WEBHOOK_URL"
