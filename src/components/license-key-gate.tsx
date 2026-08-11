@@ -12,7 +12,7 @@ import {
 } from "react-icons/lu";
 import { cn } from "@/lib/utils";
 
-const GET_KEY_URL = "https://donutbrowser.com";
+const GET_KEY_URL = "https://lunex.io.vn";
 
 const LICENSE_KEY_STORAGE_KEY = "donut-license-key";
 

@@ -97,7 +97,7 @@ function ExtensionEntry({ extension }: { extension: DetectedVpnExtension }) {
   );
   const source = t(
     extension.source === "donut"
-      ? "prelaunchGate.sourceDonut"
+      ? "prelaunchGate.sourcePrfNoir"
       : "prelaunchGate.sourceBrowser",
   );
 

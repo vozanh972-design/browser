@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Donut",
+  "productName": "PrfNoir",
   "version": "0.29.1",
   "identifier": "com.donutbrowser",
   "build": {

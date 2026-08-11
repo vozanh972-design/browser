@@ -1,6 +1,6 @@
-# Contributing to Donut Browser
+# Contributing to PrfNoir
 
-Contributions are welcome. Don't open a PR just to get added to the contributors list. Reviewing PRs takes time, so open one only if you believe the change improves Donut for yourself and others. For a significant change, get in touch with the maintainer first.
+Contributions are welcome. Don't open a PR just to get added to the contributors list. Reviewing PRs takes time, so open one only if you believe the change improves PrfNoir for yourself and others. For a significant change, get in touch with the maintainer first.
 
 ## AI Policy
 

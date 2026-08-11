@@ -223,7 +223,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                 </button>
 
                 <div className="text-center">
-                  <p className="text-lg font-semibold">Donut Browser</p>
+                  <p className="text-lg font-semibold">PrfNoir</p>
                   {systemInfo && (
                     <>
                       <p className="text-sm text-muted-foreground">
@@ -251,18 +251,9 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => void openUrl("https://donutbrowser.com")}
+                    onClick={() => void openUrl("https://lunex.io.vn")}
                   >
                     {t("about.website")}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      void openUrl("https://github.com/zhom/donutbrowser")
-                    }
-                  >
-                    {t("about.github")}
                   </Button>
                   <Button
                     ref={handleLicensesButtonRef}

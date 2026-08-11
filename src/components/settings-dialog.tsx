@@ -1505,7 +1505,7 @@ export function SettingsDialog({
               {systemInfo && (
                 <div className="border-t pt-2">
                   <p className="font-mono text-xs whitespace-pre-line text-muted-foreground select-all">
-                    {`Donut Browser ${systemInfo.app_version}\n${systemInfo.os} ${systemInfo.arch}${systemInfo.portable ? " (portable)" : ""}`}
+                    {`PrfNoir ${systemInfo.app_version}\n${systemInfo.os} ${systemInfo.arch}${systemInfo.portable ? " (portable)" : ""}`}
                   </p>
                 </div>
               )}

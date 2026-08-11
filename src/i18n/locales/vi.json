@@ -134,12 +134,12 @@
       "title": "Trình duyệt mặc định",
       "setAsDefault": "Đặt làm trình duyệt mặc định",
       "alreadyDefault": "Đã là trình duyệt mặc định",
-      "description": "Khi được đặt làm mặc định, Donut Browser sẽ xử lý các liên kết web và cho phép bạn chọn hồ sơ để sử dụng."
+      "description": "Khi được đặt làm mặc định, PrfNoir sẽ xử lý các liên kết web và cho phép bạn chọn hồ sơ để sử dụng."
     },
     "permissions": {
       "title": "Quyền hệ thống",
       "loading": "Đang tải quyền...",
-      "description": "Các quyền này cho phép trình duyệt được khởi chạy từ Donut Browser truy cập tài nguyên hệ thống. Mỗi trang web vẫn sẽ yêu cầu quyền riêng lẻ.",
+      "description": "Các quyền này cho phép trình duyệt được khởi chạy từ PrfNoir truy cập tài nguyên hệ thống. Mỗi trang web vẫn sẽ yêu cầu quyền riêng lẻ.",
       "microphone": "Micro",
       "microphoneDescription": "Quyền truy cập micro cho ứng dụng trình duyệt",
       "camera": "Camera",
@@ -183,7 +183,7 @@
       "trialExpired": "Đã hết hạn dùng thử",
       "trialExpiredDescription": "Sử dụng cá nhân vẫn miễn phí. Sử dụng thương mại cần giấy phép.",
       "subscriptionActive": "Đã đăng ký — gói {{plan}}",
-      "subscriptionActiveDescription": "Đăng ký Donut Browser của bạn đang hoạt động. Sử dụng thương mại được cấp phép trong thời hạn gói."
+      "subscriptionActiveDescription": "Đăng ký PrfNoir của bạn đang hoạt động. Sử dụng thương mại được cấp phép trong thời hạn gói."
     },
     "advanced": {
       "title": "Nâng cao",
@@ -196,7 +196,7 @@
       "copyLogsDescription": "Sao chép gói nhật ký gần đây đã được che thông tin nhạy cảm (tối đa 5 MB). Hãy xem lại trước khi chia sẻ vì việc che dữ liệu không thể nhận diện mọi loại dữ liệu cá nhân."
     },
     "disableAutoUpdates": "Tắt tự động cập nhật ứng dụng",
-    "disableAutoUpdatesDescription": "Ngăn ứng dụng tự động kiểm tra và cài đặt bản cập nhật Donut Browser. Cập nhật trình duyệt không bị ảnh hưởng.",
+    "disableAutoUpdatesDescription": "Ngăn ứng dụng tự động kiểm tra và cài đặt bản cập nhật PrfNoir. Cập nhật trình duyệt không bị ảnh hưởng.",
     "keepDecryptedProfilesInRam": "Giữ hồ sơ đã giải mã trong RAM",
     "keepDecryptedProfilesInRamDescription": "Giữ bản sao đã giải mã trong RAM của hồ sơ được bảo vệ bằng mật khẩu giữa các lần khởi chạy để khởi động nhanh hơn. Bản sao trên ổ đĩa vẫn được mã hóa.",
     "privacy": {
@@ -224,7 +224,7 @@
       "extensions": "Tiện ích mở rộng"
     },
     "newProfile": "Mới",
-    "donutLogo": "Logo Donut Browser",
+    "donutLogo": "Logo PrfNoir",
     "scrollGroupsLeft": "Cuộn nhóm sang trái",
     "scrollGroupsRight": "Cuộn nhóm sang phải"
   },
@@ -1166,7 +1166,7 @@
     "launchHook": {
       "title": "URL hook khởi chạy",
       "label": "URL hook khởi chạy",
-      "description": "Donut Browser sẽ gửi yêu cầu GET đến URL này mỗi khi profile được khởi chạy.",
+      "description": "PrfNoir sẽ gửi yêu cầu GET đến URL này mỗi khi profile được khởi chạy.",
       "placeholder": "https://example.com/hooks/profile-launch",
       "invalidUrlHint": "Nhập URL http:// hoặc https:// hợp lệ."
     },
@@ -1558,7 +1558,7 @@
   },
   "wayfernTerms": {
     "title": "Điều khoản và điều kiện Wayfern",
-    "description": "Trước khi sử dụng Donut Browser, bạn phải đọc và đồng ý với Điều khoản và Điều kiện của Wayfern.",
+    "description": "Trước khi sử dụng PrfNoir, bạn phải đọc và đồng ý với Điều khoản và Điều kiện của Wayfern.",
     "reviewLabel": "Vui lòng xem lại Điều khoản và Điều kiện tại:",
     "agreeNotice": "Bằng cách nhấn \"Tôi chấp nhận\", bạn đồng ý bị ràng buộc bởi các điều khoản này.",
     "acceptButton": "Tôi chấp nhận",
@@ -1569,7 +1569,7 @@
   "commercialTrial": {
     "title": "Thời gian dùng thử thương mại đã hết",
     "description": "Thời gian dùng thử thương mại 2 tuần của bạn đã kết thúc.",
-    "body": "Nếu bạn sử dụng Donut Browser cho mục đích thương mại, bạn cần mua giấy phép thương mại để tiếp tục. Bạn vẫn có thể sử dụng miễn phí cho mục đích cá nhân.",
+    "body": "Nếu bạn sử dụng PrfNoir cho mục đích thương mại, bạn cần mua giấy phép thương mại để tiếp tục. Bạn vẫn có thể sử dụng miễn phí cho mục đích cá nhân.",
     "understandButton": "Tôi hiểu",
     "failed": "Lưu xác nhận thất bại",
     "tryAgain": "Vui lòng thử lại"
@@ -1577,10 +1577,10 @@
   "permissionDialog": {
     "titleMicrophone": "Yêu cầu quyền truy cập micro",
     "titleCamera": "Yêu cầu quyền truy cập camera",
-    "descMicrophone": "Donut Browser cần quyền truy cập micro để bật tính năng micro trong trình duyệt web. Mỗi trang web muốn sử dụng micro vẫn sẽ hỏi quyền bạn riêng lẻ.",
-    "descCamera": "Donut Browser cần quyền truy cập camera để bật tính năng camera trong trình duyệt web. Mỗi trang web muốn sử dụng camera vẫn sẽ hỏi quyền bạn riêng lẻ.",
-    "grantedMicrophone": "Đã cấp quyền! Trình duyệt khởi chạy từ Donut Browser giờ có thể truy cập micro của bạn.",
-    "grantedCamera": "Đã cấp quyền! Trình duyệt khởi chạy từ Donut Browser giờ có thể truy cập camera của bạn.",
+    "descMicrophone": "PrfNoir cần quyền truy cập micro để bật tính năng micro trong trình duyệt web. Mỗi trang web muốn sử dụng micro vẫn sẽ hỏi quyền bạn riêng lẻ.",
+    "descCamera": "PrfNoir cần quyền truy cập camera để bật tính năng camera trong trình duyệt web. Mỗi trang web muốn sử dụng camera vẫn sẽ hỏi quyền bạn riêng lẻ.",
+    "grantedMicrophone": "Đã cấp quyền! Trình duyệt khởi chạy từ PrfNoir giờ có thể truy cập micro của bạn.",
+    "grantedCamera": "Đã cấp quyền! Trình duyệt khởi chạy từ PrfNoir giờ có thể truy cập camera của bạn.",
     "notGrantedMicrophone": "Chưa cấp quyền. Nhấn nút bên dưới để yêu cầu quyền truy cập micro.",
     "notGrantedCamera": "Chưa cấp quyền. Nhấn nút bên dưới để yêu cầu quyền truy cập camera.",
     "doneButton": "Xong",
@@ -1683,7 +1683,7 @@
   },
   "appUpdate": {
     "toast": {
-      "updateFailed": "Cập nhật Donut Browser thất bại",
+      "updateFailed": "Cập nhật PrfNoir thất bại",
       "restartFailed": "Khởi động lại thất bại",
       "updateReady": "Bản cập nhật sẵn sàng, khởi động lại để áp dụng",
       "manualDownloadRequired": "Cần tải xuống thủ công",
@@ -1776,7 +1776,7 @@
     },
     "warnings": {
       "forgetWarningTitle": "Quan trọng: mật khẩu này không thể khôi phục",
-      "forgetWarningBody": "Donut Browser không thể đặt lại, khôi phục hoặc bỏ qua mật khẩu này. Nếu bạn quên, bạn sẽ mất quyền truy cập vĩnh viễn vào dữ liệu profile này."
+      "forgetWarningBody": "PrfNoir không thể đặt lại, khôi phục hoặc bỏ qua mật khẩu này. Nếu bạn quên, bạn sẽ mất quyền truy cập vĩnh viễn vào dữ liệu profile này."
     },
     "modes": {
       "set": "Đặt",
@@ -1821,7 +1821,7 @@
     "invalidLaunchHookUrl": "URL hook khởi chạy không hợp lệ. Sử dụng URL http:// hoặc https:// đầy đủ.",
     "cookieDbLocked": "Không thể đọc cookie — cơ sở dữ liệu bị khóa. Đóng trình duyệt và thử lại.",
     "cookieDbUnavailable": "Không thể đọc cookie — kho cookie không khả dụng.",
-    "selfHostedRequiresLogout": "Đăng xuất khỏi tài khoản Donut trước khi cấu hình máy chủ tự lưu trữ.",
+    "selfHostedRequiresLogout": "Đăng xuất khỏi tài khoản PrfNoir trước khi cấu hình máy chủ tự lưu trữ.",
     "fingerprintRequiresPro": "Xem hoặc chỉnh sửa vân tay yêu cầu gói trả phí đang hoạt động. Tính năng bảo vệ được bao gồm trong mọi gói.",
     "proxyNotWorking": "Proxy đã chọn không hoạt động, nên profile chưa được tạo.",
     "proxyPaymentRequired": "Proxy đã chọn yêu cầu thanh toán (402) — gói đăng ký của nó có thể đã hết hạn — nên profile chưa được tạo.",
@@ -1844,9 +1844,9 @@
     "dnsRulesSaveFailed": "Không thể lưu quy tắc DNS.",
     "dnsRulesExportFailed": "Không thể xuất quy tắc DNS.",
     "fingerprintMatchFailed": "Không thể khớp vân tay với proxy.",
-    "proxySidecarVersionMismatch": "Một số tệp Donut Browser thuộc các phiên bản khác nhau. Hãy cài đặt lại bản cập nhật mới nhất; hồ sơ của bạn vẫn được giữ an toàn.",
+    "proxySidecarVersionMismatch": "Một số tệp PrfNoir thuộc các phiên bản khác nhau. Hãy cài đặt lại bản cập nhật mới nhất; hồ sơ của bạn vẫn được giữ an toàn.",
     "updateProfilesRunning": "Hãy dừng tất cả hồ sơ đang chạy trước khi cài đặt bản cập nhật.",
-    "updatePreparationFailed": "Donut Browser không thể dừng an toàn một tiến trình mạng chạy nền. Hãy khởi động lại máy tính rồi thử cập nhật lại.",
+    "updatePreparationFailed": "PrfNoir không thể dừng an toàn một tiến trình mạng chạy nền. Hãy khởi động lại máy tính rồi thử cập nhật lại.",
     "wayfernTermsRequired": "Hãy chấp nhận Điều khoản và Điều kiện của Wayfern trước khi khởi động máy chủ MCP.",
     "apiPortUnavailable": "Máy chủ API không tìm thấy cổng khả dụng.",
     "mcpServerAlreadyRunning": "Máy chủ MCP đang chạy.",
@@ -1854,14 +1854,14 @@
     "mcpPortUnavailable": "Máy chủ MCP không tìm thấy cổng khả dụng.",
     "mcpConfigurationUnavailable": "Cấu hình máy chủ MCP không khả dụng. Hãy khởi động lại máy chủ rồi thử lại.",
     "mcpAgentUnknown": "Ứng dụng MCP này không được hỗ trợ.",
-    "mcpAgentInstallFailed": "Không thể thêm Donut Browser vào ứng dụng MCP: {{detail}}",
-    "mcpAgentRemoveFailed": "Không thể xóa Donut Browser khỏi ứng dụng MCP: {{detail}}",
+    "mcpAgentInstallFailed": "Không thể thêm PrfNoir vào ứng dụng MCP: {{detail}}",
+    "mcpAgentRemoveFailed": "Không thể xóa PrfNoir khỏi ứng dụng MCP: {{detail}}",
     "vlessConfigInvalid": "URI VLESS không hợp lệ.",
     "xrayUnavailable": "Xray-core không khả dụng trên hệ thống này.",
     "xrayUnsupportedOs": "VLESS yêu cầu macOS 12 trở lên.",
     "xrayStartFailed": "Không thể khởi động Xray-core.",
-    "cloudNotSignedIn": "Hãy đăng nhập tài khoản Donut Browser để dùng tính năng này.",
-    "cloudUnreachable": "Không kết nối được tới máy chủ Donut Browser. Hãy kiểm tra kết nối và thử lại.",
+    "cloudNotSignedIn": "Hãy đăng nhập tài khoản PrfNoir để dùng tính năng này.",
+    "cloudUnreachable": "Không kết nối được tới máy chủ PrfNoir. Hãy kiểm tra kết nối và thử lại.",
     "cloudRequestFailed": "Yêu cầu thất bại. Hãy thử lại sau giây lát.",
     "remoteRateLimited": "Quá nhiều yêu cầu. Hãy đợi một lát rồi thử lại.",
     "remoteNoCapacity": "Hiện không có máy từ xa nào rảnh. Hãy thử lại sau vài phút.",
@@ -1901,16 +1901,16 @@
     "vpnWorkerStartFailed": "Không thể khởi động kết nối VPN: {{detail}}",
     "exitProbeFailed": "Không thể kết nối tới nút thoát của proxy để kiểm tra vị trí.",
     "vlessUnsupported": {
-      "security": "Máy chủ VLESS này không dùng REALITY. Donut chỉ hỗ trợ VLESS kèm REALITY.",
-      "flow": "Máy chủ VLESS này không dùng luồng XTLS Vision mà Donut yêu cầu.",
-      "transport": "Donut chỉ hỗ trợ VLESS trên TCP thuần — máy chủ này dùng phương thức truyền khác (như WebSocket hoặc gRPC).",
-      "encryption": "Máy chủ VLESS này dùng thiết lập mã hóa mà Donut không hỗ trợ.",
-      "headerType": "Máy chủ VLESS này dùng cách che giấu tiêu đề mà Donut không hỗ trợ.",
-      "fingerprint": "URI VLESS này yêu cầu một dấu vân tay TLS mà Donut không hỗ trợ.",
+      "security": "Máy chủ VLESS này không dùng REALITY. PrfNoir chỉ hỗ trợ VLESS kèm REALITY.",
+      "flow": "Máy chủ VLESS này không dùng luồng XTLS Vision mà PrfNoir yêu cầu.",
+      "transport": "PrfNoir chỉ hỗ trợ VLESS trên TCP thuần — máy chủ này dùng phương thức truyền khác (như WebSocket hoặc gRPC).",
+      "encryption": "Máy chủ VLESS này dùng thiết lập mã hóa mà PrfNoir không hỗ trợ.",
+      "headerType": "Máy chủ VLESS này dùng cách che giấu tiêu đề mà PrfNoir không hỗ trợ.",
+      "fingerprint": "URI VLESS này yêu cầu một dấu vân tay TLS mà PrfNoir không hỗ trợ.",
       "sni": "URI VLESS thiếu SNI (sni) cần cho REALITY.",
       "publicKey": "URI VLESS thiếu khóa công khai REALITY (pbk).",
       "scheme": "Đây không phải liên kết VLESS. Nó phải bắt đầu bằng vless://.",
-      "parameter": "URI VLESS chứa một tùy chọn mà Donut không hỗ trợ.",
+      "parameter": "URI VLESS chứa một tùy chọn mà PrfNoir không hỗ trợ.",
       "malformed": "URI VLESS không hợp lệ."
     },
     "camoufoxRemoved": "Camoufox không còn được hỗ trợ. Hãy tạo lại hồ sơ này bằng Wayfern.",
@@ -1928,7 +1928,7 @@
       "importProfileHint": "Đưa profile từ công cụ khác",
       "keyboardShortcuts": "Phím tắt",
       "keyboardShortcutsHint": "Xem tất cả phím tắt",
-      "about": "Giới thiệu về Donut Browser",
+      "about": "Giới thiệu về PrfNoir",
       "aboutHint": "Phiên bản và thông tin ứng dụng"
     },
     "network": "Mạng",
@@ -1995,8 +1995,8 @@
     },
     "selfHosted": {
       "title": "Máy chủ đồng bộ tự lưu trữ",
-      "description": "Trỏ Donut đến máy chủ donut-sync của riêng bạn để đồng bộ profile, proxy, nhóm và tiện ích mà không cần sử dụng đám mây.",
-      "disabledWhileLoggedIn": "Đồng bộ tự lưu trữ không khả dụng khi bạn đã đăng nhập vào tài khoản Donut. Đăng xuất để sử dụng máy chủ tùy chỉnh.",
+      "description": "Trỏ PrfNoir đến máy chủ donut-sync của riêng bạn để đồng bộ profile, proxy, nhóm và tiện ích mà không cần sử dụng đám mây.",
+      "disabledWhileLoggedIn": "Đồng bộ tự lưu trữ không khả dụng khi bạn đã đăng nhập vào tài khoản PrfNoir. Đăng xuất để sử dụng máy chủ tùy chỉnh.",
       "connectionStatus": "Kết nối:",
       "statusUnknown": "Chưa kiểm tra",
       "testConnection": "Kiểm tra kết nối",
@@ -2025,7 +2025,7 @@
       "stopProfile": "Dừng {{name}}",
       "profileInfo": "Thông tin — {{name}}",
       "createProfile": "Tạo hồ sơ",
-      "about": "Giới thiệu về Donut Browser"
+      "about": "Giới thiệu về PrfNoir"
     }
   },
   "shortcuts": {
@@ -2042,13 +2042,13 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "Đóng Donut Browser?",
+    "title": "Đóng PrfNoir?",
     "description": "Bạn muốn thu nhỏ ứng dụng vào khay hệ thống hay thoát?",
     "minimize": "Thu nhỏ vào khay",
     "quit": "Thoát"
   },
   "tray": {
-    "show": "Hiển thị Donut Browser",
+    "show": "Hiển thị PrfNoir",
     "quit": "Thoát"
   },
   "onboarding": {
@@ -2069,13 +2069,13 @@
       "finish": "Hoàn tất"
     },
     "thankYou": {
-      "title": "Cảm ơn bạn đã chọn Donut Browser",
+      "title": "Cảm ơn bạn đã chọn PrfNoir",
       "body": "Hy vọng nó giúp việc duyệt web của bạn riêng tư hơn — mỗi danh tính được giữ riêng, và không có gì rời khỏi máy của bạn. Chúc bạn duyệt web vui vẻ.",
       "cta": "Bắt đầu duyệt web"
     }
   },
   "welcome": {
-    "title": "Chào mừng đến với Donut Browser",
+    "title": "Chào mừng đến với PrfNoir",
     "tagline": "Trình duyệt chống phát hiện mã nguồn mở để quản lý nhiều danh tính cùng lúc.",
     "skip": "Bỏ qua",
     "next": "Tiếp theo",
@@ -2119,7 +2119,7 @@
     },
     "license": {
       "title": "Cấp phép",
-      "body": "Donut Browser là mã nguồn mở và miễn phí sử dụng.",
+      "body": "PrfNoir là mã nguồn mở và miễn phí sử dụng.",
       "agree": "Tôi hiểu",
       "personalTitle": "Sử dụng cá nhân",
       "personalDesc": "Miễn phí vĩnh viễn.",
@@ -2147,9 +2147,8 @@
     "title": "Giới thiệu",
     "version": "Phiên bản {{version}}",
     "portableBadge": "bản portable",
-    "licenseNotice": "Trình duyệt chống phát hiện mã nguồn mở.",
+    "licenseNotice": "Trình duyệt chống phát hiện.",
     "website": "Trang web",
-    "github": "GitHub",
     "licenses": "Giấy phép",
     "searchLicenses": "Tìm kiếm giấy phép…",
     "noMatchingLicenses": "Không có giấy phép phù hợp.",
@@ -2494,16 +2493,16 @@
     "vpnExtensionConfirmed": "Công cụ VPN hoặc proxy đã biết",
     "vpnExtensionLikely": "Có vẻ là công cụ VPN hoặc proxy",
     "vpnExtensionCapability": "Có quyền proxy",
-    "vpnExtensionExplainer": "Nếu một trong số đó chuyển lưu lượng của bạn đi nơi khác, vị trí thực của trình duyệt sẽ không còn khớp với múi giờ, ngôn ngữ và vị trí địa lý mà hồ sơ này được tạo ra, và Donut không thể phát hiện điều đó từ bên ngoài.",
+    "vpnExtensionExplainer": "Nếu một trong số đó chuyển lưu lượng của bạn đi nơi khác, vị trí thực của trình duyệt sẽ không còn khớp với múi giờ, ngôn ngữ và vị trí địa lý mà hồ sơ này được tạo ra, và PrfNoir không thể phát hiện điều đó từ bên ngoài.",
     "proxyCapableHeading": "Các tiện ích có thể thay đổi proxy",
-    "proxyCapableIntro": "Chúng không giống VPN, nhưng có quyền proxy của Chromium, thứ mà trình quản lý tải xuống và công cụ gỡ lỗi cũng cần. Donut không thể biết liệu có tiện ích nào đang dùng quyền đó hay không:",
-    "sourceDonut": "Do Donut quản lý",
+    "proxyCapableIntro": "Chúng không giống VPN, nhưng có quyền proxy của Chromium, thứ mà trình quản lý tải xuống và công cụ gỡ lỗi cũng cần. PrfNoir không thể biết liệu có tiện ích nào đang dùng quyền đó hay không:",
+    "sourcePrfNoir": "Do PrfNoir quản lý",
     "sourceBrowser": "Đã cài trong hồ sơ",
     "measurementUnreliable": "Một tiện ích trong hồ sơ này có quyền proxy, nên kết quả kiểm tra điểm ra có thể không phản ánh tuyến đường mà trình duyệt thực sự dùng.",
-    "scanIncompleteEncrypted": "Hồ sơ này được mã hóa nên chỉ có thể kiểm tra các tiện ích do Donut quản lý.",
-    "scanIncompleteEphemeral": "Hồ sơ này chưa có dữ liệu nên chỉ có thể kiểm tra các tiện ích do Donut quản lý.",
+    "scanIncompleteEncrypted": "Hồ sơ này được mã hóa nên chỉ có thể kiểm tra các tiện ích do PrfNoir quản lý.",
+    "scanIncompleteEphemeral": "Hồ sơ này chưa có dữ liệu nên chỉ có thể kiểm tra các tiện ích do PrfNoir quản lý.",
     "scanIncompletePartial": "Quá trình quét tiện ích bị ngắt giữa chừng nên có thể thiếu một số tiện ích.",
-    "probePending": "Điểm ra của proxy chưa được đo. Donut sẽ kiểm tra trong lúc khởi động và dừng lại nếu không khớp.",
+    "probePending": "Điểm ra của proxy chưa được đo. PrfNoir sẽ kiểm tra trong lúc khởi động và dừng lại nếu không khớp.",
     "launchAnyway": "Vẫn khởi chạy",
     "dontBlockAgain": "Không chặn lại với đúng sai lệch này",
     "dontWarnExtensions": "Không cảnh báo lại về các tiện ích này",
@@ -2511,6 +2510,6 @@
     "cancelledSummary": "Đã hủy {{cancelled}} trên {{total}} lượt khởi chạy",
     "vpnExtensionEntry": " {{version}} — {{capability}}, {{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}, {{source}}",
-    "scanIncompleteMissing": "Hồ sơ này chưa từng được khởi chạy nên chỉ có thể kiểm tra các tiện ích do Donut quản lý."
+    "scanIncompleteMissing": "Hồ sơ này chưa từng được khởi chạy nên chỉ có thể kiểm tra các tiện ích do PrfNoir quản lý."
   }
 }

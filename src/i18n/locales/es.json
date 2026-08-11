@@ -134,12 +134,12 @@
       "title": "Navegador Predeterminado",
       "setAsDefault": "Establecer como Navegador Predeterminado",
       "alreadyDefault": "Ya es el Navegador Predeterminado",
-      "description": "Cuando se establece como predeterminado, Donut Browser manejará los enlaces web y te permitirá elegir qué perfil usar."
+      "description": "Cuando se establece como predeterminado, PrfNoir manejará los enlaces web y te permitirá elegir qué perfil usar."
     },
     "permissions": {
       "title": "Permisos del Sistema",
       "loading": "Cargando permisos...",
-      "description": "Estos permisos permiten que los navegadores iniciados desde Donut Browser accedan a los recursos del sistema. Cada sitio web seguirá pidiendo tu permiso individualmente.",
+      "description": "Estos permisos permiten que los navegadores iniciados desde PrfNoir accedan a los recursos del sistema. Cada sitio web seguirá pidiendo tu permiso individualmente.",
       "microphone": "Micrófono",
       "microphoneDescription": "Acceso al micrófono para aplicaciones del navegador",
       "camera": "Cámara",
@@ -183,7 +183,7 @@
       "trialExpired": "Prueba expirada",
       "trialExpiredDescription": "El uso personal sigue siendo gratuito. El uso comercial requiere una licencia.",
       "subscriptionActive": "Suscrito — plan {{plan}}",
-      "subscriptionActiveDescription": "Tu suscripción a Donut Browser está activa. El uso comercial está autorizado mientras tu plan esté vigente."
+      "subscriptionActiveDescription": "Tu suscripción a PrfNoir está activa. El uso comercial está autorizado mientras tu plan esté vigente."
     },
     "advanced": {
       "title": "Avanzado",
@@ -196,7 +196,7 @@
       "copyLogsDescription": "Copia un paquete censurado de los registros recientes (hasta 5 MB). Revísalo antes de compartirlo, ya que la censura no puede identificar todos los tipos de datos personales."
     },
     "disableAutoUpdates": "Desactivar Actualizaciones Automáticas de la App",
-    "disableAutoUpdatesDescription": "Evita que la aplicación busque e instale actualizaciones de Donut Browser automáticamente. Las actualizaciones de navegadores no se ven afectadas.",
+    "disableAutoUpdatesDescription": "Evita que la aplicación busque e instale actualizaciones de PrfNoir automáticamente. Las actualizaciones de navegadores no se ven afectadas.",
     "keepDecryptedProfilesInRam": "Mantener Perfiles Descifrados en RAM",
     "keepDecryptedProfilesInRamDescription": "Conservar la copia descifrada en RAM de los perfiles protegidos por contraseña entre lanzamientos para un inicio más rápido. La copia en disco permanece cifrada en cualquier caso.",
     "privacy": {
@@ -224,7 +224,7 @@
       "extensions": "Extensiones"
     },
     "newProfile": "Nuevo",
-    "donutLogo": "Logotipo de Donut Browser",
+    "donutLogo": "Logotipo de PrfNoir",
     "scrollGroupsLeft": "Desplazar grupos a la izquierda",
     "scrollGroupsRight": "Desplazar grupos a la derecha"
   },
@@ -1169,7 +1169,7 @@
     "launchHook": {
       "title": "URL del hook de inicio",
       "label": "URL del hook de inicio",
-      "description": "Donut Browser enviará una solicitud GET a esta URL cada vez que se inicie el perfil.",
+      "description": "PrfNoir enviará una solicitud GET a esta URL cada vez que se inicie el perfil.",
       "placeholder": "https://example.com/hooks/profile-launch",
       "invalidUrlHint": "Introduce una URL válida http:// o https://."
     },
@@ -1565,7 +1565,7 @@
   },
   "wayfernTerms": {
     "title": "Términos y condiciones de Wayfern",
-    "description": "Antes de usar Donut Browser, debes leer y aceptar los Términos y Condiciones de Wayfern.",
+    "description": "Antes de usar PrfNoir, debes leer y aceptar los Términos y Condiciones de Wayfern.",
     "reviewLabel": "Por favor, revisa los Términos y Condiciones en:",
     "agreeNotice": "Al hacer clic en \"Acepto\", aceptas estos términos.",
     "acceptButton": "Acepto",
@@ -1576,7 +1576,7 @@
   "commercialTrial": {
     "title": "Periodo de prueba comercial expirado",
     "description": "Tu periodo de prueba comercial de 2 semanas ha terminado.",
-    "body": "Si usas Donut Browser con fines comerciales, debes adquirir una licencia comercial para continuar. Puedes seguir usándolo de forma personal gratis.",
+    "body": "Si usas PrfNoir con fines comerciales, debes adquirir una licencia comercial para continuar. Puedes seguir usándolo de forma personal gratis.",
     "understandButton": "Entendido",
     "failed": "Error al guardar el reconocimiento",
     "tryAgain": "Por favor, inténtalo de nuevo"
@@ -1584,10 +1584,10 @@
   "permissionDialog": {
     "titleMicrophone": "Se requiere acceso al micrófono",
     "titleCamera": "Se requiere acceso a la cámara",
-    "descMicrophone": "Donut Browser necesita acceso a tu micrófono para activar la funcionalidad de micrófono en los navegadores. Cada sitio web que quiera usar tu micrófono te lo pedirá individualmente.",
-    "descCamera": "Donut Browser necesita acceso a tu cámara para activar la funcionalidad de cámara en los navegadores. Cada sitio web que quiera usar tu cámara te lo pedirá individualmente.",
-    "grantedMicrophone": "¡Permiso concedido! Los navegadores lanzados desde Donut Browser ya pueden acceder a tu micrófono.",
-    "grantedCamera": "¡Permiso concedido! Los navegadores lanzados desde Donut Browser ya pueden acceder a tu cámara.",
+    "descMicrophone": "PrfNoir necesita acceso a tu micrófono para activar la funcionalidad de micrófono en los navegadores. Cada sitio web que quiera usar tu micrófono te lo pedirá individualmente.",
+    "descCamera": "PrfNoir necesita acceso a tu cámara para activar la funcionalidad de cámara en los navegadores. Cada sitio web que quiera usar tu cámara te lo pedirá individualmente.",
+    "grantedMicrophone": "¡Permiso concedido! Los navegadores lanzados desde PrfNoir ya pueden acceder a tu micrófono.",
+    "grantedCamera": "¡Permiso concedido! Los navegadores lanzados desde PrfNoir ya pueden acceder a tu cámara.",
     "notGrantedMicrophone": "Permiso no concedido. Haz clic en el botón para solicitar acceso a tu micrófono.",
     "notGrantedCamera": "Permiso no concedido. Haz clic en el botón para solicitar acceso a tu cámara.",
     "doneButton": "Hecho",
@@ -1690,7 +1690,7 @@
   },
   "appUpdate": {
     "toast": {
-      "updateFailed": "Error al actualizar Donut Browser",
+      "updateFailed": "Error al actualizar PrfNoir",
       "restartFailed": "Error al reiniciar",
       "updateReady": "Actualización lista, reinicia para aplicar",
       "manualDownloadRequired": "Descarga manual requerida",
@@ -1783,7 +1783,7 @@
     },
     "warnings": {
       "forgetWarningTitle": "Importante: esta contraseña no se puede recuperar",
-      "forgetWarningBody": "Donut Browser no puede restablecer, recuperar ni omitir esta contraseña. Si la olvidas, perderás permanentemente el acceso a los datos de este perfil."
+      "forgetWarningBody": "PrfNoir no puede restablecer, recuperar ni omitir esta contraseña. Si la olvidas, perderás permanentemente el acceso a los datos de este perfil."
     },
     "modes": {
       "set": "Establecer",
@@ -1828,7 +1828,7 @@
     "invalidLaunchHookUrl": "URL del hook de inicio no válida. Usa una URL completa http:// o https://.",
     "cookieDbLocked": "No se pudieron leer las cookies — la base de datos está bloqueada. Cierra el navegador e inténtalo de nuevo.",
     "cookieDbUnavailable": "No se pudieron leer las cookies — el almacén de cookies no está disponible.",
-    "selfHostedRequiresLogout": "Cierra sesión en tu cuenta de Donut antes de configurar un servidor autoalojado.",
+    "selfHostedRequiresLogout": "Cierra sesión en tu cuenta de PrfNoir antes de configurar un servidor autoalojado.",
     "fingerprintRequiresPro": "Ver o editar la huella digital requiere un plan de pago activo. La protección está incluida en todos los planes.",
     "proxyNotWorking": "El proxy seleccionado no funciona, por lo que no se creó el perfil.",
     "proxyPaymentRequired": "El proxy seleccionado requiere pago (402) —su suscripción puede haber vencido— por lo que no se creó el perfil.",
@@ -1851,9 +1851,9 @@
     "dnsRulesSaveFailed": "No se pudieron guardar las reglas DNS.",
     "dnsRulesExportFailed": "No se pudieron exportar las reglas DNS.",
     "fingerprintMatchFailed": "No se pudo ajustar la huella al proxy.",
-    "proxySidecarVersionMismatch": "Algunos archivos de Donut Browser pertenecen a versiones diferentes. Reinstala la última actualización; tus perfiles permanecerán seguros.",
+    "proxySidecarVersionMismatch": "Algunos archivos de PrfNoir pertenecen a versiones diferentes. Reinstala la última actualización; tus perfiles permanecerán seguros.",
     "updateProfilesRunning": "Detén todos los perfiles en ejecución antes de instalar la actualización.",
-    "updatePreparationFailed": "Donut Browser no pudo detener de forma segura un proceso de red en segundo plano. Reinicia el equipo y vuelve a intentar la actualización.",
+    "updatePreparationFailed": "PrfNoir no pudo detener de forma segura un proceso de red en segundo plano. Reinicia el equipo y vuelve a intentar la actualización.",
     "wayfernTermsRequired": "Acepta los Términos y condiciones de Wayfern antes de iniciar el servidor MCP.",
     "apiPortUnavailable": "El servidor API no pudo encontrar un puerto disponible.",
     "mcpServerAlreadyRunning": "El servidor MCP ya está en ejecución.",
@@ -1861,14 +1861,14 @@
     "mcpPortUnavailable": "El servidor MCP no pudo encontrar un puerto disponible.",
     "mcpConfigurationUnavailable": "La configuración del servidor MCP no está disponible. Reinicia el servidor e inténtalo de nuevo.",
     "mcpAgentUnknown": "Este cliente MCP no es compatible.",
-    "mcpAgentInstallFailed": "No se pudo añadir Donut Browser al cliente MCP: {{detail}}",
-    "mcpAgentRemoveFailed": "No se pudo eliminar Donut Browser del cliente MCP: {{detail}}",
+    "mcpAgentInstallFailed": "No se pudo añadir PrfNoir al cliente MCP: {{detail}}",
+    "mcpAgentRemoveFailed": "No se pudo eliminar PrfNoir del cliente MCP: {{detail}}",
     "vlessConfigInvalid": "El URI de VLESS no es válido.",
     "xrayUnavailable": "Xray-core no está disponible en este sistema.",
     "xrayUnsupportedOs": "VLESS requiere macOS 12 o posterior.",
     "xrayStartFailed": "No se pudo iniciar Xray-core.",
-    "cloudNotSignedIn": "Inicia sesión en tu cuenta de Donut Browser para usar esto.",
-    "cloudUnreachable": "No se pudo contactar con los servidores de Donut Browser. Comprueba tu conexión e inténtalo de nuevo.",
+    "cloudNotSignedIn": "Inicia sesión en tu cuenta de PrfNoir para usar esto.",
+    "cloudUnreachable": "No se pudo contactar con los servidores de PrfNoir. Comprueba tu conexión e inténtalo de nuevo.",
     "cloudRequestFailed": "La solicitud falló. Inténtalo de nuevo en un momento.",
     "remoteRateLimited": "Demasiadas solicitudes. Espera un momento e inténtalo de nuevo.",
     "remoteNoCapacity": "Ahora mismo no hay ninguna máquina remota libre. Inténtalo de nuevo en unos minutos.",
@@ -1908,16 +1908,16 @@
     "vpnWorkerStartFailed": "No se pudo iniciar la conexión VPN: {{detail}}",
     "exitProbeFailed": "No se pudo contactar con el nodo de salida del proxy para comprobar su ubicación.",
     "vlessUnsupported": {
-      "security": "Este servidor VLESS no usa REALITY. Donut solo admite VLESS con REALITY.",
-      "flow": "Este servidor VLESS no usa el flujo XTLS Vision, que Donut requiere.",
-      "transport": "Donut solo admite VLESS sobre TCP simple: este servidor usa otro transporte (como WebSocket o gRPC).",
-      "encryption": "Este servidor VLESS usa un cifrado que Donut no admite.",
-      "headerType": "Este servidor VLESS usa una ofuscación de cabecera que Donut no admite.",
-      "fingerprint": "Esta URI VLESS solicita una huella TLS que Donut no admite.",
+      "security": "Este servidor VLESS no usa REALITY. PrfNoir solo admite VLESS con REALITY.",
+      "flow": "Este servidor VLESS no usa el flujo XTLS Vision, que PrfNoir requiere.",
+      "transport": "PrfNoir solo admite VLESS sobre TCP simple: este servidor usa otro transporte (como WebSocket o gRPC).",
+      "encryption": "Este servidor VLESS usa un cifrado que PrfNoir no admite.",
+      "headerType": "Este servidor VLESS usa una ofuscación de cabecera que PrfNoir no admite.",
+      "fingerprint": "Esta URI VLESS solicita una huella TLS que PrfNoir no admite.",
       "sni": "A la URI VLESS le falta el SNI (sni) necesario para REALITY.",
       "publicKey": "A la URI VLESS le falta la clave pública de REALITY (pbk).",
       "scheme": "Eso no es un enlace VLESS. Debe empezar por vless://.",
-      "parameter": "La URI VLESS contiene una opción que Donut no admite.",
+      "parameter": "La URI VLESS contiene una opción que PrfNoir no admite.",
       "malformed": "La URI VLESS no es válida."
     },
     "camoufoxRemoved": "Camoufox ya no es compatible. Vuelve a crear este perfil con Wayfern.",
@@ -1935,7 +1935,7 @@
       "importProfileHint": "Trae perfiles de otra herramienta",
       "keyboardShortcuts": "Atajos de teclado",
       "keyboardShortcutsHint": "Ver todos los atajos",
-      "about": "Acerca de Donut Browser",
+      "about": "Acerca de PrfNoir",
       "aboutHint": "Versión e información de la aplicación"
     },
     "network": "Red",
@@ -2002,8 +2002,8 @@
     },
     "selfHosted": {
       "title": "Servidor de sincronización autoalojado",
-      "description": "Conecta Donut a tu propio servidor donut-sync para sincronizar perfiles, proxies, grupos y extensiones sin usar la nube alojada.",
-      "disabledWhileLoggedIn": "La sincronización autoalojada no está disponible mientras estás conectado a tu cuenta de Donut. Cierra sesión para usar un servidor personalizado.",
+      "description": "Conecta PrfNoir a tu propio servidor donut-sync para sincronizar perfiles, proxies, grupos y extensiones sin usar la nube alojada.",
+      "disabledWhileLoggedIn": "La sincronización autoalojada no está disponible mientras estás conectado a tu cuenta de PrfNoir. Cierra sesión para usar un servidor personalizado.",
       "connectionStatus": "Conexión:",
       "statusUnknown": "Sin probar",
       "testConnection": "Probar conexión",
@@ -2032,7 +2032,7 @@
       "stopProfile": "Detener {{name}}",
       "profileInfo": "Información — {{name}}",
       "createProfile": "Crear perfil",
-      "about": "Acerca de Donut Browser"
+      "about": "Acerca de PrfNoir"
     }
   },
   "shortcuts": {
@@ -2049,13 +2049,13 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "¿Cerrar Donut Browser?",
+    "title": "¿Cerrar PrfNoir?",
     "description": "¿Quieres enviar la aplicación a la bandeja del sistema o salir?",
     "minimize": "Minimizar a la bandeja",
     "quit": "Salir"
   },
   "tray": {
-    "show": "Mostrar Donut Browser",
+    "show": "Mostrar PrfNoir",
     "quit": "Salir"
   },
   "onboarding": {
@@ -2076,13 +2076,13 @@
       "finish": "Finalizar"
     },
     "thankYou": {
-      "title": "Gracias por elegir Donut Browser",
+      "title": "Gracias por elegir PrfNoir",
       "body": "Ojalá ayude a hacer tu navegación más privada: cada identidad por separado y sin que nada salga de tu equipo. ¡Que lo disfrutes!",
       "cta": "Empezar a navegar"
     }
   },
   "welcome": {
-    "title": "Te damos la bienvenida a Donut Browser",
+    "title": "Te damos la bienvenida a PrfNoir",
     "tagline": "Un navegador antidetección de código abierto para gestionar muchas identidades a la vez.",
     "skip": "Omitir",
     "next": "Siguiente",
@@ -2126,7 +2126,7 @@
     },
     "license": {
       "title": "Licencias",
-      "body": "Donut Browser es de código abierto y de uso gratuito.",
+      "body": "PrfNoir es de código abierto y de uso gratuito.",
       "agree": "Entendido",
       "personalTitle": "Uso personal",
       "personalDesc": "Gratis para siempre.",
@@ -2154,9 +2154,8 @@
     "title": "Acerca de",
     "version": "Versión {{version}}",
     "portableBadge": "portable",
-    "licenseNotice": "Navegador anti-detección de código abierto.",
+    "licenseNotice": "Navegador anti-detección.",
     "website": "Sitio web",
-    "github": "GitHub",
     "licenses": "Licencias",
     "searchLicenses": "Buscar licencias…",
     "noMatchingLicenses": "No hay licencias que coincidan.",
@@ -2523,16 +2522,16 @@
     "vpnExtensionConfirmed": "Herramienta de VPN o proxy conocida",
     "vpnExtensionLikely": "Parece una herramienta de VPN o proxy",
     "vpnExtensionCapability": "Tiene el permiso de proxy",
-    "vpnExtensionExplainer": "Si alguna de ellas redirige tu tráfico a otro lugar, la ubicación real del navegador dejará de coincidir con la zona horaria, el idioma y la geolocalización con los que se creó este perfil, y Donut no puede detectarlo desde fuera.",
+    "vpnExtensionExplainer": "Si alguna de ellas redirige tu tráfico a otro lugar, la ubicación real del navegador dejará de coincidir con la zona horaria, el idioma y la geolocalización con los que se creó este perfil, y PrfNoir no puede detectarlo desde fuera.",
     "proxyCapableHeading": "Extensiones que pueden cambiar el proxy",
-    "proxyCapableIntro": "No parecen VPN, pero tienen el permiso de proxy de Chromium, que también necesitan los gestores de descargas y las herramientas de depuración. Donut no puede saber si alguna lo está usando:",
-    "sourceDonut": "Gestionada por Donut",
+    "proxyCapableIntro": "No parecen VPN, pero tienen el permiso de proxy de Chromium, que también necesitan los gestores de descargas y las herramientas de depuración. PrfNoir no puede saber si alguna lo está usando:",
+    "sourcePrfNoir": "Gestionada por PrfNoir",
     "sourceBrowser": "Instalada en el perfil",
     "measurementUnreliable": "Una extensión de este perfil tiene el permiso de proxy, así que la comprobación de salida podría no reflejar la ruta que el navegador usa realmente.",
-    "scanIncompleteEncrypted": "Este perfil está cifrado, así que solo se pudieron comprobar las extensiones gestionadas por Donut.",
-    "scanIncompleteEphemeral": "Este perfil aún no tiene datos, así que solo se pudieron comprobar las extensiones gestionadas por Donut.",
+    "scanIncompleteEncrypted": "Este perfil está cifrado, así que solo se pudieron comprobar las extensiones gestionadas por PrfNoir.",
+    "scanIncompleteEphemeral": "Este perfil aún no tiene datos, así que solo se pudieron comprobar las extensiones gestionadas por PrfNoir.",
     "scanIncompletePartial": "El análisis de extensiones se interrumpió, así que puede que falten algunas.",
-    "probePending": "Todavía no se ha medido la salida del proxy. Donut la comprobará al iniciar y se detendrá si no coincide.",
+    "probePending": "Todavía no se ha medido la salida del proxy. PrfNoir la comprobará al iniciar y se detendrá si no coincide.",
     "launchAnyway": "Iniciar de todos modos",
     "dontBlockAgain": "No bloquear de nuevo por esta discrepancia exacta",
     "dontWarnExtensions": "No volver a avisar sobre estas extensiones",
@@ -2540,6 +2539,6 @@
     "cancelledSummary": "{{cancelled}} de {{total}} inicios cancelados",
     "vpnExtensionEntry": " {{version}} — {{capability}}, {{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}, {{source}}",
-    "scanIncompleteMissing": "Este perfil aún no se ha iniciado, así que solo se pudieron comprobar las extensiones gestionadas por Donut."
+    "scanIncompleteMissing": "Este perfil aún no se ha iniciado, así que solo se pudieron comprobar las extensiones gestionadas por PrfNoir."
   }
 }

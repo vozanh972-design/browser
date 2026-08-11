@@ -134,12 +134,12 @@
       "title": "기본 브라우저",
       "setAsDefault": "기본 브라우저로 설정",
       "alreadyDefault": "이미 기본 브라우저입니다",
-      "description": "기본 브라우저로 설정하면 Donut Browser가 웹 링크를 처리하고 사용할 프로필을 선택할 수 있습니다."
+      "description": "기본 브라우저로 설정하면 PrfNoir가 웹 링크를 처리하고 사용할 프로필을 선택할 수 있습니다."
     },
     "permissions": {
       "title": "시스템 권한",
       "loading": "권한 불러오는 중...",
-      "description": "이 권한은 Donut Browser에서 실행된 브라우저가 시스템 리소스에 액세스할 수 있도록 합니다. 각 웹사이트는 여전히 개별적으로 권한을 요청합니다.",
+      "description": "이 권한은 PrfNoir에서 실행된 브라우저가 시스템 리소스에 액세스할 수 있도록 합니다. 각 웹사이트는 여전히 개별적으로 권한을 요청합니다.",
       "microphone": "마이크",
       "microphoneDescription": "브라우저 애플리케이션의 마이크 액세스",
       "camera": "카메라",
@@ -183,7 +183,7 @@
       "trialExpired": "체험판이 만료되었습니다",
       "trialExpiredDescription": "개인 사용은 무료로 유지됩니다. 상업적 사용에는 라이선스가 필요합니다.",
       "subscriptionActive": "구독 중 — {{plan}} 플랜",
-      "subscriptionActiveDescription": "Donut Browser 구독이 활성 상태입니다. 플랜 기간 동안 상업적 사용이 라이선스됩니다."
+      "subscriptionActiveDescription": "PrfNoir 구독이 활성 상태입니다. 플랜 기간 동안 상업적 사용이 라이선스됩니다."
     },
     "advanced": {
       "title": "고급",
@@ -196,7 +196,7 @@
       "copyLogsDescription": "최근 로그를 민감 정보가 제거된 묶음으로 복사합니다(최대 5MB). 모든 유형의 개인 데이터를 식별할 수는 없으므로 공유하기 전에 검토하세요."
     },
     "disableAutoUpdates": "앱 자동 업데이트 사용 안 함",
-    "disableAutoUpdatesDescription": "Donut Browser 업데이트를 앱이 자동으로 확인하고 설치하지 않도록 합니다. 브라우저 업데이트는 영향을 받지 않습니다.",
+    "disableAutoUpdatesDescription": "PrfNoir 업데이트를 앱이 자동으로 확인하고 설치하지 않도록 합니다. 브라우저 업데이트는 영향을 받지 않습니다.",
     "keepDecryptedProfilesInRam": "복호화된 프로필을 RAM에 유지",
     "keepDecryptedProfilesInRamDescription": "비밀번호로 보호된 프로필의 복호화된 RAM 사본을 실행 사이에 유지하여 시작 속도를 높입니다. 디스크의 사본은 그대로 암호화된 상태로 유지됩니다.",
     "privacy": {
@@ -224,7 +224,7 @@
       "extensions": "확장 프로그램"
     },
     "newProfile": "새로 만들기",
-    "donutLogo": "Donut Browser 로고",
+    "donutLogo": "PrfNoir 로고",
     "scrollGroupsLeft": "그룹 왼쪽으로 스크롤",
     "scrollGroupsRight": "그룹 오른쪽으로 스크롤"
   },
@@ -1166,7 +1166,7 @@
     "launchHook": {
       "title": "실행 후크 URL",
       "label": "실행 후크 URL",
-      "description": "Donut Browser는 프로필이 실행될 때마다 이 URL로 GET 요청을 보냅니다.",
+      "description": "PrfNoir는 프로필이 실행될 때마다 이 URL로 GET 요청을 보냅니다.",
       "placeholder": "https://example.com/hooks/profile-launch",
       "invalidUrlHint": "유효한 http:// 또는 https:// URL을 입력하세요."
     },
@@ -1558,7 +1558,7 @@
   },
   "wayfernTerms": {
     "title": "Wayfern 이용 약관",
-    "description": "Donut Browser를 사용하기 전에 Wayfern의 이용 약관을 읽고 동의해야 합니다.",
+    "description": "PrfNoir를 사용하기 전에 Wayfern의 이용 약관을 읽고 동의해야 합니다.",
     "reviewLabel": "다음 위치에서 이용 약관을 검토하세요:",
     "agreeNotice": "\"동의함\"을 클릭하면 이 약관에 동의하는 것입니다.",
     "acceptButton": "동의함",
@@ -1569,7 +1569,7 @@
   "commercialTrial": {
     "title": "상업용 체험판 만료됨",
     "description": "2주 상업용 체험판 기간이 종료되었습니다.",
-    "body": "Donut Browser를 비즈니스 용도로 사용하는 경우 계속 사용하려면 상업용 라이선스를 구매해야 합니다. 개인 용도로는 계속 무료로 사용할 수 있습니다.",
+    "body": "PrfNoir를 비즈니스 용도로 사용하는 경우 계속 사용하려면 상업용 라이선스를 구매해야 합니다. 개인 용도로는 계속 무료로 사용할 수 있습니다.",
     "understandButton": "이해했습니다",
     "failed": "확인 저장 실패",
     "tryAgain": "다시 시도하세요"
@@ -1577,10 +1577,10 @@
   "permissionDialog": {
     "titleMicrophone": "마이크 액세스가 필요합니다",
     "titleCamera": "카메라 액세스가 필요합니다",
-    "descMicrophone": "Donut Browser는 웹 브라우저에서 마이크 기능을 활성화하기 위해 마이크에 액세스해야 합니다. 마이크를 사용하려는 각 웹사이트는 여전히 개별적으로 권한을 요청합니다.",
-    "descCamera": "Donut Browser는 웹 브라우저에서 카메라 기능을 활성화하기 위해 카메라에 액세스해야 합니다. 카메라를 사용하려는 각 웹사이트는 여전히 개별적으로 권한을 요청합니다.",
-    "grantedMicrophone": "권한이 허용되었습니다! 이제 Donut Browser에서 실행된 브라우저가 마이크에 액세스할 수 있습니다.",
-    "grantedCamera": "권한이 허용되었습니다! 이제 Donut Browser에서 실행된 브라우저가 카메라에 액세스할 수 있습니다.",
+    "descMicrophone": "PrfNoir는 웹 브라우저에서 마이크 기능을 활성화하기 위해 마이크에 액세스해야 합니다. 마이크를 사용하려는 각 웹사이트는 여전히 개별적으로 권한을 요청합니다.",
+    "descCamera": "PrfNoir는 웹 브라우저에서 카메라 기능을 활성화하기 위해 카메라에 액세스해야 합니다. 카메라를 사용하려는 각 웹사이트는 여전히 개별적으로 권한을 요청합니다.",
+    "grantedMicrophone": "권한이 허용되었습니다! 이제 PrfNoir에서 실행된 브라우저가 마이크에 액세스할 수 있습니다.",
+    "grantedCamera": "권한이 허용되었습니다! 이제 PrfNoir에서 실행된 브라우저가 카메라에 액세스할 수 있습니다.",
     "notGrantedMicrophone": "권한이 허용되지 않았습니다. 아래 버튼을 클릭하여 마이크에 대한 액세스를 요청하세요.",
     "notGrantedCamera": "권한이 허용되지 않았습니다. 아래 버튼을 클릭하여 카메라에 대한 액세스를 요청하세요.",
     "doneButton": "완료",
@@ -1683,7 +1683,7 @@
   },
   "appUpdate": {
     "toast": {
-      "updateFailed": "Donut Browser 업데이트 실패",
+      "updateFailed": "PrfNoir 업데이트 실패",
       "restartFailed": "재시작 실패",
       "updateReady": "업데이트 준비됨, 적용하려면 재시작하세요",
       "manualDownloadRequired": "수동 다운로드 필요",
@@ -1776,7 +1776,7 @@
     },
     "warnings": {
       "forgetWarningTitle": "중요: 이 비밀번호는 복구할 수 없습니다",
-      "forgetWarningBody": "Donut Browser는 이 비밀번호를 재설정, 복구 또는 우회할 수 없습니다. 잊어버리면 이 프로필의 데이터에 영구적으로 액세스할 수 없게 됩니다."
+      "forgetWarningBody": "PrfNoir는 이 비밀번호를 재설정, 복구 또는 우회할 수 없습니다. 잊어버리면 이 프로필의 데이터에 영구적으로 액세스할 수 없게 됩니다."
     },
     "modes": {
       "set": "설정",
@@ -1821,7 +1821,7 @@
     "invalidLaunchHookUrl": "잘못된 실행 후크 URL입니다. 전체 http:// 또는 https:// URL을 사용하세요.",
     "cookieDbLocked": "쿠키를 읽을 수 없습니다 — 데이터베이스가 잠겨 있습니다. 브라우저를 닫고 다시 시도하세요.",
     "cookieDbUnavailable": "쿠키를 읽을 수 없습니다 — 쿠키 저장소를 사용할 수 없습니다.",
-    "selfHostedRequiresLogout": "자체 호스팅 서버를 구성하기 전에 Donut 계정에서 로그아웃하세요.",
+    "selfHostedRequiresLogout": "자체 호스팅 서버를 구성하기 전에 PrfNoir 계정에서 로그아웃하세요.",
     "fingerprintRequiresPro": "핑거프린트를 보거나 편집하려면 활성 유료 요금제가 필요합니다. 보호 기능은 모든 요금제에 포함되어 있습니다.",
     "proxyNotWorking": "선택한 프록시가 작동하지 않아 프로필이 생성되지 않았습니다.",
     "proxyPaymentRequired": "선택한 프록시는 결제가 필요합니다(402). 구독이 만료되었을 수 있어 프로필이 생성되지 않았습니다.",
@@ -1844,9 +1844,9 @@
     "dnsRulesSaveFailed": "DNS 규칙을 저장하지 못했습니다.",
     "dnsRulesExportFailed": "DNS 규칙을 내보내지 못했습니다.",
     "fingerprintMatchFailed": "지문을 프록시에 맞추지 못했습니다.",
-    "proxySidecarVersionMismatch": "Donut Browser 파일에 서로 다른 버전이 섞여 있습니다. 최신 업데이트를 다시 설치해 주세요. 프로필은 안전하게 유지됩니다.",
+    "proxySidecarVersionMismatch": "PrfNoir 파일에 서로 다른 버전이 섞여 있습니다. 최신 업데이트를 다시 설치해 주세요. 프로필은 안전하게 유지됩니다.",
     "updateProfilesRunning": "업데이트를 설치하기 전에 실행 중인 모든 프로필을 중지하세요.",
-    "updatePreparationFailed": "Donut Browser가 백그라운드 네트워크 프로세스를 안전하게 중지하지 못했습니다. 컴퓨터를 다시 시작한 후 업데이트를 다시 시도하세요.",
+    "updatePreparationFailed": "PrfNoir가 백그라운드 네트워크 프로세스를 안전하게 중지하지 못했습니다. 컴퓨터를 다시 시작한 후 업데이트를 다시 시도하세요.",
     "wayfernTermsRequired": "MCP 서버를 시작하기 전에 Wayfern 이용 약관에 동의하세요.",
     "apiPortUnavailable": "API 서버에서 사용 가능한 포트를 찾지 못했습니다.",
     "mcpServerAlreadyRunning": "MCP 서버가 이미 실행 중입니다.",
@@ -1854,14 +1854,14 @@
     "mcpPortUnavailable": "MCP 서버에서 사용 가능한 포트를 찾지 못했습니다.",
     "mcpConfigurationUnavailable": "MCP 서버 구성을 사용할 수 없습니다. 서버를 다시 시작한 후 다시 시도하세요.",
     "mcpAgentUnknown": "이 MCP 클라이언트는 지원되지 않습니다.",
-    "mcpAgentInstallFailed": "MCP 클라이언트에 Donut Browser를 추가하지 못했습니다: {{detail}}",
-    "mcpAgentRemoveFailed": "MCP 클라이언트에서 Donut Browser를 제거하지 못했습니다: {{detail}}",
+    "mcpAgentInstallFailed": "MCP 클라이언트에 PrfNoir를 추가하지 못했습니다: {{detail}}",
+    "mcpAgentRemoveFailed": "MCP 클라이언트에서 PrfNoir를 제거하지 못했습니다: {{detail}}",
     "vlessConfigInvalid": "VLESS URI가 올바르지 않습니다.",
     "xrayUnavailable": "이 시스템에서는 Xray-core를 사용할 수 없습니다.",
     "xrayUnsupportedOs": "VLESS를 사용하려면 macOS 12 이상이 필요합니다.",
     "xrayStartFailed": "Xray-core를 시작할 수 없습니다.",
-    "cloudNotSignedIn": "이 기능을 사용하려면 Donut Browser 계정에 로그인하세요.",
-    "cloudUnreachable": "Donut Browser 서버에 연결하지 못했습니다. 연결 상태를 확인하고 다시 시도하세요.",
+    "cloudNotSignedIn": "이 기능을 사용하려면 PrfNoir 계정에 로그인하세요.",
+    "cloudUnreachable": "PrfNoir 서버에 연결하지 못했습니다. 연결 상태를 확인하고 다시 시도하세요.",
     "cloudRequestFailed": "요청이 실패했습니다. 잠시 후 다시 시도하세요.",
     "remoteRateLimited": "요청이 너무 많습니다. 잠시 기다렸다가 다시 시도하세요.",
     "remoteNoCapacity": "지금은 사용 가능한 원격 머신이 없습니다. 몇 분 후에 다시 시도하세요.",
@@ -1901,16 +1901,16 @@
     "vpnWorkerStartFailed": "VPN 연결을 시작하지 못했습니다: {{detail}}",
     "exitProbeFailed": "프록시 출구 노드에 연결할 수 없어 위치를 확인하지 못했습니다.",
     "vlessUnsupported": {
-      "security": "이 VLESS 서버는 REALITY를 사용하지 않습니다. Donut은 REALITY를 사용하는 VLESS만 지원합니다.",
-      "flow": "이 VLESS 서버는 Donut이 요구하는 XTLS Vision 플로우를 사용하지 않습니다.",
-      "transport": "Donut은 일반 TCP 기반 VLESS만 지원합니다. 이 서버는 다른 전송 방식(WebSocket, gRPC 등)을 사용합니다.",
-      "encryption": "이 VLESS 서버는 Donut이 지원하지 않는 암호화 설정을 사용합니다.",
-      "headerType": "이 VLESS 서버는 Donut이 지원하지 않는 헤더 난독화를 사용합니다.",
-      "fingerprint": "이 VLESS URI는 Donut이 지원하지 않는 TLS 지문을 요청합니다.",
+      "security": "이 VLESS 서버는 REALITY를 사용하지 않습니다. PrfNoir은 REALITY를 사용하는 VLESS만 지원합니다.",
+      "flow": "이 VLESS 서버는 PrfNoir이 요구하는 XTLS Vision 플로우를 사용하지 않습니다.",
+      "transport": "PrfNoir은 일반 TCP 기반 VLESS만 지원합니다. 이 서버는 다른 전송 방식(WebSocket, gRPC 등)을 사용합니다.",
+      "encryption": "이 VLESS 서버는 PrfNoir이 지원하지 않는 암호화 설정을 사용합니다.",
+      "headerType": "이 VLESS 서버는 PrfNoir이 지원하지 않는 헤더 난독화를 사용합니다.",
+      "fingerprint": "이 VLESS URI는 PrfNoir이 지원하지 않는 TLS 지문을 요청합니다.",
       "sni": "VLESS URI에 REALITY에 필요한 SNI(sni)가 없습니다.",
       "publicKey": "VLESS URI에 REALITY 공개 키(pbk)가 없습니다.",
       "scheme": "VLESS 링크가 아닙니다. vless:// 로 시작해야 합니다.",
-      "parameter": "VLESS URI에 Donut이 지원하지 않는 옵션이 있습니다.",
+      "parameter": "VLESS URI에 PrfNoir이 지원하지 않는 옵션이 있습니다.",
       "malformed": "VLESS URI가 올바르지 않습니다."
     },
     "camoufoxRemoved": "Camoufox는 더 이상 지원되지 않습니다. Wayfern으로 이 프로필을 다시 만드세요.",
@@ -1928,7 +1928,7 @@
       "importProfileHint": "다른 도구에서 프로필 가져오기",
       "keyboardShortcuts": "키보드 단축키",
       "keyboardShortcutsHint": "모든 단축키 보기",
-      "about": "Donut Browser 정보",
+      "about": "PrfNoir 정보",
       "aboutHint": "버전 및 앱 정보"
     },
     "network": "네트워크",
@@ -1995,8 +1995,8 @@
     },
     "selfHosted": {
       "title": "자체 호스팅 동기화 서버",
-      "description": "호스팅 클라우드를 사용하지 않고 프로필, 프록시, 그룹 및 확장 프로그램을 동기화하려면 Donut을 자체 donut-sync 서버로 연결하세요.",
-      "disabledWhileLoggedIn": "Donut 계정에 로그인되어 있는 동안에는 자체 호스팅 동기화를 사용할 수 없습니다. 사용자 지정 서버를 사용하려면 로그아웃하세요.",
+      "description": "호스팅 클라우드를 사용하지 않고 프로필, 프록시, 그룹 및 확장 프로그램을 동기화하려면 PrfNoir을 자체 donut-sync 서버로 연결하세요.",
+      "disabledWhileLoggedIn": "PrfNoir 계정에 로그인되어 있는 동안에는 자체 호스팅 동기화를 사용할 수 없습니다. 사용자 지정 서버를 사용하려면 로그아웃하세요.",
       "connectionStatus": "연결:",
       "statusUnknown": "테스트 안 됨",
       "testConnection": "연결 테스트",
@@ -2025,7 +2025,7 @@
       "stopProfile": "{{name}} 중지",
       "profileInfo": "정보 — {{name}}",
       "createProfile": "프로필 생성",
-      "about": "Donut Browser 정보"
+      "about": "PrfNoir 정보"
     }
   },
   "shortcuts": {
@@ -2042,13 +2042,13 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "Donut Browser를 닫으시겠습니까?",
+    "title": "PrfNoir를 닫으시겠습니까?",
     "description": "앱을 시스템 트레이로 보내시겠습니까, 아니면 종료하시겠습니까?",
     "minimize": "트레이로 최소화",
     "quit": "종료"
   },
   "tray": {
-    "show": "Donut Browser 표시",
+    "show": "PrfNoir 표시",
     "quit": "종료"
   },
   "onboarding": {
@@ -2069,13 +2069,13 @@
       "finish": "완료"
     },
     "thankYou": {
-      "title": "Donut Browser를 선택해 주셔서 감사합니다",
+      "title": "PrfNoir를 선택해 주셔서 감사합니다",
       "body": "각 ID를 분리하고 어떤 데이터도 기기 밖으로 내보내지 않으면서 더 프라이빗한 브라우징에 도움이 되길 바랍니다. 즐겁게 사용하세요.",
       "cta": "브라우징 시작"
     }
   },
   "welcome": {
-    "title": "Donut Browser에 오신 것을 환영합니다",
+    "title": "PrfNoir에 오신 것을 환영합니다",
     "tagline": "여러 ID를 한 번에 관리할 수 있는 오픈 소스 안티디텍트 브라우저입니다.",
     "skip": "건너뛰기",
     "next": "다음",
@@ -2119,7 +2119,7 @@
     },
     "license": {
       "title": "라이선스",
-      "body": "Donut Browser는 오픈 소스이며 무료로 사용할 수 있습니다.",
+      "body": "PrfNoir는 오픈 소스이며 무료로 사용할 수 있습니다.",
       "agree": "이해했습니다",
       "personalTitle": "개인 사용",
       "personalDesc": "영구적으로 무료입니다.",
@@ -2147,9 +2147,8 @@
     "title": "정보",
     "version": "버전 {{version}}",
     "portableBadge": "포터블",
-    "licenseNotice": "오픈 소스 안티 디텍트 브라우저입니다.",
+    "licenseNotice": "안티 디텍트 브라우저입니다.",
     "website": "웹사이트",
-    "github": "GitHub",
     "licenses": "라이선스",
     "searchLicenses": "라이선스 검색…",
     "noMatchingLicenses": "일치하는 라이선스가 없습니다.",
@@ -2494,16 +2493,16 @@
     "vpnExtensionConfirmed": "알려진 VPN 또는 프록시 도구",
     "vpnExtensionLikely": "VPN 또는 프록시 도구로 보임",
     "vpnExtensionCapability": "프록시 권한을 보유함",
-    "vpnExtensionExplainer": "이 중 하나가 트래픽을 다른 곳으로 보내면 브라우저의 실제 위치가 이 프로필을 만들 때 사용한 시간대, 언어, 지리 정보와 더 이상 일치하지 않으며, Donut은 외부에서 이를 감지할 수 없습니다.",
+    "vpnExtensionExplainer": "이 중 하나가 트래픽을 다른 곳으로 보내면 브라우저의 실제 위치가 이 프로필을 만들 때 사용한 시간대, 언어, 지리 정보와 더 이상 일치하지 않으며, PrfNoir은 외부에서 이를 감지할 수 없습니다.",
     "proxyCapableHeading": "프록시를 변경할 수 있는 확장 프로그램",
-    "proxyCapableIntro": "VPN으로 보이지는 않지만 Chromium의 프록시 권한을 가지고 있습니다. 다운로드 관리자나 디버깅 도구에도 필요한 권한이며, 실제로 사용하는지는 Donut이 알 수 없습니다:",
-    "sourceDonut": "Donut이 관리",
+    "proxyCapableIntro": "VPN으로 보이지는 않지만 Chromium의 프록시 권한을 가지고 있습니다. 다운로드 관리자나 디버깅 도구에도 필요한 권한이며, 실제로 사용하는지는 PrfNoir이 알 수 없습니다:",
+    "sourcePrfNoir": "PrfNoir이 관리",
     "sourceBrowser": "프로필에 설치됨",
     "measurementUnreliable": "이 프로필의 확장 프로그램이 프록시 권한을 가지고 있어, 출구 확인 결과가 브라우저의 실제 경로와 다를 수 있습니다.",
-    "scanIncompleteEncrypted": "이 프로필은 암호화되어 있어 Donut이 관리하는 확장 프로그램만 확인할 수 있었습니다.",
-    "scanIncompleteEphemeral": "이 프로필에는 아직 데이터가 없어 Donut이 관리하는 확장 프로그램만 확인할 수 있었습니다.",
+    "scanIncompleteEncrypted": "이 프로필은 암호화되어 있어 PrfNoir이 관리하는 확장 프로그램만 확인할 수 있었습니다.",
+    "scanIncompleteEphemeral": "이 프로필에는 아직 데이터가 없어 PrfNoir이 관리하는 확장 프로그램만 확인할 수 있었습니다.",
     "scanIncompletePartial": "확장 프로그램 검사가 중단되어 일부가 표시되지 않을 수 있습니다.",
-    "probePending": "프록시 출구를 아직 측정하지 않았습니다. Donut이 시작 중에 확인하고 일치하지 않으면 중단합니다.",
+    "probePending": "프록시 출구를 아직 측정하지 않았습니다. PrfNoir이 시작 중에 확인하고 일치하지 않으면 중단합니다.",
     "launchAnyway": "그래도 실행",
     "dontBlockAgain": "이 불일치에 대해 다시 차단하지 않기",
     "dontWarnExtensions": "이 확장 프로그램에 대해 다시 경고하지 않기",
@@ -2511,6 +2510,6 @@
     "cancelledSummary": "{{total}}개 중 {{cancelled}}개의 실행이 취소됨",
     "vpnExtensionEntry": " {{version}} — {{capability}}, {{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}, {{source}}",
-    "scanIncompleteMissing": "이 프로필은 아직 실행된 적이 없어 Donut이 관리하는 확장 프로그램만 확인할 수 있었습니다."
+    "scanIncompleteMissing": "이 프로필은 아직 실행된 적이 없어 PrfNoir이 관리하는 확장 프로그램만 확인할 수 있었습니다."
   }
 }

@@ -1,27 +1,13 @@
 <div align="center">
-  <img src="assets/logo.png" alt="Donut Browser Logo" width="150">
-  <h1>Donut Browser</h1>
-  <strong>Open Source Anti-Detect Browser</strong>
+  <img src="assets/logo.png" alt="PrfNoir Logo" width="150">
+  <h1>PrfNoir</h1>
+  <strong>Anti-Detect Browser</strong>
   <br>
-  <a href="https://donutbrowser.com">donutbrowser.com</a>
+  <a href="https://lunex.io.vn">lunex.io.vn</a>
 </div>
 <br>
 
-<p align="center">
-  <a style="text-decoration: none;" href="https://github.com/zhom/donutbrowser/releases/latest" target="_blank"><img alt="GitHub release" src="https://img.shields.io/github/v/release/zhom/donutbrowser">
-  </a>
-  <a style="text-decoration: none;" href="https://github.com/zhom/donutbrowser/issues" target="_blank">
-    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat" alt="PRs Welcome">
-  </a>
-  <a style="text-decoration: none;" href="https://github.com/zhom/donutbrowser/blob/main/LICENSE" target="_blank">
-    <img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License">
-  </a>
-  <a style="text-decoration: none;" href="https://github.com/zhom/donutbrowser/network/members" target="_blank">
-    <img src="https://img.shields.io/github/forks/zhom/donutbrowser?style=social" alt="GitHub forks">
-  </a>
-</p>
-
-<img alt="Donut Browser Preview" src="assets/donut-preview.png" />
+<img alt="PrfNoir Preview" src="assets/donut-preview.png" />
 
 ## Features
 
@@ -34,7 +20,7 @@
 - Profile groups: organize profiles and apply bulk settings
 - Import profiles: migrate from Chrome, Edge, Brave, or other Chromium browsers
 - Cookie & extension management: import/export cookies, manage extensions per profile
-- Default browser: set Donut as your default browser and choose which profile opens each link
+- Default browser: set PrfNoir as your default browser and choose which profile opens each link
 - Cloud sync: sync profiles, proxies, and groups across devices (self-hostable)
 - E2E encryption: optional end-to-end encrypted sync with a password only you know
 - Zero telemetry: no tracking or device fingerprinting
@@ -42,175 +28,15 @@
 ## Install
 
 <!-- install-links-start -->
-### macOS
-
-| | Apple Silicon | Intel |
-|---|---|---|
-| **DMG** | [Download](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut_0.29.1_aarch64.dmg) | [Download](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut_0.29.1_x64.dmg) |
-
-Or install via Homebrew:
-
-```bash
-brew install --cask donut
-```
-
 ### Windows
 
-[Download Windows Installer (x64)](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut_0.29.1_x64-setup.exe) · [Portable (x64)](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut_0.29.1_x64-portable.zip)
-
-### Linux
-
-| Format | x86_64 | ARM64 |
-|---|---|---|
-| **deb** | [Download](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut_0.29.1_amd64.deb) | [Download](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut_0.29.1_arm64.deb) |
-| **rpm** | [Download](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut-0.29.1-1.x86_64.rpm) | [Download](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut-0.29.1-1.aarch64.rpm) |
-| **AppImage** | [Download](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut_0.29.1_amd64.AppImage) | [Download](https://github.com/zhom/donutbrowser/releases/download/v0.29.1/Donut_0.29.1_aarch64.AppImage) |
+Download the latest installer from [lunex.io.vn](https://lunex.io.vn).
 <!-- install-links-end -->
-
-Or install via package manager:
-
-```bash
-curl -fsSL https://donutbrowser.com/install.sh | sh
-```
-
-<details>
-<summary>Troubleshooting AppImage</summary>
-
-If the AppImage segfaults on launch, install libfuse2 (`sudo apt install libfuse2` / `yay -S libfuse2` / `sudo dnf install fuse-libs`), or bypass FUSE entirely:
-
-```bash
-APPIMAGE_EXTRACT_AND_RUN=1 ./Donut.Browser_x.x.x_amd64.AppImage
-```
-
-If that gives an EGL display error, add `WEBKIT_DISABLE_DMABUF_RENDERER=1` or `GDK_BACKEND=x11` to the command above. If issues persist, the .deb and .rpm packages are more reliable.
-
-</details>
-
-### Nix
-
-```bash
-nix run github:zhom/donutbrowser#release-start
-```
 
 ## Self-Hosting Sync
 
-Run your own sync server to sync profiles, proxies, and groups across devices for free. See the [Self-Hosting Donut Sync guide](https://donutbrowser.com/docs/self-hosting) for Docker-based setup instructions.
-
-## Contributing
-
-Donut Browser is built by the people who use it, and plenty of the most useful help involves no code at all.
-
-- Tell other people about Donut. Word of mouth is how most users find the project, so talking about it is a real contribution.
-- Report bugs and request features in [GitHub Issues](https://github.com/zhom/donutbrowser/issues).
-- Answer questions in [GitHub Discussions](https://github.com/zhom/donutbrowser/discussions).
-- Fix and improve translations in `src/i18n/locales`.
-- Write code. Start with [CONTRIBUTING.md](CONTRIBUTING.md).
-- Star the repo so more people see it.
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=zhom%2Fdonutbrowser&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=zhom/donutbrowser&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=zhom/donutbrowser&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=zhom/donutbrowser&type=date&legend=top-left" />
- </picture>
-</a>
-
-## Contributors
-
-<!-- readme: collaborators,contributors -start -->
-<table>
-	<tbody>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/zhom">
-                    <img src="https://avatars.githubusercontent.com/u/2717306?v=4" width="100;" alt="zhom"/>
-                    <br />
-                    <sub><b>zhom</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/HassiyYT">
-                    <img src="https://avatars.githubusercontent.com/u/81773493?v=4" width="100;" alt="HassiyYT"/>
-                    <br />
-                    <sub><b>Hassiy</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/xenos1337">
-                    <img src="https://avatars.githubusercontent.com/u/66328734?v=4" width="100;" alt="xenos1337"/>
-                    <br />
-                    <sub><b>xenos</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/webees">
-                    <img src="https://avatars.githubusercontent.com/u/5155291?v=4" width="100;" alt="webees"/>
-                    <br />
-                    <sub><b>JockLee</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/yb403">
-                    <img src="https://avatars.githubusercontent.com/u/87396571?v=4" width="100;" alt="yb403"/>
-                    <br />
-                    <sub><b>yb403</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/huy97">
-                    <img src="https://avatars.githubusercontent.com/u/30153437?v=4" width="100;" alt="huy97"/>
-                    <br />
-                    <sub><b>Huy Le</b></sub>
-                </a>
-            </td>
-		</tr>
-		<tr>
-            <td align="center">
-                <a href="https://github.com/drunkod">
-                    <img src="https://avatars.githubusercontent.com/u/9677471?v=4" width="100;" alt="drunkod"/>
-                    <br />
-                    <sub><b>drunkod</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/JorySeverijnse">
-                    <img src="https://avatars.githubusercontent.com/u/117462355?v=4" width="100;" alt="JorySeverijnse"/>
-                    <br />
-                    <sub><b>Jory Severijnse</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/ThiagoMafra-Integrare">
-                    <img src="https://avatars.githubusercontent.com/u/222241596?v=4" width="100;" alt="ThiagoMafra-Integrare"/>
-                    <br />
-                    <sub><b>Thiago Mafra</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/mchnkkc">
-                    <img src="https://avatars.githubusercontent.com/u/251900355?v=4" width="100;" alt="mchnkkc"/>
-                    <br />
-                    <sub><b>mchnkkc</b></sub>
-                </a>
-            </td>
-            <td align="center">
-                <a href="https://github.com/liasica">
-                    <img src="https://avatars.githubusercontent.com/u/671431?v=4" width="100;" alt="liasica"/>
-                    <br />
-                    <sub><b>liasica</b></sub>
-                </a>
-            </td>
-		</tr>
-	<tbody>
-</table>
-<!-- readme: collaborators,contributors -end -->
+Run your own sync server to sync profiles, proxies, and groups across devices for free. See the [Self-Hosting guide](https://lunex.io.vn/docs/self-hosting) for Docker-based setup instructions.
 
 ## Contact
 
-For urgent questions or security vulnerability reports, email [contact@donutbrowser.com](mailto:contact@donutbrowser.com).
-
-## License
-
-This project is licensed under the AGPL-3.0 License. See the [LICENSE](LICENSE) file for details.
+For questions or support, email [contact@lunex.io.vn](mailto:contact@lunex.io.vn).

@@ -1,8 +1,8 @@
 [package]
 name = "donutbrowser"
 version = "0.29.1"
-description = "Simple Yet Powerful Anti-Detect Browser"
-authors = ["zhom@github"]
+description = "Anti-Detect Browser"
+authors = ["PrfNoir"]
 edition = "2021"
 default-run = "donutbrowser"
 
