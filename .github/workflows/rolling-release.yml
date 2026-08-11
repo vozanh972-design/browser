@@ -25,7 +25,7 @@ env:
 
 jobs:
   security-scan:
-    if: github.repository == 'zhom/donutbrowser'
+    if: github.repository == 'vozanh972-design/browser'
     name: Security Vulnerability Scan
     uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@9a498708959aeaef5ef730655706c5a1df1edbc2" # v2.3.8
     with:
@@ -41,21 +41,21 @@ jobs:
       actions: read
 
   lint-js:
-    if: github.repository == 'zhom/donutbrowser'
+    if: github.repository == 'vozanh972-design/browser'
     name: Lint JavaScript/TypeScript
     uses: ./.github/workflows/lint-js.yml
     permissions:
       contents: read
 
   lint-rust:
-    if: github.repository == 'zhom/donutbrowser'
+    if: github.repository == 'vozanh972-design/browser'
     name: Lint Rust
     uses: ./.github/workflows/lint-rs.yml
     permissions:
       contents: read
 
   codeql:
-    if: github.repository == 'zhom/donutbrowser'
+    if: github.repository == 'vozanh972-design/browser'
     name: CodeQL
     uses: ./.github/workflows/codeql.yml
     permissions:
@@ -65,14 +65,14 @@ jobs:
       actions: read
 
   spellcheck:
-    if: github.repository == 'zhom/donutbrowser'
+    if: github.repository == 'vozanh972-design/browser'
     name: Spell Check
     uses: ./.github/workflows/spellcheck.yml
     permissions:
       contents: read
 
   rolling-release:
-    if: github.repository == 'zhom/donutbrowser'
+    if: github.repository == 'vozanh972-design/browser'
     needs: [security-scan, lint-js, lint-rust, codeql, spellcheck]
     permissions:
       contents: write
@@ -296,7 +296,7 @@ jobs:
           rm -f $RUNNER_TEMP/build_certificate.p12 || true
 
   update-nightly-release:
-    if: github.repository == 'zhom/donutbrowser'
+    if: github.repository == 'vozanh972-design/browser'
     needs: [rolling-release]
     runs-on: ubuntu-latest
     permissions:
@@ -417,7 +417,7 @@ jobs:
             --prerelease
 
   deploy-website:
-    if: github.repository == 'zhom/donutbrowser'
+    if: github.repository == 'vozanh972-design/browser'
     needs: [update-nightly-release]
     runs-on: ubuntu-latest
     steps:
@@ -427,7 +427,7 @@ jobs:
         run: curl -fsSL -X POST "$DEPLOYMENT_HOOK"
 
   notify-discord:
-    if: github.repository == 'zhom/donutbrowser'
+    if: github.repository == 'vozanh972-design/browser'
     needs: [update-nightly-release]
     runs-on: ubuntu-latest
     steps:

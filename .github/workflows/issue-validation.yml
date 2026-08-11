@@ -26,7 +26,7 @@ env:
 
 jobs:
   analyze-issue:
-    if: github.repository == 'zhom/donutbrowser' && github.event_name == 'issues'
+    if: github.repository == 'vozanh972-design/browser' && github.event_name == 'issues'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -501,7 +501,7 @@ jobs:
           fi
 
   analyze-pr:
-    if: github.repository == 'zhom/donutbrowser' && github.event_name == 'pull_request_target' && github.actor != 'dependabot[bot]'
+    if: github.repository == 'vozanh972-design/browser' && github.event_name == 'pull_request_target' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -678,7 +678,7 @@ jobs:
 
   opencode-command:
     if: |
-      github.repository == 'zhom/donutbrowser' &&
+      github.repository == 'vozanh972-design/browser' &&
       (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
       (github.event.comment.author_association == 'OWNER' ||
        github.event.comment.author_association == 'MEMBER' ||
