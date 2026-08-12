@@ -81,7 +81,7 @@ jobs:
       matrix:
         include:
           - platform: "windows-latest"
-            args: "--target x86_64-pc-windows-msvc --verbose"
+            args: "--target x86_64-pc-windows-msvc --bundles nsis --verbose"
             arch: "x86_64"
             target: "x86_64-pc-windows-msvc"
             pkg_target: "latest-win-x64"
@@ -227,7 +227,7 @@ jobs:
         with:
           projectPath: ./src-tauri
           tagName: "nightly-${{ steps.timestamp.outputs.timestamp }}"
-          releaseName: "Donut Browser Nightly (Build ${{ steps.timestamp.outputs.timestamp }})"
+          releaseName: "PrfNoir Nightly (Build ${{ steps.timestamp.outputs.timestamp }})"
           releaseBody: "⚠️ **Nightly Release** - This is an automatically generated pre-release build from the latest main branch. Use with caution.\n\nCommit: ${{ github.sha }}\nBuild: ${{ steps.timestamp.outputs.timestamp }}"
           releaseDraft: false
           prerelease: true
@@ -237,10 +237,10 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: bash
         run: |
-          PORTABLE_DIR="Donut-Portable"
+          PORTABLE_DIR="PrfNoir-Portable"
           mkdir -p "$PORTABLE_DIR"
 
-          cp "src-tauri/target/${{ matrix.target }}/release/donutbrowser.exe" "$PORTABLE_DIR/Donut.exe"
+          cp "src-tauri/target/${{ matrix.target }}/release/donutbrowser.exe" "$PORTABLE_DIR/PrfNoir.exe"
           cp "src-tauri/target/${{ matrix.target }}/release/donut-proxy.exe" "$PORTABLE_DIR/"
           cp "src-tauri/binaries/xray-${{ matrix.target }}.exe" "$PORTABLE_DIR/xray.exe"
           mkdir -p "$PORTABLE_DIR/licenses"
@@ -258,7 +258,7 @@ jobs:
 
           touch "$PORTABLE_DIR/.portable"
 
-          7z a "Donut_x64-portable.zip" "$PORTABLE_DIR"
+          7z a "PrfNoir_x64-portable.zip" "$PORTABLE_DIR"
 
       - name: Upload portable ZIP to release
         if: matrix.platform == 'windows-latest'
@@ -267,7 +267,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NIGHTLY_TAG: "nightly-${{ steps.timestamp.outputs.timestamp }}"
         run: |
-          gh release upload "$NIGHTLY_TAG" "Donut_x64-portable.zip" --clobber
+          gh release upload "$NIGHTLY_TAG" "PrfNoir_x64-portable.zip" --clobber
 
       - name: Clean up Apple certificate
         if: matrix.platform == 'macos-latest' && always()
@@ -361,15 +361,15 @@ jobs:
           # --repo is required: ASSETS_DIR is outside the git checkout, so gh
           # cannot infer the repository from the working directory.
           cd "$ASSETS_DIR"
-          sha256sum Donut* > SHA256SUMS.txt
+          sha256sum PrfNoir* > SHA256SUMS.txt
           gh release upload "$NIGHTLY_TAG" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
 
           # Rename versioned filename to stable nightly name
-          for f in Donut_*_x64-setup.exe; do [ -f "$f" ] && mv "$f" Donut_nightly_x64-setup.exe; done
+          for f in PrfNoir_*_x64-setup.exe; do [ -f "$f" ] && mv "$f" PrfNoir_nightly_x64-setup.exe; done
 
           # Checksums for the rolling release (renamed filenames), restricted
           # to exactly the assets uploaded below.
-          sha256sum Donut_nightly_* > SHA256SUMS.txt
+          sha256sum PrfNoir_nightly_* > SHA256SUMS.txt
           cd "$GITHUB_WORKSPACE"
 
           # Delete existing rolling nightly release and tag
@@ -378,9 +378,9 @@ jobs:
 
           # Create new rolling nightly release with all assets
           gh release create nightly \
-            "$ASSETS_DIR"/Donut_nightly_* \
+            "$ASSETS_DIR"/PrfNoir_nightly_* \
             "$ASSETS_DIR"/SHA256SUMS.txt \
-            --title "Donut Browser Nightly" \
+            --title "PrfNoir Nightly" \
             --notes-file /tmp/nightly-notes.md \
             --prerelease
 

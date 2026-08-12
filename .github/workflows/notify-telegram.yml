@@ -197,13 +197,13 @@ jobs:
               parse_mode: "HTML",
               disable_web_page_preview: true,
               text: (
-                "<b>Donut Browser " + $version + " released</b>\n\n" +
+                "<b>PrfNoir " + $version + " released</b>\n\n" +
                 $changes + "\n" +
                 "<b>Download</b>\n" +
-                "<a href=\"" + $dl + "/Donut_" + $vnum + "_aarch64.dmg\">macOS (Apple Silicon)</a> · " +
-                "<a href=\"" + $dl + "/Donut_" + $vnum + "_x64.dmg\">macOS (Intel)</a>\n" +
-                "<a href=\"" + $dl + "/Donut_" + $vnum + "_x64-setup.exe\">Windows x64</a> · " +
-                "<a href=\"" + $dl + "/Donut_" + $vnum + "_amd64.AppImage\">Linux x64</a>\n\n" +
+                "<a href=\"" + $dl + "/PrfNoir_" + $vnum + "_aarch64.dmg\">macOS (Apple Silicon)</a> · " +
+                "<a href=\"" + $dl + "/PrfNoir_" + $vnum + "_x64.dmg\">macOS (Intel)</a>\n" +
+                "<a href=\"" + $dl + "/PrfNoir_" + $vnum + "_x64-setup.exe\">Windows x64</a> · " +
+                "<a href=\"" + $dl + "/PrfNoir_" + $vnum + "_amd64.AppImage\">Linux x64</a>\n\n" +
                 "<a href=\"" + $release_url + "\">Full release notes</a>"
               )
             }')
