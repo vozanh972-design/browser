@@ -185,7 +185,7 @@ pub fn export_vless_uri(config: &VlessRealityConfig, name: Option<&str>) -> Xray
 /// caller can report the *shape* problem first. A WebSocket URI always carries
 /// `path` (and usually `host`), gRPC carries `serviceName` — naming those keys
 /// instead of the transport sends the user deleting parameters when the real
-/// answer is that Donut only speaks plain TCP.
+/// answer is that PrfNoir only speaks plain TCP.
 fn parse_parameters(url: &Url) -> XrayResult<(HashMap<String, String>, Vec<String>)> {
   let mut parameters = HashMap::new();
   let mut unsupported = Vec::new();
@@ -252,11 +252,11 @@ mod tests {
 
   const ID: &str = "6d6e21a1-4829-4d2b-bc7f-1b25707b61e4";
 
-  /// Donut accepts exactly one VLESS shape, so most rejections mean "your
+  /// PrfNoir accepts exactly one VLESS shape, so most rejections mean "your
   /// server is a kind we do not support" rather than "you mistyped". These pin
   /// the reason each rejection reports, because the UI turns it into the one
   /// sentence that tells a user with a working WebSocket or plain-TLS server
-  /// why Donut will not take it.
+  /// why PrfNoir will not take it.
   #[test]
   fn unsupported_setups_report_which_part_is_unsupported() {
     let good = format!(
@@ -294,7 +294,7 @@ mod tests {
   /// carries `serviceName`. Those keys are not in SUPPORTED_PARAMETERS, so
   /// before the shape was checked first they produced "unsupported option"
   /// and sent the user deleting query parameters instead of telling them
-  /// Donut only speaks plain TCP.
+  /// PrfNoir only speaks plain TCP.
   #[test]
   fn a_display_name_survives_an_export_parse_round_trip() {
     // Percent signs are legal in a fragment, so they used to pass through

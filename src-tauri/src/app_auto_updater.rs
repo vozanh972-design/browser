@@ -1,7 +1,7 @@
 /*!
 # App Auto Updater
 
-This module provides comprehensive self-update functionality for the Donut Browser application
+This module provides comprehensive self-update functionality for the PrfNoir application
 across multiple operating systems and installation methods.
 
 ## Supported Platforms
@@ -1180,18 +1180,18 @@ impl AppAutoUpdater {
       // Clean up backup after successful installation
       let _ = fs::remove_dir_all(&backup_path);
 
-      // Clean up old "Donut Browser.app" if it exists (from before the project rename)
+      // Clean up old "PrfNoir.app" if it exists (from before the project rename)
       if let Some(parent_dir) = current_app_path.parent() {
-        let old_app_path = parent_dir.join("Donut Browser.app");
+        let old_app_path = parent_dir.join("PrfNoir.app");
         if old_app_path.exists() && old_app_path != current_app_path {
           log::info!(
-            "Removing old 'Donut Browser.app' from: {}",
+            "Removing old 'PrfNoir.app' from: {}",
             old_app_path.display()
           );
           if let Err(e) = fs::remove_dir_all(&old_app_path) {
-            log::warn!("Warning: Failed to remove old 'Donut Browser.app': {e}");
+            log::warn!("Warning: Failed to remove old 'PrfNoir.app': {e}");
           } else {
-            log::info!("Successfully removed old 'Donut Browser.app'");
+            log::info!("Successfully removed old 'PrfNoir.app'");
           }
         }
       }
@@ -2229,29 +2229,29 @@ mod tests {
   #[test]
   fn test_find_checksum_for_file() {
     let sums = "\
-0e5a4601745092b7d1c93c1e7e1c30d923be3d1e916b661bd53d1c0c9c7f0a11  Donut_0.29.0_aarch64.dmg
-ABCDEF01745092B7D1C93C1E7E1C30D923BE3D1E916B661BD53D1C0C9C7F0A22 *Donut_0.29.0_x64.dmg
-not-a-hash  Donut_0.29.0_amd64.deb
+0e5a4601745092b7d1c93c1e7e1c30d923be3d1e916b661bd53d1c0c9c7f0a11  PrfNoir_0.29.0_aarch64.dmg
+ABCDEF01745092B7D1C93C1E7E1C30D923BE3D1E916B661BD53D1C0C9C7F0A22 *PrfNoir_0.29.0_x64.dmg
+not-a-hash  PrfNoir_0.29.0_amd64.deb
 ";
 
     // Plain entry.
     assert_eq!(
-      AppAutoUpdater::find_checksum_for_file(sums, "Donut_0.29.0_aarch64.dmg").as_deref(),
+      AppAutoUpdater::find_checksum_for_file(sums, "PrfNoir_0.29.0_aarch64.dmg").as_deref(),
       Some("0e5a4601745092b7d1c93c1e7e1c30d923be3d1e916b661bd53d1c0c9c7f0a11")
     );
     // Binary-mode marker is stripped; hash is normalized to lowercase.
     assert_eq!(
-      AppAutoUpdater::find_checksum_for_file(sums, "Donut_0.29.0_x64.dmg").as_deref(),
+      AppAutoUpdater::find_checksum_for_file(sums, "PrfNoir_0.29.0_x64.dmg").as_deref(),
       Some("abcdef01745092b7d1c93c1e7e1c30d923be3d1e916b661bd53d1c0c9c7f0a22")
     );
     // Entries with malformed hashes are rejected rather than trusted.
     assert_eq!(
-      AppAutoUpdater::find_checksum_for_file(sums, "Donut_0.29.0_amd64.deb"),
+      AppAutoUpdater::find_checksum_for_file(sums, "PrfNoir_0.29.0_amd64.deb"),
       None
     );
     // Missing file.
     assert_eq!(
-      AppAutoUpdater::find_checksum_for_file(sums, "Donut_0.29.0_arm64.deb"),
+      AppAutoUpdater::find_checksum_for_file(sums, "PrfNoir_0.29.0_arm64.deb"),
       None
     );
   }
@@ -2272,7 +2272,7 @@ not-a-hash  Donut_0.29.0_amd64.deb
   fn test_find_checksums_url() {
     let assets = vec![
       AppReleaseAsset {
-        name: "Donut_0.29.0_x64.dmg".to_string(),
+        name: "PrfNoir_0.29.0_x64.dmg".to_string(),
         browser_download_url: "https://example.com/x64.dmg".to_string(),
         size: 1,
         digest: None,
@@ -2341,20 +2341,20 @@ not-a-hash  Donut_0.29.0_amd64.deb
     let all_assets = vec![
       // macOS assets
       AppReleaseAsset {
-        name: "Donut.Browser_0.1.0_aarch64.dmg".to_string(),
+        name: "PrfNoir_0.1.0_aarch64.dmg".to_string(),
         browser_download_url: "https://example.com/aarch64.dmg".to_string(),
         size: 12345,
         digest: None,
       },
       AppReleaseAsset {
-        name: "Donut.Browser_0.1.0_x64.dmg".to_string(),
+        name: "PrfNoir_0.1.0_x64.dmg".to_string(),
         browser_download_url: "https://example.com/x64.dmg".to_string(),
         size: 12345,
         digest: None,
       },
       // Windows assets (NSIS naming: _ARCH-setup.exe)
       AppReleaseAsset {
-        name: "Donut_0.1.0_x64-setup.exe".to_string(),
+        name: "PrfNoir_0.1.0_x64-setup.exe".to_string(),
         browser_download_url: "https://example.com/x64-setup.exe".to_string(),
         size: 12345,
         digest: None,
@@ -2373,7 +2373,7 @@ not-a-hash  Donut_0.29.0_amd64.deb
         digest: None,
       },
       AppReleaseAsset {
-        name: "Donut.Browser-0.1.0-x86_64.AppImage".to_string(),
+        name: "PrfNoir-0.1.0-x86_64.AppImage".to_string(),
         browser_download_url: "https://example.com/x86_64.AppImage".to_string(),
         size: 12345,
         digest: None,
@@ -2482,7 +2482,7 @@ not-a-hash  Donut_0.29.0_amd64.deb
         digest: None,
       },
       AppReleaseAsset {
-        name: "Donut.Browser-0.1.0-x86_64.AppImage".to_string(),
+        name: "PrfNoir-0.1.0-x86_64.AppImage".to_string(),
         browser_download_url: "https://example.com/x86_64.AppImage".to_string(),
         size: 12345,
         digest: None,
@@ -2523,14 +2523,14 @@ not-a-hash  Donut_0.29.0_amd64.deb
     let all_assets = vec![
       // macOS assets
       AppReleaseAsset {
-        name: "Donut.Browser_0.1.0_aarch64.dmg".to_string(),
+        name: "PrfNoir_0.1.0_aarch64.dmg".to_string(),
         browser_download_url: "https://example.com/aarch64.dmg".to_string(),
         size: 12345,
         digest: None,
       },
       // Windows assets
       AppReleaseAsset {
-        name: "Donut.Browser_0.1.0_x64.msi".to_string(),
+        name: "PrfNoir_0.1.0_x64.msi".to_string(),
         browser_download_url: "https://example.com/x64.msi".to_string(),
         size: 12345,
         digest: None,
@@ -2543,7 +2543,7 @@ not-a-hash  Donut_0.29.0_amd64.deb
         digest: None,
       },
       AppReleaseAsset {
-        name: "Donut.Browser-0.1.0-x86_64.AppImage".to_string(),
+        name: "PrfNoir-0.1.0-x86_64.AppImage".to_string(),
         browser_download_url: "https://example.com/x86_64.AppImage".to_string(),
         size: 12345,
         digest: None,

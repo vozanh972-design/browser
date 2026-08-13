@@ -76,7 +76,7 @@ pub struct DetectedVpnExtension {
   pub key: String,
   pub name: String,
   pub version: Option<String>,
-  /// `"donut"` (managed by Donut) or `"browser"` (installed inside the profile).
+  /// `"donut"` (managed by PrfNoir) or `"browser"` (installed inside the profile).
   pub source: String,
   /// `"confirmed"` and `"likely"` are claims that this IS a VPN/proxy tool.
   /// `"capability"` claims only that it *could* change the proxy.

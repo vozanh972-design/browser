@@ -275,8 +275,8 @@ pub mod macos {
     // The Chromium `--user-data-dir=<path> <url>` remote command failed.
     // We intentionally do NOT fall back to an AppleScript `System Events`
     // keystroke path: that would send Apple Events to another application
-    // and trigger the macOS TCC "<Donut> wants control of <Browser>" /
-    // "prevented from modifying other apps" prompts. Donut must never touch
+    // and trigger the macOS TCC "<PrfNoir> wants control of <Browser>" /
+    // "prevented from modifying other apps" prompts. PrfNoir must never touch
     // other apps on the user's Mac.
     Err(
       format!(

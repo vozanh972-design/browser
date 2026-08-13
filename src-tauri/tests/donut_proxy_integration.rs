@@ -1030,7 +1030,7 @@ async fn test_bypass_rules_http_direct() -> Result<(), Box<dyn std::error::Error
   let local_port = config["localPort"].as_u64().unwrap() as u16;
   tracker.track_proxy(proxy_id.clone());
 
-  println!("Donut-proxy started on port {local_port} with bypass rules for 127.0.0.1");
+  println!("PrfNoir-proxy started on port {local_port} with bypass rules for 127.0.0.1");
 
   sleep(Duration::from_millis(500)).await;
 

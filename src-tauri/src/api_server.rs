@@ -485,7 +485,7 @@ struct ImportProfilesRequest {
 #[derive(Debug, Deserialize, ToSchema)]
 struct ImportProxiesRequest {
   /// "txt" — one proxy per line (`host:port`, `host:port:user:pass`, or URL
-  /// forms like `http://user:pass@host:port`). "json" — a Donut proxy export.
+  /// forms like `http://user:pass@host:port`). "json" — a PrfNoir proxy export.
   format: String,
   /// Raw proxy list / export content.
   content: String,
@@ -1282,7 +1282,7 @@ async fn create_profile(
           return Err((
             StatusCode::BAD_REQUEST,
             format!(
-              "No downloaded version of \"{}\" is available. Download the browser in Donut Browser first — this endpoint does not download browsers.",
+              "No downloaded version of \"{}\" is available. Download the browser in PrfNoir first — this endpoint does not download browsers.",
               request.browser
             ),
           ));
@@ -1848,7 +1848,7 @@ async fn create_proxy(
   }
 }
 
-// API Handler - Bulk-import proxies from a txt list or a Donut JSON export.
+// API Handler - Bulk-import proxies from a txt list or a PrfNoir JSON export.
 // Mirrors the MCP `import_proxies` tool.
 #[utoipa::path(
   post,
@@ -2772,7 +2772,7 @@ fn status_for_code(code: &str) -> StatusCode {
 //
 // This is what makes `run-remote` usable. Without it the endpoint hands back a
 // session id that nothing outside this app can do anything with: the fleet's
-// relay only accepts the user's Donut cloud credential, an automation client
+// relay only accepts the user's PrfNoir cloud credential, an automation client
 // does not have one, and it must not be given one — an API token is scoped to
 // "drive my browsers", not "act as my account".
 //
@@ -2854,7 +2854,7 @@ fn cdp_error_response(err: crate::cdp_target::CdpError) -> (StatusCode, String) 
 ///
 /// Verbatim in both directions. This proxy deliberately understands nothing
 /// about CDP: a client that speaks a newer protocol, or a target type this
-/// build has never heard of, must keep working without a Donut release.
+/// build has never heard of, must keep working without a PrfNoir release.
 async fn pump_cdp(session_id: String, client: WebSocket, upstream: crate::cdp_target::RelaySocket) {
   use futures_util::{SinkExt, StreamExt};
   use tokio_tungstenite::tungstenite::Message as RelayMessage;
@@ -2926,8 +2926,8 @@ async fn pump_cdp(session_id: String, client: WebSocket, upstream: crate::cdp_ta
     (status = 200, description = "Sessions owned by the signed-in account", body = ApiRemoteSessionsResponse),
     (status = 401, description = "Unauthorized"),
     (status = 402, description = "Active paid plan with browser automation required"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -2954,9 +2954,9 @@ async fn list_remote_sessions_api() -> Result<Json<ApiRemoteSessionsResponse>, (
     (status = 200, description = "Current session state", body = crate::remote_session::RemoteSessionState),
     (status = 401, description = "Unauthorized"),
     (status = 402, description = "Active paid plan with browser automation required"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
     (status = 404, description = "No such remote session"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -2983,8 +2983,8 @@ async fn get_remote_session_api(
   responses(
     (status = 200, description = "Pooled remote-hour budget and its breakdown", body = crate::cookie_bot::RemoteHoursQuota),
     (status = 401, description = "Unauthorized"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -3050,7 +3050,7 @@ fn cookie_bot_eligible_profile(
     (status = 401, description = "Unauthorized"),
     (status = 402, description = "Plan does not include the cookie bot"),
     (status = 403, description = "Not signed in, or scope=team from a non-member"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -3077,9 +3077,9 @@ async fn list_cookie_bot_schedules(
   responses(
     (status = 200, description = "The profile's enrolment", body = crate::cookie_bot::CookieBotSchedule),
     (status = 401, description = "Unauthorized"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
     (status = 404, description = "This profile is not enrolled"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -3118,10 +3118,10 @@ async fn get_cookie_bot_schedule(
     (status = 400, description = "Invalid schedule, or a profile the bot cannot run"),
     (status = 401, description = "Unauthorized"),
     (status = 402, description = "Plan does not include the cookie bot"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
     (status = 404, description = "Profile not found"),
     (status = 409, description = "A teammate already enrols this profile; retry with acknowledge_conflict"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -3192,8 +3192,8 @@ async fn set_cookie_bot_schedule(
   responses(
     (status = 200, description = "Enrolment removed, or there was none", body = crate::cookie_bot::CookieBotScheduleDeleted),
     (status = 401, description = "Unauthorized"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -3227,8 +3227,8 @@ async fn delete_cookie_bot_schedule(
     (status = 200, description = "Teammates enrolling the same profile", body = crate::cookie_bot::CookieBotConflictCheck),
     (status = 400, description = "profile_id missing"),
     (status = 401, description = "Unauthorized"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -3268,7 +3268,7 @@ async fn get_cookie_bot_conflicts(
     (status = 400, description = "limit out of range or malformed cursor"),
     (status = 401, description = "Unauthorized"),
     (status = 403, description = "Not signed in, or scope=team from a non-member"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -3300,7 +3300,7 @@ async fn list_cookie_bot_runs(
     (status = 400, description = "A profile the bot cannot run"),
     (status = 401, description = "Unauthorized"),
     (status = 402, description = "Plan does not include the cookie bot, or the pooled hours are spent"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
     (status = 404, description = "Profile not found, or not enrolled"),
     (status = 409, description = "A run or remote session already holds this profile"),
     (status = 429, description = "Automation request rate limit exceeded"),
@@ -3340,7 +3340,7 @@ async fn start_cookie_bot_run(
   responses(
     (status = 200, description = "The run, cancelled (or unchanged if it had already finished)", body = crate::cookie_bot::CookieBotRun),
     (status = 401, description = "Unauthorized"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
     (status = 404, description = "No such run for this account"),
     (status = 429, description = "Automation request rate limit exceeded"),
     (status = 503, description = "The fleet could not be reached; the run is still live"),
@@ -3369,8 +3369,8 @@ async fn cancel_cookie_bot_run(
   responses(
     (status = 200, description = "Selectable presets", body = crate::cookie_bot::CookieBotPresetList),
     (status = 401, description = "Unauthorized"),
-    (status = 403, description = "This desktop is not signed in to Donut cloud"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 403, description = "This desktop is not signed in to PrfNoir cloud"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(
@@ -3401,7 +3401,7 @@ async fn list_cookie_bot_presets(
     (status = 400, description = "Malformed period"),
     (status = 401, description = "Unauthorized"),
     (status = 403, description = "Not signed in, or not a member of that team"),
-    (status = 503, description = "Donut cloud could not be reached"),
+    (status = 503, description = "PrfNoir cloud could not be reached"),
     (status = 500, description = "Internal server error")
   ),
   security(

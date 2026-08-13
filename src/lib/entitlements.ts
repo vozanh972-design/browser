@@ -132,9 +132,9 @@ export function getEntitlements(
  * goes through here so a plan change is one edit, and so the Pro badge and the
  * control it guards can never disagree.
  */
-export function canUseCookieBot(user: CloudUser | null | undefined): boolean {
-  const entitlements = getEntitlements(user);
-  return entitlements.active && entitlements.cookieBot;
+export function canUseCookieBot(_user: CloudUser | null | undefined): boolean {
+  // Cookie Bot integration is disabled for this build.
+  return false;
 }
 
 /**

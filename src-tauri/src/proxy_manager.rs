@@ -1308,7 +1308,7 @@ impl ProxyManager {
       version: "1.0".to_string(),
       proxies,
       exported_at: Utc::now().to_rfc3339(),
-      source: "DonutBrowser".to_string(),
+      source: "PrfNoir".to_string(),
     };
 
     serde_json::to_string_pretty(&export_data).map_err(|e| format!("Failed to serialize: {e}"))
@@ -2243,7 +2243,7 @@ impl ProxyManager {
     // profile-associated workers were left alone in the other cleanup branches).
     //
     // Without this, every time a user closes their browser via the window's
-    // X button (bypassing Donut's stop flow) or the browser crashes, the
+    // X button (bypassing PrfNoir's stop flow) or the browser crashes, the
     // worker keeps running forever. On Windows users reported dozens of
     // donut-proxy processes accumulating this way.
     {

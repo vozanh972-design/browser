@@ -536,7 +536,7 @@ impl McpServer {
         // is metered alongside the remote-session stop it mirrors.
         //
         // Deliberately absent: set_cookie_bot_schedule and
-        // delete_cookie_bot_schedule. They write one row in Donut cloud and
+        // delete_cookie_bot_schedule. They write one row in PrfNoir cloud and
         // lease nothing; metering them would throttle an agent enrolling a
         // fleet of profiles, while the budget that actually guards the
         // hardware is spent per RUN and enforced server-side.
@@ -1754,7 +1754,7 @@ impl McpServer {
           "required": []
         }),
       },
-      // Cookie bot. Every one of these is a proxy onto Donut cloud, which owns
+      // Cookie bot. Every one of these is a proxy onto PrfNoir cloud, which owns
       // the schedule and the browsing behaviour; the tools carry only the
       // user's own choices.
       McpTool {
@@ -2007,7 +2007,7 @@ impl McpServer {
         "name": SERVER_NAME,
         "version": SERVER_VERSION,
       },
-      "instructions": "Donut Browser MCP server. Use tools/list to discover available browser automation tools."
+      "instructions": "PrfNoir MCP server. Use tools/list to discover available browser automation tools."
     });
 
     log::info!("[mcp] New session initialized: {}", session_id);
@@ -5615,7 +5615,7 @@ impl McpServer {
 
   // --- Remote fleet and cookie bot -----------------------------------------
   //
-  // Every tool below is a proxy onto Donut cloud, which owns the schedule, the
+  // Every tool below is a proxy onto PrfNoir cloud, which owns the schedule, the
   // calendar arithmetic, the browsing behaviour and the pooled hour budget.
   // Nothing here decides when a run happens or what it does. What this file
   // DOES decide is which profiles may be offered to the bot at all.
@@ -6132,7 +6132,7 @@ mod tests {
   // build notices.
   //
   // Asserted against the source rather than by dispatching, because half these
-  // tools take no arguments — calling them would reach Donut cloud, and a unit
+  // tools take no arguments — calling them would reach PrfNoir cloud, and a unit
   // test that needs the network is a test that gets deleted.
   #[test]
   fn every_cookie_bot_tool_is_both_advertised_and_dispatchable() {
@@ -6339,7 +6339,7 @@ mod tests {
 
     for name in [
       "list_profiles",
-      // Configuration, not automation: one row in Donut cloud, no hardware
+      // Configuration, not automation: one row in PrfNoir cloud, no hardware
       // leased. Metering it would throttle an agent enrolling a fleet of
       // profiles, while the budget that guards the hardware is spent per run.
       "set_cookie_bot_schedule",

@@ -23,7 +23,7 @@ pub(crate) fn backend_error_with_detail(code: &str, detail: impl std::fmt::Displ
   serde_json::json!({ "code": code, "params": { "detail": detail.to_string() } }).to_string()
 }
 
-/// A VLESS URI Donut cannot use, carrying which part is unsupported so the UI
+/// A VLESS URI PrfNoir cannot use, carrying which part is unsupported so the UI
 /// can say so instead of implying a typo.
 pub(crate) fn vless_config_error(error: &crate::xray::XrayError) -> String {
   serde_json::json!({
@@ -642,10 +642,10 @@ async fn add_mcp_to_claude_desktop_internal(app_handle: &tauri::AppHandle) -> Re
   let manifest = serde_json::json!({
     "manifest_version": "0.3",
     "name": "donut-browser",
-    "display_name": "Donut Browser",
+    "display_name": "PrfNoir",
     "version": env!("CARGO_PKG_VERSION"),
-    "description": "Control Donut Browser profiles, proxies, and automation via MCP",
-    "author": { "name": "Donut Browser" },
+    "description": "Control PrfNoir profiles, proxies, and automation via MCP",
+    "author": { "name": "PrfNoir" },
     "tools_generated": true,
     "server": {
       "type": "node",
@@ -1638,7 +1638,7 @@ fn setup_system_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::E
   // Bootstrap labels only — the frontend pushes localized labels via
   // `update_tray_menu` on mount and on language change, and the menu is only
   // opened after a minimize-to-tray (post-mount), so these are never shown.
-  let show_item = MenuItemBuilder::with_id("tray_show", "Show Donut Browser").build(app)?;
+  let show_item = MenuItemBuilder::with_id("tray_show", "Show PrfNoir").build(app)?;
   let quit_item = MenuItemBuilder::with_id("tray_quit", "Quit").build(app)?;
   let tray_menu = MenuBuilder::new(app)
     .item(&show_item)
@@ -1665,7 +1665,7 @@ fn setup_system_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::E
   TrayIconBuilder::with_id("main")
     .icon(tray_image)
     .icon_as_template(cfg!(target_os = "macos"))
-    .tooltip("Donut Browser")
+    .tooltip("PrfNoir")
     .menu(&tray_menu)
     .show_menu_on_left_click(false)
     .on_menu_event(|app_handle, event| match event.id().as_ref() {
@@ -1679,7 +1679,7 @@ fn setup_system_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::E
     .on_tray_icon_event(|tray, event| {
       // Click events are not delivered on Linux (AppIndicator/SNI only drives
       // the menu), so left-click-to-restore is macOS/Windows only — Linux users
-      // restore via the "Show Donut Browser" menu item.
+      // restore via the "Show PrfNoir" menu item.
       if let TrayIconEvent::Click {
         button: MouseButton::Left,
         button_state: MouseButtonState::Up,
@@ -1815,7 +1815,7 @@ pub fn run_with_builder(
       // Create the main window programmatically
       #[allow(unused_variables)]
       let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-        .title("Donut Browser")
+        .title("PrfNoir")
         .inner_size(880.0, 500.0)
         .min_inner_size(640.0, 400.0)
         .resizable(true)

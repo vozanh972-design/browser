@@ -504,13 +504,13 @@ pub async fn cdp_endpoint(session_id: &str) -> Result<CdpEndpoint, RemoteSession
 fn unsupported_descriptor(endpoint: &CdpEndpoint) -> Option<String> {
   if !endpoint.auth.is_empty() && endpoint.auth != AUTH_BEARER {
     return Some(format!(
-      "this version cannot attach to a remote browser using {:?} authentication; update Donut Browser",
+      "this version cannot attach to a remote browser using {:?} authentication; update PrfNoir",
       endpoint.auth
     ));
   }
   if !endpoint.protocol.is_empty() && endpoint.protocol != PROTOCOL_CDP_RELAY_1 {
     return Some(format!(
-      "this version does not speak {:?}; update Donut Browser",
+      "this version does not speak {:?}; update PrfNoir",
       endpoint.protocol
     ));
   }
@@ -536,7 +536,7 @@ fn forget_endpoint(session_id: &str) {
 pub fn access_token_for_cdp() -> Result<String, String> {
   crate::cloud_auth::CloudAuthManager::load_access_token()?
     .filter(|token| !token.is_empty())
-    .ok_or_else(|| "not signed in to Donut cloud".to_string())
+    .ok_or_else(|| "not signed in to PrfNoir cloud".to_string())
 }
 
 /// Sessions that can be driven right now, keyed by the profile they hold.
@@ -1786,7 +1786,7 @@ mod tests {
     };
     assert!(unsupported_descriptor(&ticketed)
       .expect("an unknown auth scheme must be refused")
-      .contains("update Donut Browser"));
+      .contains("update PrfNoir"));
 
     let future_protocol = CdpEndpoint {
       auth: AUTH_BEARER.to_string(),

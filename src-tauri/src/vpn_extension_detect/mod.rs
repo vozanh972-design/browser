@@ -1,10 +1,10 @@
 //! Detects VPN/proxy browser extensions present in a profile.
 //!
 //! An extension holding Chromium's `proxy` permission can override the proxy
-//! Donut passes on the command line, so the browser's real exit stops being the
-//! one Donut measured and generated the fingerprint against. That produces
+//! PrfNoir passes on the command line, so the browser's real exit stops being the
+//! one PrfNoir measured and generated the fingerprint against. That produces
 //! exactly the geo/timezone/language mismatch the fingerprint exists to avoid,
-//! except Donut cannot observe it from the outside — hence a launch-time
+//! except PrfNoir cannot observe it from the outside — hence a launch-time
 //! warning rather than a measurement.
 //!
 //! That permission is a capability, not an identity. Chromium exposes no
@@ -12,7 +12,7 @@
 //! route for its own transfers declares exactly what a VPN hijacking it
 //! declares. The two are reported as different things — see `rules::classify`.
 //!
-//! Two sources, deliberately both: Donut-managed extensions live in the app's
+//! Two sources, deliberately both: PrfNoir-managed extensions live in the app's
 //! own store and are handed to Chromium via `--load-extension` from *outside*
 //! the profile directory, while extensions the user installed from the Web
 //! Store live *inside* it. Neither set appears in the other.
@@ -41,7 +41,7 @@ pub struct ExtensionScan {
   pub scan_state: String,
 }
 
-/// Donut-managed extensions, reached through the profile's extension group.
+/// PrfNoir-managed extensions, reached through the profile's extension group.
 ///
 /// Read live from the stored archive rather than from the metadata cached on
 /// `Extension`, so replacing an extension's file cannot leave a stale verdict
@@ -77,7 +77,7 @@ fn scan_donut_extensions(profile: &BrowserProfile, out: &mut Vec<DetectedVpnExte
       crate::extension_manager::resolve_archive_i18n(&data, &ext.file_type, &manifest, &raw_name)
         .unwrap_or_else(|| {
           // An unresolvable placeholder is not a name — fall back to the one
-          // the extension carries in Donut.
+          // the extension carries in PrfNoir.
           if message_placeholder_key(&raw_name).is_some() {
             ext.name.clone()
           } else {
@@ -96,7 +96,7 @@ fn scan_donut_extensions(profile: &BrowserProfile, out: &mut Vec<DetectedVpnExte
 
     let signals = signals_from_manifest(&manifest);
     let keyword = vpn_keyword_hit(&name, description.as_deref());
-    // A Donut-managed extension is stored under Donut's own uuid, not the Web
+    // A PrfNoir-managed extension is stored under PrfNoir's own uuid, not the Web
     // Store id the known-VPN list is keyed on, so it is classified on what its
     // manifest says about itself.
     let Some(confidence) = classify(None, &signals, keyword) else {

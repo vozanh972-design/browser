@@ -153,12 +153,12 @@ jobs:
           # OS-SPECIFIC LOG PATHS (use ONLY the one matching the user's OS)
           # Easiest path for the user: Donut → Settings → Advanced → Copy logs
           # (puts the latest rotated log on the clipboard). If they prefer to
-          # attach files directly, the active log is `DonutBrowser.log`; older
-          # rotated copies sit next to it (`DonutBrowser.log.YYYY-MM-DD-...`).
+          # attach files directly, the active log is `PrfNoir.log`; older
+          # rotated copies sit next to it (`PrfNoir.log.YYYY-MM-DD-...`).
 
-          - macOS:   `~/Library/Logs/com.donutbrowser/DonutBrowser.log`
-          - Linux:   `~/.local/share/com.donutbrowser/logs/DonutBrowser.log`
-          - Windows: `%LOCALAPPDATA%\com.donutbrowser\logs\DonutBrowser.log`
+          - macOS:   `~/Library/Logs/com.prfnoir/PrfNoir.log`
+          - Linux:   `~/.local/share/com.prfnoir/logs/PrfNoir.log`
+          - Windows: `%LOCALAPPDATA%\com.prfnoir\logs\PrfNoir.log`
 
           # KNOWN ERROR SIGNATURES (truth, not guesses; match these
           # verbatim before suggesting anything else)
@@ -360,10 +360,10 @@ jobs:
           latest rotated log on the clipboard without the user hunting for
           a directory. If they want to attach files directly, point at the
           path that matches `triage.operating_system`. The active log is
-          always `DonutBrowser.log`; rotated copies sit next to it.
-            - macos:   `~/Library/Logs/com.donutbrowser/DonutBrowser.log`
-            - linux:   `~/.local/share/com.donutbrowser/logs/DonutBrowser.log`
-            - windows: `%LOCALAPPDATA%\com.donutbrowser\logs\DonutBrowser.log` (PowerShell: `Get-Content $env:LOCALAPPDATA\com.donutbrowser\logs\DonutBrowser.log -Tail 200`)
+          always `PrfNoir.log`; rotated copies sit next to it.
+            - macos:   `~/Library/Logs/com.prfnoir/PrfNoir.log`
+            - linux:   `~/.local/share/com.prfnoir/logs/PrfNoir.log`
+            - windows: `%LOCALAPPDATA%\com.prfnoir\logs\PrfNoir.log` (PowerShell: `Get-Content $env:LOCALAPPDATA\com.prfnoir\logs\PrfNoir.log -Tail 200`)
             - unknown: ask the user to share their OS first.
 
           ## Known error signatures (apply BEFORE asking generic questions)

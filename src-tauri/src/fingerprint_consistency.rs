@@ -139,7 +139,7 @@ fn probe_url(settings: &crate::browser::ProxySettings) -> Option<String> {
 /// (`geolocation::LocaleSelector`), not a hand-written country->language table.
 /// The generator picks a language at random weighted by CLDR speaker share, so
 /// any table naming one "expected" language per country flags fingerprints
-/// Donut itself produced — roughly 10% of US profiles legitimately get `es-US`
+/// PrfNoir itself produced — roughly 10% of US profiles legitimately get `es-US`
 /// and ~23% of Canadian ones get `fr-CA`. `None` means the country has no CLDR
 /// data and the check is skipped.
 fn language_matches_country(cc: &str, language: &str) -> Option<bool> {
@@ -406,7 +406,7 @@ mod tests {
     // These are not the "expected" language for the country, but the generator
     // samples the CLDR distribution and produces them routinely — CLDR puts es
     // at 9.6% in the US and fr at 30% in Canada. Flagging them warns the user
-    // about a fingerprint Donut itself created.
+    // about a fingerprint PrfNoir itself created.
     assert_eq!(language_matches_country("US", "es-US"), Some(true));
     assert_eq!(language_matches_country("CA", "fr-CA"), Some(true));
     assert_eq!(language_matches_country("CA", "en-CA"), Some(true));

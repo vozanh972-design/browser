@@ -347,8 +347,7 @@ export default function Home() {
     "api" | "mcp"
   >("api");
   const [cookieBotDialogOpen, setCookieBotDialogOpen] = useState(false);
-  const [cookieBotInitialTab, setCookieBotInitialTab] =
-    useState<CookieBotTab>("overview");
+  const cookieBotInitialTab: CookieBotTab = "overview";
   const [createProfileDialogOpen, setCreateProfileDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [integrationsDialogOpen, setIntegrationsDialogOpen] = useState(false);
@@ -562,19 +561,6 @@ export default function Home() {
         case "goGroups":
           handleRailNavigate("groups");
           break;
-        case "goCookieBot": {
-          // Mod+B: navigate first time; flip overview↔activity while already
-          // there, matching how Mod+I flips the integrations tabs.
-          if (currentPage === "cookieBot") {
-            setCookieBotInitialTab((cur) =>
-              cur === "overview" ? "activity" : "overview",
-            );
-          } else {
-            setCookieBotInitialTab("overview");
-            handleRailNavigate("cookieBot");
-          }
-          break;
-        }
         case "goIntegrations": {
           // Mod+I: flip api↔mcp tab when already on integrations.
           if (currentPage === "integrations") {

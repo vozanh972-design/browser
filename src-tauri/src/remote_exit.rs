@@ -18,7 +18,7 @@
 //! check.
 //!
 //! Local proxies are not an exotic case. A local MITM proxy, an SSH tunnel, a
-//! locally-run SOCKS client and Donut's own VLESS support all present to the
+//! locally-run SOCKS client and PrfNoir's own VLESS support all present to the
 //! browser as `127.0.0.1:<port>`.
 //!
 //! This module is the single answer, shared by every caller, and it FAILS
@@ -214,7 +214,7 @@ fn normalize_host(raw: &str) -> String {
 /// The host a VLESS URI actually dials.
 ///
 /// Load-bearing because of an asymmetry that is easy to get backwards: a VLESS
-/// proxy presents to the browser as `127.0.0.1:<port>` — Donut runs a local xray
+/// proxy presents to the browser as `127.0.0.1:<port>` — PrfNoir runs a local xray
 /// worker and points the browser at it — but the address that decides whether
 /// anyone else could use this config is the SERVER inside the URI. The local
 /// port is an implementation detail of this machine; the URI is the exit.
@@ -409,7 +409,7 @@ mod tests {
 
   #[test]
   fn a_vless_proxy_is_judged_by_its_server_not_its_local_port() {
-    // THE asymmetry. Donut points the browser at a local xray worker, so the
+    // THE asymmetry. PrfNoir points the browser at a local xray worker, so the
     // browser-facing address of every VLESS proxy is 127.0.0.1 — but the stored
     // config names a real server, and that is what a fleet host would dial.
     // Classifying VLESS off `settings.host` would refuse every VLESS profile.

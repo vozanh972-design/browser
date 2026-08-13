@@ -3,8 +3,8 @@
 //! Two findings can stop a launch being what the user expects:
 //!
 //! * a **VPN/proxy extension** in the profile, which can override the proxy
-//!   Donut configured and silently move the browser's exit away from the one
-//!   the fingerprint was generated for — a warning, since Donut cannot tell
+//!   PrfNoir configured and silently move the browser's exit away from the one
+//!   the fingerprint was generated for — a warning, since PrfNoir cannot tell
 //!   from outside whether it is actually routing anything;
 //! * a measured **exit/fingerprint mismatch**, which is a hard block: the
 //!   browser does not start until the user explicitly proceeds.

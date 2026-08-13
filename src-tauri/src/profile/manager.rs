@@ -1064,7 +1064,7 @@ impl ProfileManager {
       updated_at: Some(crate::proxy_manager::now_secs()),
     };
 
-    // Donut: a clone must NOT be linkable to its source. The source
+    // PrfNoir: a clone must NOT be linkable to its source. The source
     // wayfern_config embeds the persisted fingerprint JSON (including the
     // canvas_noise_seed), so copying it verbatim makes the clone emit
     // BYTE-IDENTICAL canvas/WebGL/audio readback hashes and identical device
@@ -1616,8 +1616,8 @@ mod tests {
     let profiles_dir = manager.get_profiles_dir();
 
     assert!(
-      profiles_dir.to_string_lossy().contains("DonutBrowser"),
-      "Profiles dir should contain DonutBrowser"
+      profiles_dir.to_string_lossy().contains("PrfNoir"),
+      "Profiles dir should contain PrfNoir"
     );
     assert!(
       profiles_dir.to_string_lossy().contains("profiles"),
@@ -1633,8 +1633,8 @@ mod tests {
     let path_str = binaries_dir.to_string_lossy();
 
     assert!(
-      path_str.contains("DonutBrowser"),
-      "Binaries dir should contain DonutBrowser"
+      path_str.contains("PrfNoir"),
+      "Binaries dir should contain PrfNoir"
     );
     assert!(
       path_str.contains("binaries"),
