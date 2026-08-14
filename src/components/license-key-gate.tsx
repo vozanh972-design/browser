@@ -82,7 +82,7 @@ export function LicenseKeyGate({ onContinue }: LicenseKeyGateProps) {
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6">
         <div className="flex w-full max-w-[560px] flex-col items-center">
           <div
-            className="mb-6 flex size-[88px] items-center justify-center rounded-full border"
+            className="mb-4 flex size-16 items-center justify-center rounded-full border lg:mb-6 lg:size-[88px]"
             style={{
               borderColor: "rgba(226, 111, 81, 0.55)",
               backgroundColor: "#141212",
@@ -90,20 +90,20 @@ export function LicenseKeyGate({ onContinue }: LicenseKeyGateProps) {
                 "0 0 0 1px rgba(226,111,81,0.08), 0 0 40px 4px rgba(226,111,81,0.25)",
             }}
           >
-            <LuKeyRound className="size-9 text-white" />
+            <LuKeyRound className="size-7 text-white lg:size-9" />
           </div>
 
-          <h1 className="text-center text-[28px] font-bold tracking-tight text-white">
+          <h1 className="text-center text-xl font-bold tracking-tight text-white lg:text-[28px]">
             Enter Your Key
           </h1>
-          <p className="mt-2.5 text-center text-sm text-[#9a9a9a]">
+          <p className="mt-2 text-center text-xs text-[#9a9a9a] lg:mt-2.5 lg:text-sm">
             Enter your license key to continue and access your profiles.
           </p>
 
-          <div className="mt-7 w-full">
+          <div className="mt-5 w-full lg:mt-7">
             <div
               className={cn(
-                "flex w-full items-center gap-3 rounded-xl border bg-[#0d0d0d] px-4 py-3.5 transition-colors",
+                "flex w-full items-center gap-3 rounded-xl border bg-[#0d0d0d] px-4 py-3 transition-colors lg:py-3.5",
                 error ? "border-destructive" : "border-white/10",
               )}
             >
@@ -130,7 +130,7 @@ export function LicenseKeyGate({ onContinue }: LicenseKeyGateProps) {
           <button
             type="button"
             onClick={handleContinue}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-[15px] font-semibold text-white shadow-lg transition-opacity hover:opacity-90 active:opacity-80"
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white shadow-lg transition-opacity hover:opacity-90 active:opacity-80 lg:mt-4 lg:py-3.5 lg:text-[15px]"
             style={{
               background: "linear-gradient(90deg, #d97757 0%, #b3554a 100%)",
             }}
@@ -139,7 +139,7 @@ export function LicenseKeyGate({ onContinue }: LicenseKeyGateProps) {
             <LuArrowRight className="size-4" />
           </button>
 
-          <div className="mt-7 flex w-full items-center gap-3">
+          <div className="mt-5 flex w-full items-center gap-3 lg:mt-7">
             <div className="h-px flex-1 bg-white/10" />
             <span className="shrink-0 text-xs text-[#7a7a7a]">
               Don&apos;t have a key?
@@ -150,7 +150,7 @@ export function LicenseKeyGate({ onContinue }: LicenseKeyGateProps) {
           <button
             type="button"
             onClick={() => void openUrl(GET_KEY_URL)}
-            className="mt-5 flex items-center gap-2 rounded-lg border border-white/10 bg-transparent px-4 py-2 text-sm text-white transition-colors hover:bg-white/5"
+            className="mt-4 flex items-center gap-2 rounded-lg border border-white/10 bg-transparent px-4 py-2 text-sm text-white transition-colors hover:bg-white/5 lg:mt-5"
           >
             Get a Key
             <LuExternalLink className="size-3.5 text-[#9a9a9a]" />
@@ -158,7 +158,7 @@ export function LicenseKeyGate({ onContinue }: LicenseKeyGateProps) {
         </div>
       </div>
 
-      <div className="border-t border-white/10 px-6 py-6">
+      <div className="hidden border-t border-white/10 px-6 py-6 lg:block">
         <div className="mx-auto flex w-full max-w-3xl flex-wrap items-center justify-center gap-x-14 gap-y-4">
           {FOOTER_ITEMS.map(({ Icon, title, subtitle }) => (
             <div key={title} className="flex items-center gap-2.5">
