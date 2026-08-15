@@ -3,6 +3,7 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { LuArrowRight, LuExternalLink, LuKeyRound } from "react-icons/lu";
+import { useTitleBarDrag } from "@/hooks/use-titlebar-drag";
 import { cn } from "@/lib/utils";
 
 const GET_KEY_URL = "https://lunex.io.vn";
@@ -32,6 +33,7 @@ export function LicenseKeyGate({ onContinue }: LicenseKeyGateProps) {
   const [key, setKey] = useState("");
   const [error, setError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragHandlers = useTitleBarDrag();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -53,7 +55,10 @@ export function LicenseKeyGate({ onContinue }: LicenseKeyGateProps) {
   }, [key, onContinue]);
 
   return (
-    <div className="flex h-dvh flex-col items-center justify-center bg-[#050505] px-6 text-white">
+    <div
+      className="flex h-dvh flex-col items-center justify-center bg-[#050505] px-6 text-white select-none"
+      {...dragHandlers}
+    >
       <div className="flex w-full max-w-[560px] flex-col items-center">
         <div
           className="mb-4 flex size-16 items-center justify-center rounded-full border lg:mb-6 lg:size-[88px]"
