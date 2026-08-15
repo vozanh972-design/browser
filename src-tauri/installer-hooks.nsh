@@ -1,7 +1,7 @@
 !macro NSIS_HOOK_PREINSTALL
   IfFileExists "$INSTDIR\donut-proxy.exe" 0 donut_proxy_preinstall_done
 
-  DetailPrint "Stopping Donut proxy workers before replacing application files"
+  DetailPrint "Stopping PrfNoir proxy workers before replacing application files"
   nsExec::ExecToStack '"$SYSDIR\taskkill.exe" /F /T /IM "donut-proxy.exe"'
   Pop $0
   Pop $1
