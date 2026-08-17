@@ -8,6 +8,7 @@ import {
   LuBadgeInfo,
   LuCircleStop,
   LuCloud,
+  LuCookie,
   LuInfo,
   LuKeyboard,
   LuPlay,
@@ -57,6 +58,7 @@ interface CommandPaletteProps {
   onShowProfileInfo: (profile: BrowserProfile) => void;
   onCreateProfile: () => void;
   onOpenAbout: () => void;
+  cookieBotUnlocked?: boolean;
 }
 
 const ICONS: Record<ShortcutId, React.ComponentType<{ className?: string }>> = {
@@ -67,6 +69,7 @@ const ICONS: Record<ShortcutId, React.ComponentType<{ className?: string }>> = {
   goProxies: FiWifi,
   goExtensions: LuPuzzle,
   goGroups: LuUsers,
+  goCookieBot: LuCookie,
   goIntegrations: LuPlug,
   goAccount: LuCloud,
   goSettings: GoGear,
@@ -128,6 +131,7 @@ export function CommandPalette({
   onShowProfileInfo,
   onCreateProfile,
   onOpenAbout,
+  cookieBotUnlocked = false,
 }: CommandPaletteProps) {
   const { t } = useTranslation();
 
@@ -140,7 +144,9 @@ export function CommandPalette({
   };
 
   const byGroup = (group: ShortcutDef["group"]) =>
-    SHORTCUTS.filter((s) => s.group === group);
+    SHORTCUTS.filter((s) => s.group === group).filter(
+      (s) => s.id !== "goCookieBot" || cookieBotUnlocked,
+    );
 
   // Limit to 9 — only the first 9 group targets have a Mod+digit binding.
   // We still display more in the palette (without a shortcut hint) so the

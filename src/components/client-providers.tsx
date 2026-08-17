@@ -2,6 +2,7 @@
 
 import { MotionConfig } from "motion/react";
 import { useEffect } from "react";
+import { CloseConfirmDialog } from "@/components/close-confirm-dialog";
 import { I18nProvider } from "@/components/i18n-provider";
 import { OnboardingProvider } from "@/components/onboarding-provider";
 import { CustomThemeProvider } from "@/components/theme-provider";
@@ -24,6 +25,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
             covers CSS transitions — this covers the JS-driven ones. */}
         <MotionConfig reducedMotion="user">
           <WindowDragArea />
+          <CloseConfirmDialog />
           <TooltipProvider>
             <OnboardingProvider>{children}</OnboardingProvider>
           </TooltipProvider>

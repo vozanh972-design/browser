@@ -1,3 +1,4 @@
+import { isLicenseValidLocally } from "@/lib/license";
 import type { CloudUser, Entitlements } from "@/types";
 
 const DEFAULT_REQUESTS_PER_HOUR = 100;
@@ -132,9 +133,12 @@ export function getEntitlements(
  * goes through here so a plan change is one edit, and so the Pro badge and the
  * control it guards can never disagree.
  */
-export function canUseCookieBot(_user: CloudUser | null | undefined): boolean {
-  // Cookie Bot integration is disabled for this build.
-  return false;
+export function canUseCookieBot(user: CloudUser | null | undefined): boolean {
+  // Cloud-plan entitlement OR a validated Lunex license key unlocks Cookie Bot.
+  const entitlements = getEntitlements(user);
+  return (
+    (entitlements.active && entitlements.cookieBot) || isLicenseValidLocally()
+  );
 }
 
 /**

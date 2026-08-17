@@ -8,6 +8,7 @@ import { FiWifi } from "react-icons/fi";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
 import {
   LuCloud,
+  LuCookie,
   LuInfo,
   LuKeyboard,
   LuPlug,
@@ -181,6 +182,8 @@ interface RailNavProps {
    * see from where you are standing may as well not be observable at all.
    */
   cookieBotRunning?: boolean;
+  /** Cookie Bot is a Pro feature — the nav item only appears once unlocked. */
+  cookieBotUnlocked?: boolean;
 }
 
 /** Shared-element indicator that slides between the active rail items. */
@@ -210,6 +213,12 @@ const TOP_ITEMS: RailItem[] = [
   { page: "account", Icon: LuCloud, labelKey: "rail.account" },
 ];
 
+const COOKIE_BOT_ITEM: RailItem = {
+  page: "cookieBot",
+  Icon: LuCookie,
+  labelKey: "rail.cookieBot",
+};
+
 interface MoreMenuItem {
   page: AppPage;
   Icon: React.ComponentType<{ className?: string }>;
@@ -237,9 +246,13 @@ export function RailNav({
   onNavigate,
   onOpenAbout,
   cookieBotRunning = false,
+  cookieBotUnlocked = false,
 }: RailNavProps) {
   const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
+  const visibleTopItems = cookieBotUnlocked
+    ? [...TOP_ITEMS.slice(0, 4), COOKIE_BOT_ITEM, ...TOP_ITEMS.slice(4)]
+    : TOP_ITEMS;
   const {
     logoRef,
     isPressed,
@@ -312,7 +325,7 @@ export function RailNav({
       <div className="my-1 h-px w-5 shrink-0 bg-border" />
 
       <div className="flex min-h-0 w-full scrollbar-none flex-col items-center gap-1 overflow-y-auto [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        {TOP_ITEMS.map(({ page, Icon, labelKey }) => {
+        {visibleTopItems.map(({ page, Icon, labelKey }) => {
           const active = currentPage === page;
           return (
             <Tooltip key={page} delayDuration={300}>

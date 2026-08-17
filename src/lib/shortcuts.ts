@@ -36,6 +36,7 @@ export type ShortcutId =
   | "goProxies"
   | "goExtensions"
   | "goGroups"
+  | "goCookieBot"
   | "goIntegrations"
   | "goAccount"
   | "goSettings";
@@ -90,6 +91,14 @@ export const SHORTCUTS: ShortcutDef[] = [
     labelKey: "shortcuts.goGroups",
     group: "navigation",
     key: "g",
+    mod: true,
+  },
+  {
+    // Mod+B: "bot". Only takes effect once Cookie Bot is unlocked.
+    id: "goCookieBot",
+    labelKey: "shortcuts.goCookieBot",
+    group: "navigation",
+    key: "b",
     mod: true,
   },
   {

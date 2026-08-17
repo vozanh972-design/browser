@@ -10,7 +10,6 @@ import { useTranslation } from "react-i18next";
 import { AboutDialog } from "@/components/about-dialog";
 import { AccountPage } from "@/components/account-page";
 import { CloneProfileDialog } from "@/components/clone-profile-dialog";
-import { CloseConfirmDialog } from "@/components/close-confirm-dialog";
 import { CommandPalette } from "@/components/command-palette";
 import { CommercialTrialModal } from "@/components/commercial-trial-modal";
 import { CookieBotPage, type CookieBotTab } from "@/components/cookie-bot-page";
@@ -26,10 +25,7 @@ import { GroupManagementDialog } from "@/components/group-management-dialog";
 import HomeHeader from "@/components/home-header";
 import { ImportProfileDialog } from "@/components/import-profile-dialog";
 import { IntegrationsDialog } from "@/components/integrations-dialog";
-import {
-  getStoredLicenseKey,
-  LicenseKeyGate,
-} from "@/components/license-key-gate";
+import { LicenseKeyGate } from "@/components/license-key-gate";
 import { ONBOARDING_TOUR } from "@/components/onboarding-provider";
 import { PermissionDialog } from "@/components/permission-dialog";
 import {
@@ -73,6 +69,7 @@ import { useVpnEvents } from "@/hooks/use-vpn-events";
 import { useWayfernTerms } from "@/hooks/use-wayfern-terms";
 import { parseBackendError, translateBackendError } from "@/lib/backend-errors";
 import { canUseCookieBot, getEntitlements } from "@/lib/entitlements";
+import { isLicenseValidLocally } from "@/lib/license";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import {
   ONBOARDING_TOUR_CLOSED_EVENT,
@@ -143,8 +140,8 @@ export default function Home() {
   // key has been entered (or was previously stored) the normal interface
   // below renders exactly as before. Purely a front-door UI step — it does
   // not affect any existing app functionality.
-  const [licenseKeyVerified, setLicenseKeyVerified] = useState(
-    () => getStoredLicenseKey() !== null,
+  const [licenseKeyVerified, setLicenseKeyVerified] = useState(() =>
+    isLicenseValidLocally(),
   );
 
   // Mount global version update listener/toasts
@@ -347,7 +344,8 @@ export default function Home() {
     "api" | "mcp"
   >("api");
   const [cookieBotDialogOpen, setCookieBotDialogOpen] = useState(false);
-  const cookieBotInitialTab: CookieBotTab = "overview";
+  const [cookieBotInitialTab, setCookieBotInitialTab] =
+    useState<CookieBotTab>("overview");
   const [createProfileDialogOpen, setCreateProfileDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [integrationsDialogOpen, setIntegrationsDialogOpen] = useState(false);
@@ -561,6 +559,20 @@ export default function Home() {
         case "goGroups":
           handleRailNavigate("groups");
           break;
+        case "goCookieBot": {
+          if (!canUseCookieBot(cloudUser)) break;
+          // Mod+B: navigate first time; flip overview↔activity while already
+          // there, matching how Mod+I flips the integrations tabs.
+          if (currentPage === "cookieBot") {
+            setCookieBotInitialTab((cur) =>
+              cur === "overview" ? "activity" : "overview",
+            );
+          } else {
+            setCookieBotInitialTab("overview");
+            handleRailNavigate("cookieBot");
+          }
+          break;
+        }
         case "goIntegrations": {
           // Mod+I: flip api↔mcp tab when already on integrations.
           if (currentPage === "integrations") {
@@ -578,7 +590,7 @@ export default function Home() {
           break;
       }
     },
-    [handleRailNavigate, currentPage, proxyManagementInitialTab],
+    [handleRailNavigate, currentPage, proxyManagementInitialTab, cloudUser],
   );
 
   // Ordered list the digit shortcuts and palette consume. "__all__" is index 1
@@ -1978,7 +1990,6 @@ export default function Home() {
 
   return (
     <div className="flex h-dvh flex-col bg-background font-(family-name:--font-geist-sans)">
-      <CloseConfirmDialog />
       <HomeHeader
         onCreateProfileDialogOpen={setCreateProfileDialogOpen}
         searchQuery={searchQuery}
@@ -1997,6 +2008,7 @@ export default function Home() {
             setAboutDialogOpen(true);
           }}
           cookieBotRunning={Object.keys(cookieBotLiveSessions).length > 0}
+          cookieBotUnlocked={canUseCookieBot(cloudUser)}
         />
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {currentPage === "profiles" && (
@@ -2219,6 +2231,7 @@ export default function Home() {
         onOpenAbout={() => {
           setAboutDialogOpen(true);
         }}
+        cookieBotUnlocked={canUseCookieBot(cloudUser)}
       />
 
       <AboutDialog
