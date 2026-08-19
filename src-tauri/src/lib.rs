@@ -1580,15 +1580,6 @@ fn confirm_quit(app_handle: tauri::AppHandle) {
   app_handle.exit(0);
 }
 
-/// Hide the main window so the app keeps running behind its tray icon.
-#[tauri::command]
-fn hide_to_tray(app_handle: tauri::AppHandle) -> Result<(), String> {
-  if let Some(window) = app_handle.get_webview_window("main") {
-    window.hide().map_err(|e| e.to_string())?;
-  }
-  Ok(())
-}
-
 #[cfg(not(feature = "e2e"))]
 fn show_main_window(app_handle: &tauri::AppHandle) {
   if let Some(window) = app_handle.get_webview_window("main") {
@@ -2648,7 +2639,6 @@ pub fn run_with_builder(
     })
     .invoke_handler(tauri::generate_handler![
       confirm_quit,
-      hide_to_tray,
       update_tray_menu,
       get_supported_browsers,
       is_browser_supported_on_platform,
