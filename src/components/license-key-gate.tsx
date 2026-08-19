@@ -71,11 +71,13 @@ export function LicenseKeyGate({ onContinue }: LicenseKeyGateProps) {
           onContinue(trimmed);
           return;
         }
-        setErrorMessage(
-          result.msg?.trim() ||
-            FALLBACK_MESSAGES[result.status] ||
-            "Something went wrong. Please try again.",
-        );
+        const friendlyMessage =
+          result.status === "error"
+            ? FALLBACK_MESSAGES.error
+            : result.msg?.trim() ||
+              FALLBACK_MESSAGES[result.status] ||
+              "Something went wrong. Please try again.";
+        setErrorMessage(friendlyMessage);
         setPhase("form");
       }, wait);
     });

@@ -80,8 +80,30 @@ const DEFAULT_PAID: Capabilities = {
  * desktop attaches to CloudUser; only falls back to deriving from the plan
  * fields when it's missing (older cached state). The fallback mirrors the
  * backend matrix in `apps/backend/src/plans/entitlements.ts`.
+ *
+ * A validated local Lunex license key (see `@/lib/license`) layers on top of
+ * whatever the cloud account resolves to, unlocking the capabilities that run
+ * entirely on this machine (fingerprint editing, automation, Cookie Bot). It
+ * does not grant the cloud-hosted-only features — team seats, cloud backup,
+ * hands-on remote sessions — since those need an actual paid cloud account
+ * tied to real server infrastructure, not just a local flag.
  */
 export function getEntitlements(
+  user: CloudUser | null | undefined,
+): Entitlements {
+  const base = getCloudEntitlements(user);
+  if (!isLicenseValidLocally()) return base;
+
+  return {
+    ...base,
+    active: true,
+    browserAutomation: true,
+    crossOsFingerprints: true,
+    cookieBot: true,
+  };
+}
+
+function getCloudEntitlements(
   user: CloudUser | null | undefined,
 ): Entitlements {
   if (user?.entitlements) {
@@ -134,11 +156,7 @@ export function getEntitlements(
  * control it guards can never disagree.
  */
 export function canUseCookieBot(user: CloudUser | null | undefined): boolean {
-  // Cloud-plan entitlement OR a validated Lunex license key unlocks Cookie Bot.
-  const entitlements = getEntitlements(user);
-  return (
-    (entitlements.active && entitlements.cookieBot) || isLicenseValidLocally()
-  );
+  return getEntitlements(user).cookieBot;
 }
 
 /**

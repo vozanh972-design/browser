@@ -2042,9 +2042,9 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "关闭 PrfNoir？",
-    "description": "您想将应用最小化到系统托盘还是退出？",
-    "minimize": "最小化到托盘",
+    "title": "退出 PrfNoir？",
+    "description": "确定要关闭应用吗？",
+    "cancel": "取消",
     "quit": "退出"
   },
   "tray": {

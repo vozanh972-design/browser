@@ -2043,8 +2043,8 @@
   },
   "closeConfirm": {
     "title": "PrfNoir kapatılsın mı?",
-    "description": "Uygulamayı sistem tepsisine göndermek mi yoksa çıkmak mı istersiniz?",
-    "minimize": "Tepsiye Küçült",
+    "description": "Uygulamayı kapatmak istediğinizden emin misiniz?",
+    "cancel": "İptal",
     "quit": "Çık"
   },
   "tray": {

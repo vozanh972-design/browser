@@ -2042,9 +2042,9 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "Close PrfNoir?",
-    "description": "Would you like to send the app to the system tray or quit?",
-    "minimize": "Minimize to Tray",
+    "title": "Quit PrfNoir?",
+    "description": "Are you sure you want to close the app?",
+    "cancel": "Cancel",
     "quit": "Quit"
   },
   "tray": {

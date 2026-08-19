@@ -2056,9 +2056,9 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "Закрыть PrfNoir?",
-    "description": "Свернуть приложение в системный трей или выйти?",
-    "minimize": "Свернуть в трей",
+    "title": "Выйти из PrfNoir?",
+    "description": "Вы уверены, что хотите закрыть приложение?",
+    "cancel": "Отмена",
     "quit": "Выйти"
   },
   "tray": {

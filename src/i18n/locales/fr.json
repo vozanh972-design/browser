@@ -2049,9 +2049,9 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "Fermer PrfNoir ?",
-    "description": "Voulez-vous envoyer l'application dans la zone de notification ou quitter ?",
-    "minimize": "Réduire dans la barre d'état",
+    "title": "Quitter PrfNoir ?",
+    "description": "Voulez-vous vraiment fermer l'application ?",
+    "cancel": "Annuler",
     "quit": "Quitter"
   },
   "tray": {

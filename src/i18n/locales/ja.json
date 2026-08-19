@@ -2042,9 +2042,9 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "PrfNoir を閉じますか？",
-    "description": "アプリをシステムトレイに格納しますか、それとも終了しますか？",
-    "minimize": "トレイに格納",
+    "title": "PrfNoir を終了しますか？",
+    "description": "本当にアプリを閉じてもよろしいですか？",
+    "cancel": "キャンセル",
     "quit": "終了"
   },
   "tray": {

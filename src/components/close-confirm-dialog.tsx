@@ -47,13 +47,8 @@ export function CloseConfirmDialog() {
     };
   }, [t, i18n]);
 
-  const handleMinimize = async () => {
+  const handleCancel = () => {
     setIsOpen(false);
-    try {
-      await invoke("hide_to_tray");
-    } catch (error) {
-      console.error("Failed to hide to tray:", error);
-    }
   };
 
   const handleQuit = async () => {
@@ -73,13 +68,8 @@ export function CloseConfirmDialog() {
           <DialogDescription>{t("closeConfirm.description")}</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <RippleButton
-            variant="outline"
-            onClick={() => {
-              void handleMinimize();
-            }}
-          >
-            {t("closeConfirm.minimize")}
+          <RippleButton variant="outline" onClick={handleCancel}>
+            {t("closeConfirm.cancel")}
           </RippleButton>
           <RippleButton
             variant="destructive"

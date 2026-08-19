@@ -2049,9 +2049,9 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "Fechar PrfNoir?",
-    "description": "Você deseja enviar o aplicativo para a bandeja do sistema ou sair?",
-    "minimize": "Minimizar para a bandeja",
+    "title": "Sair do PrfNoir?",
+    "description": "Tem certeza de que deseja fechar o aplicativo?",
+    "cancel": "Cancelar",
     "quit": "Sair"
   },
   "tray": {

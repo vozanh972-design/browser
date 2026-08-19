@@ -2042,10 +2042,10 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "Đóng PrfNoir?",
-    "description": "Bạn muốn thu nhỏ ứng dụng vào khay hệ thống hay thoát?",
-    "minimize": "Thu nhỏ vào khay",
-    "quit": "Thoát"
+    "title": "Thoát PrfNoir?",
+    "description": "Bạn có chắc chắn muốn đóng ứng dụng không?",
+    "cancel": "Không",
+    "quit": "Có, thoát"
   },
   "tray": {
     "show": "Hiển thị PrfNoir",
