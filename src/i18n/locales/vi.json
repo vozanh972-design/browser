@@ -207,6 +207,17 @@
       "clearTrafficSuccess": "Đã xóa lịch sử lưu lượng",
       "vpnExtensionWarning": "Cảnh báo tiện ích VPN",
       "vpnExtensionWarningDescription": "Cảnh báo trước khi khởi chạy khi hồ sơ có tiện ích có thể định tuyến lại lưu lượng của trình duyệt."
+    },
+    "storageRoot": {
+      "title": "Thư mục lưu trữ",
+      "description": "Chọn ổ/thư mục để lưu toàn bộ dữ liệu app (hồ sơ, trình duyệt, log...). Để trống để dùng thư mục mặc định (AppData). Thay đổi có hiệu lực sau khi khởi động lại.",
+      "currentPath": "Đường dẫn hiện tại",
+      "default": "Mặc định (AppData)",
+      "browse": "Chọn thư mục",
+      "clear": "Đặt về mặc định",
+      "restartRequired": "Cần khởi động lại app để áp dụng thay đổi.",
+      "saved": "Đã lưu. Khởi động lại app để áp dụng.",
+      "cleared": "Đã đặt về mặc định. Khởi động lại app để áp dụng."
     }
   },
   "header": {

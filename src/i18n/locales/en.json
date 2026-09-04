@@ -207,6 +207,17 @@
       "clearTrafficSuccess": "Traffic history cleared",
       "vpnExtensionWarning": "VPN extension warning",
       "vpnExtensionWarningDescription": "Warn before launching when a profile contains an extension that can reroute the browser's traffic."
+    },
+    "storageRoot": {
+      "title": "Storage Location",
+      "description": "Choose the drive/folder to store all app data (profiles, browsers, logs...). Leave empty to use the default location (AppData). Changes take effect after restarting the app.",
+      "currentPath": "Current path",
+      "default": "Default (AppData)",
+      "browse": "Choose folder",
+      "clear": "Reset to default",
+      "restartRequired": "Restart the app to apply changes.",
+      "saved": "Saved. Restart the app to apply.",
+      "cleared": "Reset to default. Restart the app to apply."
     }
   },
   "header": {

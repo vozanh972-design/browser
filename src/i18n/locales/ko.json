@@ -207,6 +207,17 @@
       "clearTrafficSuccess": "트래픽 기록이 지워졌습니다",
       "vpnExtensionWarning": "VPN 확장 프로그램 경고",
       "vpnExtensionWarningDescription": "브라우저 트래픽의 경로를 바꿀 수 있는 확장 프로그램이 프로필에 있으면 실행 전에 경고합니다."
+    },
+    "storageRoot": {
+      "title": "Storage Location",
+      "description": "Choose the drive/folder to store all app data (profiles, browsers, logs...). Leave empty to use the default location (AppData). Changes take effect after restarting the app.",
+      "currentPath": "Current path",
+      "default": "Default (AppData)",
+      "browse": "Choose folder",
+      "clear": "Reset to default",
+      "restartRequired": "Restart the app to apply changes.",
+      "saved": "Saved. Restart the app to apply.",
+      "cleared": "Reset to default. Restart the app to apply."
     }
   },
   "header": {

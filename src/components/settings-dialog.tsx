@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { writeText as writeClipboardText } from "@tauri-apps/plugin-clipboard-manager";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import Color from "color";
-import { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { BsCamera, BsMic } from "react-icons/bs";
 import { DnsBlocklistDialog } from "@/components/dns-blocklist-dialog";
@@ -1501,6 +1501,9 @@ export function SettingsDialog({
                 </div>
               </div>
 
+              {/* Storage Location */}
+              <StorageRootSetting />
+
               {/* System Info */}
               {systemInfo && (
                 <div className="border-t pt-2">
@@ -1650,5 +1653,99 @@ export function SettingsDialog({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/**
+ * Standalone sub-component so it can hold its own state without polluting
+ * the giant SettingsDialog state. Reads the current storage root from Rust
+ * on mount and lets the user pick a new one via the OS folder picker.
+ */
+function StorageRootSetting() {
+  const { t } = useTranslation();
+  const [currentPath, setCurrentPath] = React.useState<string>("");
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    invoke<string>("get_storage_root")
+      .then((p) => setCurrentPath(p))
+      .catch(() => setCurrentPath(""));
+  }, []);
+
+  const handleBrowse = async () => {
+    try {
+      const { open } = await import("@tauri-apps/plugin-dialog");
+      const selected = await open({ directory: true, multiple: false });
+      if (!selected || typeof selected !== "string") return;
+      setLoading(true);
+      await invoke("set_storage_root", { path: selected });
+      setCurrentPath(selected);
+      showSuccessToast(t("settings.storageRoot.saved"));
+    } catch (err) {
+      showErrorToast(String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClear = async () => {
+    try {
+      setLoading(true);
+      await invoke("set_storage_root", { path: "" });
+      setCurrentPath("");
+      showSuccessToast(t("settings.storageRoot.cleared"));
+    } catch (err) {
+      showErrorToast(String(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3 border-t pt-4">
+      <Label className="text-base font-medium">
+        {t("settings.storageRoot.title")}
+      </Label>
+      <p className="text-xs text-muted-foreground">
+        {t("settings.storageRoot.description")}
+      </p>
+
+      <div className="flex items-center gap-2">
+        <Input
+          readOnly
+          value={currentPath}
+          placeholder={t("settings.storageRoot.default")}
+          className="flex-1 font-mono text-xs"
+        />
+        <RippleButton
+          variant="outline"
+          size="sm"
+          disabled={loading}
+          onClick={() => {
+            void handleBrowse();
+          }}
+        >
+          {t("settings.storageRoot.browse")}
+        </RippleButton>
+        {currentPath && (
+          <RippleButton
+            variant="ghost"
+            size="sm"
+            disabled={loading}
+            onClick={() => {
+              void handleClear();
+            }}
+          >
+            {t("settings.storageRoot.clear")}
+          </RippleButton>
+        )}
+      </div>
+
+      {currentPath && (
+        <p className="text-xs text-amber-500">
+          ⚠ {t("settings.storageRoot.restartRequired")}
+        </p>
+      )}
+    </div>
   );
 }

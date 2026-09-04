@@ -1580,6 +1580,39 @@ fn confirm_quit(app_handle: tauri::AppHandle) {
   app_handle.exit(0);
 }
 
+/// Path to the file that persists the user-chosen storage root across restarts.
+fn storage_root_config_file() -> Option<std::path::PathBuf> {
+  std::env::current_exe()
+    .ok()
+    .and_then(|p| p.parent().map(|d| d.join("storage_root.txt")))
+}
+
+/// Returns the currently configured storage root, or an empty string if none is set.
+#[tauri::command]
+fn get_storage_root() -> String {
+  storage_root_config_file()
+    .and_then(|p| std::fs::read_to_string(p).ok())
+    .map(|s| s.trim().to_string())
+    .unwrap_or_default()
+}
+
+/// Persists the chosen storage root path (or clears it if empty).
+/// The new path takes effect after the next app restart.
+#[tauri::command]
+fn set_storage_root(path: String) -> Result<(), String> {
+  let config = storage_root_config_file().ok_or("Could not determine config path")?;
+  let trimmed = path.trim();
+  if trimmed.is_empty() {
+    // Clear: remove the file so the app falls back to the default AppData location.
+    if config.exists() {
+      std::fs::remove_file(&config).map_err(|e| e.to_string())?;
+    }
+  } else {
+    std::fs::write(&config, trimmed).map_err(|e| e.to_string())?;
+  }
+  Ok(())
+}
+
 #[cfg(not(feature = "e2e"))]
 fn show_main_window(app_handle: &tauri::AppHandle) {
   if let Some(window) = app_handle.get_webview_window("main") {
@@ -2639,6 +2672,8 @@ pub fn run_with_builder(
     })
     .invoke_handler(tauri::generate_handler![
       confirm_quit,
+      get_storage_root,
+      set_storage_root,
       update_tray_menu,
       get_supported_browsers,
       is_browser_supported_on_platform,
