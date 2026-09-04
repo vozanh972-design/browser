@@ -144,6 +144,17 @@ export default function Home() {
     isLicenseValidLocally(),
   );
 
+  // On boot: if a valid license is already stored locally, tell the Rust
+  // backend immediately so Pro features (cross-OS fingerprints, Cookie Bot,
+  // automation) are unlocked before the user tries to use them.
+  useEffect(() => {
+    if (isLicenseValidLocally()) {
+      void invoke("set_license_valid", { valid: true });
+    }
+    // Run once on mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Mount global version update listener/toasts
   useVersionUpdater();
 

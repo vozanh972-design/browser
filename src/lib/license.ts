@@ -4,6 +4,19 @@ const LICENSE_VALID_STORAGE_KEY = "donut-license-valid";
 
 const CHECK_KEY_URL = "https://lunex.io.vn/api/check_key.php";
 
+// Sync the local license state to the Rust backend (which gates Pro features
+// in the native layer — fingerprint OS, Cookie Bot, automation). Called on
+// app boot (if a valid key is already stored) and immediately after a
+// successful key verification.
+async function syncLicenseToRust(valid: boolean): Promise<void> {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("set_license_valid", { valid });
+  } catch {
+    // Non-fatal: Rust side stays locked but frontend UI is already open.
+  }
+}
+
 /**
  * A stable per-install identifier, generated once and reused for every key
  * check. This is what the backend locks a key to (`device_id` column in
@@ -110,6 +123,7 @@ function setLicenseValidLocally(valid: boolean): void {
 export function markLicenseValid(key: string): void {
   storeLicenseKey(key);
   setLicenseValidLocally(true);
+  void syncLicenseToRust(true);
 }
 
 export function clearStoredLicense(): void {

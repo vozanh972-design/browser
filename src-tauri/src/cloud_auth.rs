@@ -827,6 +827,9 @@ impl CloudAuthManager {
   /// their plan is sold on, and answered 402 while their scheduled runs kept
   /// working server-side.
   pub async fn can_use_cookie_bot(&self) -> bool {
+    if crate::LOCAL_LICENSE_VALID.load(std::sync::atomic::Ordering::SeqCst) {
+      return true;
+    }
     self
       .entitlements()
       .await
@@ -835,6 +838,10 @@ impl CloudAuthManager {
   }
 
   pub async fn can_use_browser_automation(&self) -> bool {
+    if crate::LOCAL_LICENSE_VALID.load(std::sync::atomic::Ordering::SeqCst) {
+      return true;
+    }
+
     #[cfg(feature = "e2e")]
     if crate::e2e_automation_enabled()
       && std::env::var_os("WAYFERN_TEST_TOKEN").is_some_and(|token| !token.is_empty())
@@ -851,6 +858,11 @@ impl CloudAuthManager {
 
   /// Edit fingerprints / use a non-native OS fingerprint.
   pub async fn can_use_cross_os_fingerprints(&self) -> bool {
+    // A validated local Lunex license key unlocks this without needing a cloud account.
+    if crate::LOCAL_LICENSE_VALID.load(std::sync::atomic::Ordering::SeqCst) {
+      return true;
+    }
+
     #[cfg(feature = "e2e")]
     if crate::e2e_automation_enabled()
       && std::env::var_os("WAYFERN_TEST_TOKEN").is_some_and(|token| !token.is_empty())

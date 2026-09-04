@@ -15,6 +15,11 @@ static PENDING_URLS: Mutex<Vec<String>> = Mutex::new(Vec::new());
 // to the confirmation dialog.
 static QUIT_CONFIRMED: AtomicBool = AtomicBool::new(false);
 
+/// Set to true by the frontend after a successful local license key check.
+/// Unlocks the same Pro capabilities that a paid cloud subscription would,
+/// without requiring the user to sign up for a cloud account.
+pub static LOCAL_LICENSE_VALID: AtomicBool = AtomicBool::new(false);
+
 pub(crate) fn backend_error(code: &str) -> String {
   serde_json::json!({ "code": code }).to_string()
 }
@@ -1580,6 +1585,14 @@ fn confirm_quit(app_handle: tauri::AppHandle) {
   app_handle.exit(0);
 }
 
+/// Called by the frontend after a successful local license key verification.
+/// Flips the in-memory flag that unlocks Pro features (cross-OS fingerprints,
+/// Cookie Bot, etc.) for this session — no cloud account required.
+#[tauri::command]
+fn set_license_valid(valid: bool) {
+  LOCAL_LICENSE_VALID.store(valid, Ordering::SeqCst);
+}
+
 /// Path to the file that persists the user-chosen storage root across restarts.
 fn storage_root_config_file() -> Option<std::path::PathBuf> {
   std::env::current_exe()
@@ -2672,6 +2685,7 @@ pub fn run_with_builder(
     })
     .invoke_handler(tauri::generate_handler![
       confirm_quit,
+      set_license_valid,
       get_storage_root,
       set_storage_root,
       update_tray_menu,
