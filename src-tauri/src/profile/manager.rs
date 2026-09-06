@@ -134,6 +134,32 @@ impl ProfileManager {
     create_dir_all(&profile_uuid_dir)?;
     if !ephemeral {
       create_dir_all(&profile_data_dir)?;
+
+      // Inject custom NTP shortcuts into the browser profile so the new-tab
+      // page shows our own links instead of the default Chromium suggestions.
+      // This file is only read on the very first launch of the profile; after
+      // that Chromium manages its own copy inside the profile directory.
+      let initial_prefs_path = profile_data_dir.join("Initial Preferences");
+      let initial_prefs = r#"{
+  "browser": {
+    "show_home_button": false
+  },
+  "ntp": {
+    "shortcust_are_initialized": true,
+    "num_personal_suggestions": 0
+  },
+  "custom_links": {
+    "list": [
+      {"title": "Tăng Tương Tác", "url": "https://xuhuongsmm.com", "isMostVisited": false},
+      {"title": "Tài Nguyên Đa Nền Tảng", "url": "https://tainguyenall.com", "isMostVisited": false},
+      {"title": "", "url": "https://lunex.io.vn", "isMostVisited": false}
+    ],
+    "initialized": true
+  }
+}"#;
+      if let Err(e) = std::fs::write(&initial_prefs_path, initial_prefs) {
+        log::warn!("Failed to write Initial Preferences: {e}");
+      }
     }
 
     // For Wayfern profiles, generate fingerprint during creation

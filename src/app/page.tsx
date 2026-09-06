@@ -53,7 +53,6 @@ import { WayfernConfigDialog } from "@/components/wayfern-config-dialog";
 import { WayfernTermsDialog } from "@/components/wayfern-terms-dialog";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { WindowResizeWarningDialog } from "@/components/window-resize-warning-dialog";
-import { useAppUpdateNotifications } from "@/hooks/use-app-update-notifications";
 import { useCloudAuth } from "@/hooks/use-cloud-auth";
 import { useCommercialTrial } from "@/hooks/use-commercial-trial";
 import { cookieBotScopeFor, useCookieBot } from "@/hooks/use-cookie-bot";
@@ -64,7 +63,6 @@ import { useProfileEvents } from "@/hooks/use-profile-events";
 import { useProxyEvents } from "@/hooks/use-proxy-events";
 import { useSyncSessions } from "@/hooks/use-sync-session";
 import { useUpdateNotifications } from "@/hooks/use-update-notifications";
-import { useVersionUpdater } from "@/hooks/use-version-updater";
 import { useVpnEvents } from "@/hooks/use-vpn-events";
 import { useWayfernTerms } from "@/hooks/use-wayfern-terms";
 import { parseBackendError, translateBackendError } from "@/lib/backend-errors";
@@ -156,7 +154,8 @@ export default function Home() {
   }, []);
 
   // Mount global version update listener/toasts
-  useVersionUpdater();
+  // Update notifications disabled — users download updates from lunex.io.vn
+  // useVersionUpdater();
 
   // Use the new profile events hook for centralized profile management
   const {
@@ -768,7 +767,7 @@ export default function Home() {
   const updateNotifications = useUpdateNotifications();
   const { checkForUpdates, isUpdating } = updateNotifications;
 
-  useAppUpdateNotifications();
+  // useAppUpdateNotifications();
 
   // Check for startup URLs but only process them once
   const [hasCheckedStartupUrl, setHasCheckedStartupUrl] = useState(false);

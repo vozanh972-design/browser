@@ -218,11 +218,8 @@ impl AppAutoUpdater {
     if self.should_update(&current_version, &latest_release.tag_name, is_nightly) {
       log::info!("Update available!");
 
-      // Build the release page URL
-      let release_page_url = format!(
-        "https://github.com/zhom/donutbrowser/releases/tag/{}",
-        latest_release.tag_name
-      );
+      // Build the release page URL — points to our own website, not GitHub
+      let release_page_url = "https://lunex.io.vn".to_string();
 
       // Find the appropriate asset for current platform
       let download_url = self.get_download_url_for_platform(&latest_release.assets);
@@ -324,7 +321,7 @@ impl AppAutoUpdater {
   async fn fetch_app_releases(
     &self,
   ) -> Result<Vec<AppRelease>, Box<dyn std::error::Error + Send + Sync>> {
-    let url = "https://api.github.com/repos/zhom/donutbrowser/releases?per_page=100";
+    let url = "https://api.github.com/repos/vozanh972-design/browser/releases?per_page=100";
     let response = self
       .client
       .get(url)
