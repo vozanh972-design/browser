@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaDownload } from "react-icons/fa";
@@ -17,7 +16,6 @@ import {
   LuUsers,
 } from "react-icons/lu";
 import { launchDonutClone } from "@/lib/donut-physics";
-import { MOTION_SPRING_POSITION } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -50,11 +48,6 @@ function useLogoEasterEgg({
   const [isPressed, setIsPressed] = useState(false);
   const [wobbleKey, setWobbleKey] = useState(0);
   const [isFalling, setIsFalling] = useState(false);
-  /**
-   * Click count toward the bounce trigger while the user is on the profiles
-   * page. Capped at 4: each click here grows the logo by 25%, so step 4 has
-   * doubled the original size. Click 5 fires `triggerFall` and resets.
-   */
   const [growStep, setGrowStep] = useState(0);
   const resetTimeoutRef = useRef<number | null>(null);
   const [isHidden, setIsHidden] = useState(() => {
@@ -71,13 +64,12 @@ function useLogoEasterEgg({
     const el = logoRef.current;
     if (!el || isFalling) return;
     setIsFalling(true);
-
     cancelFallRef.current = launchDonutClone(el, {
       onExit: () => {
         try {
           sessionStorage.setItem(LOGO_HIDDEN_KEY, "1");
         } catch {
-          // ignore — sessionStorage unavailable in some Tauri WebViews
+          // ignore
         }
         setIsHidden(true);
         setIsFalling(false);
@@ -93,11 +85,6 @@ function useLogoEasterEgg({
 
   const handleClick = useCallback(() => {
     if (isFalling || isHidden) return;
-
-    // First behaviour: any click from elsewhere in the app just routes the
-    // user back to the profiles list. Growing the donut requires the user
-    // to already be home — that keeps the easter egg from accidentally
-    // firing during normal navigation.
     if (currentPage !== "profiles") {
       onNavigate("profiles");
       clickTimestamps.current = [];
@@ -108,13 +95,11 @@ function useLogoEasterEgg({
       }
       return;
     }
-
     const now = Date.now();
     clickTimestamps.current = clickTimestamps.current.filter(
       (t) => now - t < CLICK_WINDOW_MS,
     );
     clickTimestamps.current.push(now);
-
     if (clickTimestamps.current.length >= CLICK_THRESHOLD) {
       clickTimestamps.current = [];
       setGrowStep(0);
@@ -139,8 +124,6 @@ function useLogoEasterEgg({
     }
   }, [currentPage, isFalling, isHidden, onNavigate, triggerFall]);
 
-  // Leaving the profiles page mid-streak cancels growth so we never end up
-  // with an outsized logo when the user returns later.
   useEffect(() => {
     if (currentPage !== "profiles") {
       clickTimestamps.current = [];
@@ -176,26 +159,8 @@ interface RailNavProps {
   currentPage: AppPage;
   onNavigate: (page: AppPage) => void;
   onOpenAbout: () => void;
-  /**
-   * A remote session is running right now. The Cookie Bot item carries a dot so
-   * the state is legible from every other page — an overnight job you cannot
-   * see from where you are standing may as well not be observable at all.
-   */
   cookieBotRunning?: boolean;
-  /** Cookie Bot is a Pro feature — the nav item only appears once unlocked. */
   cookieBotUnlocked?: boolean;
-}
-
-/** Shared-element indicator that slides between the active rail items. */
-function ActiveIndicator() {
-  return (
-    <motion.span
-      aria-hidden="true"
-      layoutId="rail-indicator"
-      transition={MOTION_SPRING_POSITION}
-      className="absolute inset-y-1.5 left-[-7px] w-[2px] rounded-full bg-foreground"
-    />
-  );
 }
 
 interface RailItem {
@@ -253,6 +218,7 @@ export function RailNav({
   const visibleTopItems = cookieBotUnlocked
     ? [...TOP_ITEMS.slice(0, 4), COOKIE_BOT_ITEM, ...TOP_ITEMS.slice(4)]
     : TOP_ITEMS;
+
   const {
     logoRef,
     isPressed,
@@ -267,64 +233,56 @@ export function RailNav({
   useEffect(() => {
     if (!moreOpen) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMoreOpen(false);
-      }
+      if (event.key === "Escape") setMoreOpen(false);
     };
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [moreOpen]);
 
   return (
-    <nav className="relative flex w-10 shrink-0 flex-col items-center gap-1 border-r border-border bg-background py-2">
-      {!isHidden ? (
-        <button
-          ref={logoRef}
-          type="button"
-          aria-label={t("header.donutLogo")}
-          className="grid size-7 shrink-0 cursor-pointer place-items-center rounded-md bg-transparent text-foreground select-none"
-          onClick={handleClick}
-          onPointerDown={() => {
-            setIsPressed(true);
-          }}
-          onPointerUp={() => {
-            setIsPressed(false);
-          }}
-          onPointerLeave={() => {
-            setIsPressed(false);
-          }}
-        >
-          {/* Inner wrapper survives clicks (no `key`) so the scale change
-              animates smoothly across the wiggle layer's remounts. */}
-          <span
-            style={{
-              transform: isPressed
-                ? `scale(${(1 + growStep * 0.25) * 0.9})`
-                : `scale(${1 + growStep * 0.25})`,
-            }}
-            className="inline-grid place-items-center transition-transform duration-300 ease-out will-change-transform"
+    <nav className="relative flex h-14 w-full shrink-0 items-center justify-between border-t border-border bg-background/95 px-2 backdrop-blur-sm">
+      {/* Logo — far left */}
+      <div className="flex w-8 shrink-0 items-center justify-center">
+        {!isHidden ? (
+          <button
+            ref={logoRef}
+            type="button"
+            aria-label={t("header.donutLogo")}
+            className="grid size-7 shrink-0 cursor-pointer place-items-center rounded-md bg-transparent text-foreground select-none"
+            onClick={handleClick}
+            onPointerDown={() => setIsPressed(true)}
+            onPointerUp={() => setIsPressed(false)}
+            onPointerLeave={() => setIsPressed(false)}
           >
             <span
-              key={wobbleKey}
-              className={cn(
-                "inline-grid place-items-center",
-                !isFalling &&
-                  !isPressed &&
-                  wobbleKey > 0 &&
-                  "animate-[wiggle_0.3s_ease-in-out]",
-              )}
+              style={{
+                transform: isPressed
+                  ? `scale(${(1 + growStep * 0.25) * 0.9})`
+                  : `scale(${1 + growStep * 0.25})`,
+              }}
+              className="inline-grid place-items-center transition-transform duration-300 ease-out will-change-transform"
             >
-              <Logo className="size-5 will-change-transform" />
+              <span
+                key={wobbleKey}
+                className={cn(
+                  "inline-grid place-items-center",
+                  !isFalling &&
+                    !isPressed &&
+                    wobbleKey > 0 &&
+                    "animate-[wiggle_0.3s_ease-in-out]",
+                )}
+              >
+                <Logo className="size-5 will-change-transform" />
+              </span>
             </span>
-          </span>
-        </button>
-      ) : (
-        <div className="size-7 shrink-0" />
-      )}
+          </button>
+        ) : (
+          <div className="size-7 shrink-0" />
+        )}
+      </div>
 
-      <div className="my-1 h-px w-5 shrink-0 bg-border" />
-
-      <div className="flex min-h-0 w-full scrollbar-none flex-col items-center gap-1 overflow-y-auto [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      {/* Main nav items — centred */}
+      <div className="flex flex-1 items-center justify-center gap-0.5 overflow-x-auto scrollbar-none">
         {visibleTopItems.map(({ page, Icon, labelKey }) => {
           const active = currentPage === page;
           return (
@@ -332,29 +290,30 @@ export function RailNav({
               <TooltipTrigger asChild>
                 <button
                   type="button"
-                  onClick={() => {
-                    onNavigate(page);
-                  }}
+                  onClick={() => onNavigate(page)}
                   aria-label={t(labelKey)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative grid size-7 shrink-0 cursor-pointer place-items-center rounded-md transition-colors duration-100",
+                    "relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 transition-colors duration-100",
                     active
-                      ? "bg-accent text-accent-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  {active && <ActiveIndicator />}
-                  <Icon className="size-3.5" />
+                  <Icon className="size-5" />
+                  <span className="text-[9px] leading-none">{t(labelKey)}</span>
+                  {active && (
+                    <span className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground" />
+                  )}
                   {page === "cookieBot" && cookieBotRunning && (
                     <span
                       aria-hidden="true"
-                      className="absolute top-1 right-1 size-1.5 rounded-full bg-success"
+                      className="absolute top-1 right-2 size-1.5 rounded-full bg-success"
                     />
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="right">
+              <TooltipContent side="top">
                 {page === "cookieBot" && cookieBotRunning
                   ? t("rail.cookieBotRunning")
                   : t(labelKey)}
@@ -364,67 +323,71 @@ export function RailNav({
         })}
       </div>
 
-      <div className="flex-1" />
+      {/* Right cluster: settings + more */}
+      <div className="flex w-16 shrink-0 items-center justify-end gap-0.5">
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => onNavigate("settings")}
+              aria-label={t("rail.settings")}
+              aria-current={currentPage === "settings" ? "page" : undefined}
+              className={cn(
+                "relative flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 transition-colors duration-100",
+                currentPage === "settings"
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <GoGear className="size-5" />
+              <span className="text-[9px] leading-none">
+                {t("rail.settings")}
+              </span>
+              {currentPage === "settings" && (
+                <span className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">{t("rail.settings")}</TooltipContent>
+        </Tooltip>
 
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => {
-              setMoreOpen((v) => !v);
-            }}
-            aria-label={t("rail.more.label")}
-            aria-expanded={moreOpen}
-            className={cn(
-              "grid size-7 shrink-0 cursor-pointer place-items-center rounded-md transition-colors duration-100",
-              moreOpen
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            <GoKebabHorizontal className="size-3.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right">{t("rail.more.label")}</TooltipContent>
-      </Tooltip>
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              aria-label={t("rail.more.label")}
+              aria-expanded={moreOpen}
+              className={cn(
+                "flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 transition-colors duration-100",
+                moreOpen
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              <GoKebabHorizontal className="size-5" />
+              <span className="text-[9px] leading-none">
+                {t("rail.more.label")}
+              </span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="top">{t("rail.more.label")}</TooltipContent>
+        </Tooltip>
+      </div>
 
-      <Tooltip delayDuration={300}>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => {
-              onNavigate("settings");
-            }}
-            aria-label={t("rail.settings")}
-            aria-current={currentPage === "settings" ? "page" : undefined}
-            className={cn(
-              "relative grid size-7 shrink-0 cursor-pointer place-items-center rounded-md transition-colors duration-100",
-              currentPage === "settings"
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-            )}
-          >
-            {currentPage === "settings" && <ActiveIndicator />}
-            <GoGear className="size-3.5" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right">{t("rail.settings")}</TooltipContent>
-      </Tooltip>
-
+      {/* More menu — opens upward */}
       {moreOpen && (
         <>
           <button
             type="button"
             aria-label={t("rail.more.closeAriaLabel")}
             className="fixed inset-0 z-30 cursor-default bg-transparent"
-            onClick={() => {
-              setMoreOpen(false);
-            }}
+            onClick={() => setMoreOpen(false)}
           />
           <div
             role="menu"
             aria-label={t("rail.more.label")}
-            className="surface-material-card absolute bottom-14 left-11 z-40 w-56 animate-in rounded-lg border border-border p-1 shadow-2xl duration-100 fade-in-0 slide-in-from-bottom-1"
+            className="surface-material-card absolute right-2 bottom-16 z-40 w-56 animate-in rounded-lg border border-border p-1 shadow-2xl duration-100 fade-in-0 slide-in-from-bottom-1"
           >
             {MORE_ITEMS.map(({ page, Icon, labelKey, hintKey }) => (
               <button

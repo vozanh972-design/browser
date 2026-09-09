@@ -2010,16 +2010,7 @@ export default function Home() {
         onGroupSelect={handleSelectGroup}
         pageTitle={subPageTitle}
       />
-      <div className="flex min-h-0 flex-1">
-        <RailNav
-          currentPage={currentPage}
-          onNavigate={handleRailNavigate}
-          onOpenAbout={() => {
-            setAboutDialogOpen(true);
-          }}
-          cookieBotRunning={Object.keys(cookieBotLiveSessions).length > 0}
-          cookieBotUnlocked={canUseCookieBot(cloudUser)}
-        />
+      <div className="flex min-h-0 flex-1 flex-col">
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {currentPage === "profiles" && (
             <motion.div
@@ -2202,6 +2193,15 @@ export default function Home() {
             />
           )}
         </main>
+        <RailNav
+          currentPage={currentPage}
+          onNavigate={handleRailNavigate}
+          onOpenAbout={() => {
+            setAboutDialogOpen(true);
+          }}
+          cookieBotRunning={Object.keys(cookieBotLiveSessions).length > 0}
+          cookieBotUnlocked={canUseCookieBot(cloudUser)}
+        />
       </div>
 
       <CreateProfileDialog
