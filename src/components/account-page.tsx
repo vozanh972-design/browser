@@ -1,7 +1,7 @@
 "use client";
 
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   LuCloud,
@@ -37,6 +37,11 @@ import {
   getEntitlements,
   isTeamOwner,
 } from "@/lib/entitlements";
+import {
+  clearStoredLicense,
+  getStoredLicenseKey,
+  isLicenseValidLocally,
+} from "@/lib/license";
 import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
 import type { SyncSettings } from "@/types";
@@ -285,6 +290,9 @@ export function AccountPage({
                       )}
                     </div>
                   </div>
+
+                  {/* Local license key card — shown when no cloud account */}
+                  {!isLoggedIn && <LicenseKeyCard />}
 
                   {remoteHoursVisible && (
                     // A headline block, not one field among six: the allowance
@@ -610,5 +618,113 @@ export function AccountPage({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/**
+ * Shows the locally-stored license key (masked), days remaining,
+ * and a logout/clear button. Only renders when not cloud-signed-in.
+ */
+function LicenseKeyCard() {
+  const [key] = React.useState(() => getStoredLicenseKey() ?? "");
+  const [valid] = React.useState(() => isLicenseValidLocally());
+  const [loggedOut, setLoggedOut] = React.useState(false);
+  const [expiredAt, setExpiredAt] = React.useState<string | null>(null);
+  const [daysLeft, setDaysLeft] = React.useState<number | null>(null);
+  const [showFull, setShowFull] = React.useState(false);
+  const deviceId = React.useRef<string>("");
+
+  // Fetch expiry from server on mount
+  React.useEffect(() => {
+    if (!key) return;
+    import("@/lib/license").then(({ getDeviceId }) => {
+      deviceId.current = getDeviceId();
+      const url = `https://lunex.io.vn/api/check_key.php?key=${encodeURIComponent(key)}&device_id=${encodeURIComponent(deviceId.current)}`;
+      fetch(url)
+        .then((r) => r.json())
+        .then((data: { expired_at?: string | null }) => {
+          if (data.expired_at) {
+            setExpiredAt(data.expired_at);
+            const diff = Math.ceil(
+              (new Date(data.expired_at).getTime() - Date.now()) /
+                (1000 * 60 * 60 * 24),
+            );
+            setDaysLeft(Math.max(0, diff));
+          }
+        })
+        .catch(() => {});
+    });
+  }, [key]);
+
+  const handleLogout = () => {
+    clearStoredLicense();
+    // Also notify Rust backend
+    import("@tauri-apps/api/core")
+      .then(({ invoke }) => invoke("set_license_valid", { valid: false }))
+      .catch(() => {});
+    setLoggedOut(true);
+  };
+
+  if (loggedOut || !key || !valid) return null;
+
+  // Mask key: show first 8 chars + *** + last 4
+  const masked = showFull
+    ? key
+    : `${key.slice(0, 8)}${"•".repeat(Math.max(0, key.length - 12))}${key.slice(-4)}`;
+
+  return (
+    <div className="rounded-xl border border-border bg-muted/30 p-4">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-sm font-semibold text-foreground">
+          Giấy phép kích hoạt
+        </span>
+        {daysLeft !== null && (
+          <span
+            className={cn(
+              "rounded-full px-2 py-0.5 text-xs font-medium",
+              daysLeft <= 3
+                ? "bg-destructive/20 text-destructive"
+                : "bg-success/20 text-success-text",
+            )}
+          >
+            {daysLeft === 0 ? "Hết hạn hôm nay" : `Còn ${daysLeft} ngày`}
+          </span>
+        )}
+      </div>
+
+      <div className="mb-3 flex items-center gap-2 rounded-lg bg-background px-3 py-2">
+        <span className="flex-1 truncate font-mono text-xs text-foreground">
+          {masked}
+        </span>
+        <button
+          type="button"
+          onClick={() => setShowFull((v) => !v)}
+          className="shrink-0 text-[10px] text-muted-foreground underline hover:text-foreground"
+        >
+          {showFull ? "Ẩn" : "Hiện"}
+        </button>
+      </div>
+
+      {expiredAt && (
+        <p className="mb-3 text-[11px] text-muted-foreground">
+          Hết hạn:{" "}
+          {new Date(expiredAt).toLocaleDateString("vi-VN", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+      )}
+
+      <button
+        type="button"
+        onClick={handleLogout}
+        className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/20"
+      >
+        Đăng xuất / Xóa key
+      </button>
+    </div>
   );
 }

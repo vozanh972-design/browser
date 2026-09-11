@@ -240,53 +240,57 @@ export function RailNav({
   }, [moreOpen]);
 
   return (
-    <nav className="relative flex h-14 w-full shrink-0 items-center justify-between border-t border-border bg-background/95 px-2 backdrop-blur-sm">
-      {/* Logo — far left */}
-      <div className="flex w-8 shrink-0 items-center justify-center">
-        {!isHidden ? (
-          <button
-            ref={logoRef}
-            type="button"
-            aria-label={t("header.donutLogo")}
-            className="grid size-7 shrink-0 cursor-pointer place-items-center rounded-md bg-transparent text-foreground select-none"
-            onClick={handleClick}
-            onPointerDown={() => setIsPressed(true)}
-            onPointerUp={() => setIsPressed(false)}
-            onPointerLeave={() => setIsPressed(false)}
-          >
-            <span
-              style={{
-                transform: isPressed
-                  ? `scale(${(1 + growStep * 0.25) * 0.9})`
-                  : `scale(${1 + growStep * 0.25})`,
-              }}
-              className="inline-grid place-items-center transition-transform duration-300 ease-out will-change-transform"
+    <div className="flex h-16 w-full shrink-0 items-center justify-center border-t border-border bg-background px-4">
+      {/* Pill container — Apple dock style */}
+      <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/40 px-2 py-1.5 shadow-sm backdrop-blur-sm">
+        {/* Logo */}
+        <div className="flex items-center justify-center px-1">
+          {!isHidden ? (
+            <button
+              ref={logoRef}
+              type="button"
+              aria-label={t("header.donutLogo")}
+              className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-xl bg-transparent select-none"
+              onClick={handleClick}
+              onPointerDown={() => setIsPressed(true)}
+              onPointerUp={() => setIsPressed(false)}
+              onPointerLeave={() => setIsPressed(false)}
             >
               <span
-                key={wobbleKey}
-                className={cn(
-                  "inline-grid place-items-center",
-                  !isFalling &&
-                    !isPressed &&
-                    wobbleKey > 0 &&
-                    "animate-[wiggle_0.3s_ease-in-out]",
-                )}
+                style={{
+                  transform: isPressed
+                    ? `scale(${(1 + growStep * 0.25) * 0.9})`
+                    : `scale(${1 + growStep * 0.25})`,
+                }}
+                className="inline-grid place-items-center transition-transform duration-300 ease-out"
               >
-                <Logo className="size-5 will-change-transform" />
+                <span
+                  key={wobbleKey}
+                  className={cn(
+                    "inline-grid place-items-center",
+                    !isFalling &&
+                      !isPressed &&
+                      wobbleKey > 0 &&
+                      "animate-[wiggle_0.3s_ease-in-out]",
+                  )}
+                >
+                  <Logo className="size-5" />
+                </span>
               </span>
-            </span>
-          </button>
-        ) : (
-          <div className="size-7 shrink-0" />
-        )}
-      </div>
+            </button>
+          ) : (
+            <div className="size-8 shrink-0" />
+          )}
+        </div>
 
-      {/* Main nav items — centred */}
-      <div className="flex flex-1 items-center justify-center gap-0.5 overflow-x-auto scrollbar-none">
+        {/* Divider */}
+        <div className="mx-1 h-5 w-px shrink-0 rounded-full bg-border" />
+
+        {/* Main nav items */}
         {visibleTopItems.map(({ page, Icon, labelKey }) => {
           const active = currentPage === page;
           return (
-            <Tooltip key={page} delayDuration={300}>
+            <Tooltip key={page} delayDuration={400}>
               <TooltipTrigger asChild>
                 <button
                   type="button"
@@ -294,26 +298,22 @@ export function RailNav({
                   aria-label={t(labelKey)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative flex flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 transition-colors duration-100",
+                    "relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-all duration-150",
                     active
-                      ? "text-foreground"
-                      : "text-muted-foreground hover:text-foreground",
+                      ? "bg-foreground/10 text-foreground"
+                      : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                   )}
                 >
-                  <Icon className="size-5" />
-                  <span className="text-[9px] leading-none">{t(labelKey)}</span>
+                  <Icon className="size-[18px]" />
                   {active && (
-                    <span className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground" />
+                    <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground" />
                   )}
                   {page === "cookieBot" && cookieBotRunning && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute top-1 right-2 size-1.5 rounded-full bg-success"
-                    />
+                    <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-success" />
                   )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="top">
+              <TooltipContent side="top" sideOffset={8}>
                 {page === "cookieBot" && cookieBotRunning
                   ? t("rail.cookieBotRunning")
                   : t(labelKey)}
@@ -321,11 +321,12 @@ export function RailNav({
             </Tooltip>
           );
         })}
-      </div>
 
-      {/* Right cluster: settings + more */}
-      <div className="flex w-16 shrink-0 items-center justify-end gap-0.5">
-        <Tooltip delayDuration={300}>
+        {/* Divider */}
+        <div className="mx-1 h-5 w-px shrink-0 rounded-full bg-border" />
+
+        {/* Settings */}
+        <Tooltip delayDuration={400}>
           <TooltipTrigger asChild>
             <button
               type="button"
@@ -333,25 +334,25 @@ export function RailNav({
               aria-label={t("rail.settings")}
               aria-current={currentPage === "settings" ? "page" : undefined}
               className={cn(
-                "relative flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 transition-colors duration-100",
+                "relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-all duration-150",
                 currentPage === "settings"
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-foreground/10 text-foreground"
+                  : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
               )}
             >
-              <GoGear className="size-5" />
-              <span className="text-[9px] leading-none">
-                {t("rail.settings")}
-              </span>
+              <GoGear className="size-[18px]" />
               {currentPage === "settings" && (
-                <span className="absolute bottom-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground" />
+                <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground" />
               )}
             </button>
           </TooltipTrigger>
-          <TooltipContent side="top">{t("rail.settings")}</TooltipContent>
+          <TooltipContent side="top" sideOffset={8}>
+            {t("rail.settings")}
+          </TooltipContent>
         </Tooltip>
 
-        <Tooltip delayDuration={300}>
+        {/* More */}
+        <Tooltip delayDuration={400}>
           <TooltipTrigger asChild>
             <button
               type="button"
@@ -359,23 +360,22 @@ export function RailNav({
               aria-label={t("rail.more.label")}
               aria-expanded={moreOpen}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-xl px-2 py-1.5 transition-colors duration-100",
+                "grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-all duration-150",
                 moreOpen
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? "bg-foreground/10 text-foreground"
+                  : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
               )}
             >
-              <GoKebabHorizontal className="size-5" />
-              <span className="text-[9px] leading-none">
-                {t("rail.more.label")}
-              </span>
+              <GoKebabHorizontal className="size-[18px]" />
             </button>
           </TooltipTrigger>
-          <TooltipContent side="top">{t("rail.more.label")}</TooltipContent>
+          <TooltipContent side="top" sideOffset={8}>
+            {t("rail.more.label")}
+          </TooltipContent>
         </Tooltip>
       </div>
 
-      {/* More menu — opens upward */}
+      {/* More popup — opens upward from pill */}
       {moreOpen && (
         <>
           <button
@@ -387,7 +387,7 @@ export function RailNav({
           <div
             role="menu"
             aria-label={t("rail.more.label")}
-            className="surface-material-card absolute right-2 bottom-16 z-40 w-56 animate-in rounded-lg border border-border p-1 shadow-2xl duration-100 fade-in-0 slide-in-from-bottom-1"
+            className="surface-material-card absolute bottom-20 left-1/2 z-40 w-52 -translate-x-1/2 animate-in rounded-xl border border-border p-1 shadow-2xl duration-100 fade-in-0 slide-in-from-bottom-2"
           >
             {MORE_ITEMS.map(({ page, Icon, labelKey, hintKey }) => (
               <button
@@ -398,11 +398,9 @@ export function RailNav({
                   setMoreOpen(false);
                   onNavigate(page);
                 }}
-                className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors duration-100 hover:bg-accent hover:text-accent-foreground"
+                className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
               >
-                <span className="grid size-5 shrink-0 place-items-center rounded bg-muted text-muted-foreground">
-                  <Icon className="size-3" />
-                </span>
+                <Icon className="size-4 shrink-0 text-muted-foreground" />
                 <span className="flex min-w-0 flex-col">
                   <span className="truncate text-xs font-medium text-foreground">
                     {t(labelKey)}
@@ -420,11 +418,9 @@ export function RailNav({
                 setMoreOpen(false);
                 onOpenAbout();
               }}
-              className="flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors duration-100 hover:bg-accent hover:text-accent-foreground"
+              className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
             >
-              <span className="grid size-5 shrink-0 place-items-center rounded bg-muted text-muted-foreground">
-                <LuInfo className="size-3" />
-              </span>
+              <LuInfo className="size-4 shrink-0 text-muted-foreground" />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-xs font-medium text-foreground">
                   {t("rail.more.about")}
@@ -437,6 +433,6 @@ export function RailNav({
           </div>
         </>
       )}
-    </nav>
+    </div>
   );
 }
