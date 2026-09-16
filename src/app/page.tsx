@@ -293,9 +293,7 @@ export default function Home() {
   // /v1/profiles/batch/run API gate. Free/solo users see the bulk Run/Stop
   // actions disabled with a Pro badge.
   const automationUnlocked = getEntitlements(cloudUser).browserAutomation;
-  // The rail needs to show a live run from every page, so the shell subscribes
-  // to the shared cookie-bot store too. It is a module singleton, so this costs
-  // one more listener and no extra request. This is also what starts the event
+  const syncUnlocked = getEntitlements(cloudUser).cloudBackup;
   const [currentPage, setCurrentPage] = useState<AppPage>("profiles");
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   // Tracks which tab inside the shared proxy-management page should be active.
@@ -313,26 +311,8 @@ export default function Home() {
     useState(false);
   const [groupAssignmentDialogOpen, setGroupAssignmentDialogOpen] =
     useState(false);
-  const [
-    extensionGroupAssignmentDialogOpen,
-    setExtensionGroupAssignmentDialogOpen,
-  ] = useState(false);
-  const [
-    selectedProfilesForExtensionGroup,
-    setSelectedProfilesForExtensionGroup,
-  ] = useState<string[]>([]);
   const [proxyAssignmentDialogOpen, setProxyAssignmentDialogOpen] =
     useState(false);
-  const [cookieCopyDialogOpen, setCookieCopyDialogOpen] = useState(false);
-  const [cookieManagementDialogOpen, setCookieManagementDialogOpen] =
-    useState(false);
-  const [
-    currentProfileForCookieManagement,
-    setCurrentProfileForCookieManagement,
-  ] = useState<BrowserProfile | null>(null);
-  const [selectedProfilesForCookies, setSelectedProfilesForCookies] = useState<
-    string[]
-  >([]);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("__all__");
   const [selectedProfilesForGroup, setSelectedProfilesForGroup] = useState<
     string[]
@@ -1375,12 +1355,18 @@ export default function Home() {
     setSelectedProfiles([]);
   }, [selectedProfiles, handleAssignProfilesToGroup]);
 
-  const handleAssignExtensionGroup = useCallback((profileIds: string[]) => {
-    setSelectedProfilesForExtensionGroup(profileIds);
-    setExtensionGroupAssignmentDialogOpen(true);
+  const handleAssignProfilesToProxy = useCallback((profileIds: string[]) => {
+    setSelectedProfilesForProxy(profileIds);
+    setProxyAssignmentDialogOpen(true);
   }, []);
 
-  const handleAssignProxyComplete = useCallback(() => {
+  const handleBulkProxyAssignment = useCallback(() => {
+    if (selectedProfiles.length === 0) return;
+    handleAssignProfilesToProxy(selectedProfiles);
+    setSelectedProfiles([]);
+  }, [selectedProfiles, handleAssignProfilesToProxy]);
+
+  const handleProxyAssignmentComplete = useCallback(() => {
     setProxyAssignmentDialogOpen(false);
     setSelectedProfilesForProxy([]);
   }, []);
@@ -1887,8 +1873,6 @@ export default function Home() {
                 onDeleteProfile={handleDeleteProfile}
                 onRenameProfile={handleRenameProfile}
                 onConfigureWayfern={handleConfigureWayfern}
-                onCopyCookiesToProfile={handleCopyCookiesToProfile}
-                onOpenCookieManagement={handleOpenCookieManagement}
                 runningProfiles={runningProfiles}
                 isUpdating={isUpdating}
                 onDeleteSelectedProfiles={handleDeleteSelectedProfiles}
@@ -1903,7 +1887,6 @@ export default function Home() {
                 onBulkRun={handleBulkRun}
                 onBulkStop={handleBulkStop}
                 bulkActionsUnlocked={automationUnlocked}
-                onAssignExtensionGroup={handleAssignExtensionGroup}
                 onOpenProfileSyncDialog={handleOpenProfileSyncDialog}
                 onToggleProfileSync={handleToggleProfileSync}
                 crossOsUnlocked={crossOsUnlocked}
@@ -2046,7 +2029,7 @@ export default function Home() {
         onOpenAbout={() => {
           setAboutDialogOpen(true);
         }}
-        cookieBotUnlocked={canUseCookieBot(cloudUser)}
+        cookieBotUnlocked={false}
       />
 
       <AboutDialog
@@ -2171,16 +2154,6 @@ export default function Home() {
         profiles={profiles}
       />
 
-      <ExtensionGroupAssignmentDialog
-        isOpen={extensionGroupAssignmentDialogOpen}
-        onClose={() => {
-          setExtensionGroupAssignmentDialogOpen(false);
-        }}
-        selectedProfiles={selectedProfilesForExtensionGroup}
-        onAssignmentComplete={handleExtensionGroupAssignmentComplete}
-        profiles={profiles}
-      />
-
       <ProxyAssignmentDialog
         isOpen={proxyAssignmentDialogOpen}
         onClose={() => {
@@ -2191,29 +2164,6 @@ export default function Home() {
         profiles={profiles}
         storedProxies={storedProxies}
         vpnConfigs={vpnConfigs}
-      />
-
-      <CookieCopyDialog
-        isOpen={cookieCopyDialogOpen}
-        onClose={() => {
-          setCookieCopyDialogOpen(false);
-          setSelectedProfilesForCookies([]);
-        }}
-        selectedProfiles={selectedProfilesForCookies}
-        profiles={profiles}
-        runningProfiles={runningProfiles}
-        onCopyComplete={() => {
-          setSelectedProfilesForCookies([]);
-        }}
-      />
-
-      <CookieManagementDialog
-        isOpen={cookieManagementDialogOpen}
-        onClose={() => {
-          setCookieManagementDialogOpen(false);
-          setCurrentProfileForCookieManagement(null);
-        }}
-        profile={currentProfileForCookieManagement}
       />
 
       <DeleteConfirmationDialog
@@ -2281,7 +2231,6 @@ export default function Home() {
         isOpen={syncConfigDialogOpen}
         onClose={(loginOccurred) => {
           setSyncConfigDialogOpen(false);
-          void checkSelfHostedSync();
           if (loginOccurred) {
             setSyncAllDialogOpen(true);
           }

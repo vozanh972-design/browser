@@ -25,6 +25,7 @@ import {
   LuChevronDown,
   LuChevronUp,
   LuInfo,
+  LuLock,
   LuPlay,
   LuSquare,
   LuTrash2,
@@ -321,9 +322,6 @@ const BOT_LABEL_WIDTH = 880;
 
 /** Below this the bot column leaves entirely, like the other low-priority ones. */
 const BOT_COLUMN_MIN_WIDTH = 400;
-
-/** Bulk enrolments of this size or larger are confirmed, as run and stop are. */
-const BULK_ENROL_CONFIRM_THRESHOLD = 10;
 
 /**
  * Run statuses that mean the browser never came up.
