@@ -3447,19 +3447,6 @@ export function ProfilesDataTable({
         },
       },
       {
-        id: "ext",
-        size: 95,
-        header: ({ table }) => {
-          const meta = table.options.meta as TableMeta;
-          return meta.t("profiles.table.ext");
-        },
-        cell: ({ row, table }) => {
-          const meta = table.options.meta as TableMeta;
-          const profile = row.original;
-          return <ExtCell profile={profile} meta={meta} />;
-        },
-      },
-      {
         id: "dns",
         size: 95,
         header: ({ table }) => {
@@ -3470,63 +3457,6 @@ export function ProfilesDataTable({
           const meta = table.options.meta as TableMeta;
           const profile = row.original;
           return <DnsCell profile={profile} meta={meta} />;
-        },
-      },
-      {
-        id: "bot",
-        size: 84,
-        header: ({ table }) => {
-          const meta = table.options.meta as TableMeta;
-          if (meta.cookieBotCompact) return null;
-          return meta.t("profiles.table.bot");
-        },
-        cell: ({ row, table }) => {
-          const meta = table.options.meta as TableMeta;
-          return <BotCell profile={row.original} meta={meta} />;
-        },
-      },
-      {
-        id: "sync",
-        header: "",
-        size: 28,
-        cell: ({ row, table }) => {
-          const profile = row.original;
-          const meta = table.options.meta as TableMeta;
-          const syncEntry = meta.syncStatuses[profile.id];
-          const liveStatus = syncEntry?.status as
-            | "syncing"
-            | "waiting"
-            | "synced"
-            | "error"
-            | "disabled"
-            | undefined;
-
-          const dot = getProfileSyncStatusDot(
-            profile,
-            liveStatus,
-            meta.t,
-            syncEntry?.error,
-          );
-          if (!dot) return null;
-
-          return (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="flex h-9 w-full items-center justify-center">
-                  {dot.encrypted ? (
-                    <LuLock
-                      className={`size-3 ${dot.color.replace("bg-", "text-")}${dot.animate ? " animate-pulse" : ""}`}
-                    />
-                  ) : (
-                    <span
-                      className={`size-2 rounded-full ${dot.color}${dot.animate ? " animate-pulse" : ""}`}
-                    />
-                  )}
-                </span>
-              </TooltipTrigger>
-              <TooltipContent>{dot.tooltip}</TooltipContent>
-            </Tooltip>
-          );
         },
       },
       {
@@ -4008,41 +3938,6 @@ export function ProfilesDataTable({
             <FiWifi />
           </DataTableActionBarAction>
         )}
-        {onBulkExtensionGroupAssignment && (
-          <DataTableActionBarAction
-            tooltip={t("profiles.actionBar.assignExtensionGroup")}
-            onClick={onBulkExtensionGroupAssignment}
-            size="icon"
-          >
-            <LuPuzzle />
-          </DataTableActionBarAction>
-        )}
-        {onBulkCopyCookies && (
-          <DataTableActionBarAction
-            tooltip={t("profiles.actionBar.copyCookies")}
-            onClick={onBulkCopyCookies}
-            size="icon"
-          >
-            <LuCookie />
-          </DataTableActionBarAction>
-        )}
-        <span className="relative inline-flex">
-          <DataTableActionBarAction
-            tooltip={
-              cookieBotUnlocked
-                ? t("cookieBot.actionBar.enrol")
-                : t("cookieBot.actionBar.proRequired")
-            }
-            onClick={cookieBotUnlocked ? handleBulkCookieBotEnrol : undefined}
-            disabled={!cookieBotUnlocked}
-            size="icon"
-          >
-            <LuMoon />
-          </DataTableActionBarAction>
-          {!cookieBotUnlocked && (
-            <ProBadge className="pointer-events-none absolute -top-2 -right-2" />
-          )}
-        </span>
         {onBulkDelete && (
           <DataTableActionBarAction
             tooltip={t("common.buttons.delete")}

@@ -134,12 +134,12 @@
       "title": "默认浏览器",
       "setAsDefault": "设为默认浏览器",
       "alreadyDefault": "已是默认浏览器",
-      "description": "设为默认后，PrfNoir 将处理网页链接并允许您选择使用哪个配置文件。"
+      "description": "设为默认后，AutoLunex 将处理网页链接并允许您选择使用哪个配置文件。"
     },
     "permissions": {
       "title": "系统权限",
       "loading": "加载权限中...",
-      "description": "这些权限允许从 PrfNoir 启动的浏览器访问系统资源。每个网站仍会单独请求您的权限。",
+      "description": "这些权限允许从 AutoLunex 启动的浏览器访问系统资源。每个网站仍会单独请求您的权限。",
       "microphone": "麦克风",
       "microphoneDescription": "浏览器应用程序的麦克风访问权限",
       "camera": "摄像头",
@@ -183,7 +183,7 @@
       "trialExpired": "试用期已过期",
       "trialExpiredDescription": "个人使用仍然免费。商业使用需要许可证。",
       "subscriptionActive": "已订阅 — {{plan}} 方案",
-      "subscriptionActiveDescription": "您的 PrfNoir 订阅已激活。在订阅有效期内允许商业使用。"
+      "subscriptionActiveDescription": "您的 AutoLunex 订阅已激活。在订阅有效期内允许商业使用。"
     },
     "advanced": {
       "title": "高级",
@@ -196,7 +196,7 @@
       "copyLogsDescription": "复制经过脱敏的近期日志包（最多 5 MB）。脱敏无法识别所有类型的个人数据，请在分享前检查内容。"
     },
     "disableAutoUpdates": "禁用应用自动更新",
-    "disableAutoUpdatesDescription": "阻止应用程序自动检查和安装 PrfNoir 更新。浏览器更新不受影响。",
+    "disableAutoUpdatesDescription": "阻止应用程序自动检查和安装 AutoLunex 更新。浏览器更新不受影响。",
     "keepDecryptedProfilesInRam": "在内存中保留已解密的配置文件",
     "keepDecryptedProfilesInRamDescription": "在启动之间保留密码保护配置文件的已解密内存副本,以便更快地启动。无论如何磁盘上的副本始终保持加密。",
     "privacy": {
@@ -235,7 +235,7 @@
       "extensions": "扩展程序"
     },
     "newProfile": "新建",
-    "donutLogo": "PrfNoir 标识",
+    "autolunexLogo": "AutoLunex 标识",
     "scrollGroupsLeft": "向左滚动分组",
     "scrollGroupsRight": "向右滚动分组"
   },
@@ -1177,7 +1177,7 @@
     "launchHook": {
       "title": "启动钩子 URL",
       "label": "启动钩子 URL",
-      "description": "每次启动配置文件时，PrfNoir 都会向此 URL 发送一个 GET 请求。",
+      "description": "每次启动配置文件时，AutoLunex 都会向此 URL 发送一个 GET 请求。",
       "placeholder": "https://example.com/hooks/profile-launch",
       "invalidUrlHint": "请输入有效的 http:// 或 https:// URL。"
     },
@@ -1569,7 +1569,7 @@
   },
   "wayfernTerms": {
     "title": "Wayfern 条款和条件",
-    "description": "在使用 PrfNoir 之前,你必须阅读并同意 Wayfern 的条款和条件。",
+    "description": "在使用 AutoLunex 之前,你必须阅读并同意 Wayfern 的条款和条件。",
     "reviewLabel": "请查看以下条款和条件:",
     "agreeNotice": "点击「我接受」即表示你同意受这些条款约束。",
     "acceptButton": "我接受",
@@ -1580,7 +1580,7 @@
   "commercialTrial": {
     "title": "商业试用期已过期",
     "description": "你的 2 周商业试用期已结束。",
-    "body": "如果你将 PrfNoir 用于商业目的,需要购买商业许可证才能继续。你仍然可以免费用于个人用途。",
+    "body": "如果你将 AutoLunex 用于商业目的,需要购买商业许可证才能继续。你仍然可以免费用于个人用途。",
     "understandButton": "我明白了",
     "failed": "保存确认失败",
     "tryAgain": "请重试"
@@ -1588,10 +1588,10 @@
   "permissionDialog": {
     "titleMicrophone": "需要麦克风访问权限",
     "titleCamera": "需要摄像头访问权限",
-    "descMicrophone": "PrfNoir 需要访问你的麦克风以在浏览器中启用麦克风功能。每个想使用麦克风的网站仍会单独请求你的许可。",
-    "descCamera": "PrfNoir 需要访问你的摄像头以在浏览器中启用摄像头功能。每个想使用摄像头的网站仍会单独请求你的许可。",
-    "grantedMicrophone": "权限已授予!从 PrfNoir 启动的浏览器现在可以访问你的麦克风。",
-    "grantedCamera": "权限已授予!从 PrfNoir 启动的浏览器现在可以访问你的摄像头。",
+    "descMicrophone": "AutoLunex 需要访问你的麦克风以在浏览器中启用麦克风功能。每个想使用麦克风的网站仍会单独请求你的许可。",
+    "descCamera": "AutoLunex 需要访问你的摄像头以在浏览器中启用摄像头功能。每个想使用摄像头的网站仍会单独请求你的许可。",
+    "grantedMicrophone": "权限已授予!从 AutoLunex 启动的浏览器现在可以访问你的麦克风。",
+    "grantedCamera": "权限已授予!从 AutoLunex 启动的浏览器现在可以访问你的摄像头。",
     "notGrantedMicrophone": "未授予权限。点击下方按钮请求访问你的麦克风。",
     "notGrantedCamera": "未授予权限。点击下方按钮请求访问你的摄像头。",
     "doneButton": "完成",
@@ -1694,7 +1694,7 @@
   },
   "appUpdate": {
     "toast": {
-      "updateFailed": "更新 PrfNoir 失败",
+      "updateFailed": "更新 AutoLunex 失败",
       "restartFailed": "重启失败",
       "updateReady": "更新就绪，请重启以应用",
       "manualDownloadRequired": "需要手动下载",
@@ -1787,7 +1787,7 @@
     },
     "warnings": {
       "forgetWarningTitle": "重要:此密码无法恢复",
-      "forgetWarningBody": "PrfNoir 无法重置、恢复或绕过此密码。如果忘记,您将永久无法访问此配置文件的数据。"
+      "forgetWarningBody": "AutoLunex 无法重置、恢复或绕过此密码。如果忘记,您将永久无法访问此配置文件的数据。"
     },
     "modes": {
       "set": "设置",
@@ -1832,7 +1832,7 @@
     "invalidLaunchHookUrl": "启动钩子 URL 无效。请使用完整的 http:// 或 https:// URL。",
     "cookieDbLocked": "无法读取 Cookie — 数据库已锁定。请关闭浏览器后重试。",
     "cookieDbUnavailable": "无法读取 Cookie — Cookie 存储不可用。",
-    "selfHostedRequiresLogout": "在配置自托管服务器之前请先退出 PrfNoir 账户。",
+    "selfHostedRequiresLogout": "在配置自托管服务器之前请先退出 AutoLunex 账户。",
     "fingerprintRequiresPro": "查看或编辑指纹需要有效的付费方案。所有方案均包含指纹保护。",
     "proxyNotWorking": "所选代理无法使用，因此未创建配置文件。",
     "proxyPaymentRequired": "所选代理需要付费（402），其订阅可能已过期，因此未创建配置文件。",
@@ -1855,9 +1855,9 @@
     "dnsRulesSaveFailed": "保存 DNS 规则失败。",
     "dnsRulesExportFailed": "导出 DNS 规则失败。",
     "fingerprintMatchFailed": "无法将指纹匹配到代理。",
-    "proxySidecarVersionMismatch": "部分 PrfNoir 文件来自不同版本。请重新安装最新更新；你的配置文件将保持安全。",
+    "proxySidecarVersionMismatch": "部分 AutoLunex 文件来自不同版本。请重新安装最新更新；你的配置文件将保持安全。",
     "updateProfilesRunning": "安装更新前，请停止所有正在运行的配置文件。",
-    "updatePreparationFailed": "PrfNoir 无法安全停止后台网络进程。请重启电脑，然后再次尝试更新。",
+    "updatePreparationFailed": "AutoLunex 无法安全停止后台网络进程。请重启电脑，然后再次尝试更新。",
     "wayfernTermsRequired": "请先接受 Wayfern 条款与条件，再启动 MCP 服务器。",
     "apiPortUnavailable": "API 服务器找不到可用端口。",
     "mcpServerAlreadyRunning": "MCP 服务器已在运行。",
@@ -1865,14 +1865,14 @@
     "mcpPortUnavailable": "MCP 服务器找不到可用端口。",
     "mcpConfigurationUnavailable": "MCP 服务器配置不可用。请重启服务器后重试。",
     "mcpAgentUnknown": "不支持此 MCP 客户端。",
-    "mcpAgentInstallFailed": "无法将 PrfNoir 添加到 MCP 客户端：{{detail}}",
-    "mcpAgentRemoveFailed": "无法从 MCP 客户端移除 PrfNoir：{{detail}}",
+    "mcpAgentInstallFailed": "无法将 AutoLunex 添加到 MCP 客户端：{{detail}}",
+    "mcpAgentRemoveFailed": "无法从 MCP 客户端移除 AutoLunex：{{detail}}",
     "vlessConfigInvalid": "VLESS URI 无效。",
     "xrayUnavailable": "此系统无法使用 Xray-core。",
     "xrayUnsupportedOs": "VLESS 需要 macOS 12 或更高版本。",
     "xrayStartFailed": "无法启动 Xray-core。",
-    "cloudNotSignedIn": "请先登录你的 PrfNoir 账号再使用此功能。",
-    "cloudUnreachable": "无法连接 PrfNoir 服务器。请检查网络后重试。",
+    "cloudNotSignedIn": "请先登录你的 AutoLunex 账号再使用此功能。",
+    "cloudUnreachable": "无法连接 AutoLunex 服务器。请检查网络后重试。",
     "cloudRequestFailed": "请求失败。请稍后再试。",
     "remoteRateLimited": "请求过于频繁。请稍候再试。",
     "remoteNoCapacity": "当前没有空闲的远程机器。请几分钟后再试。",
@@ -1912,16 +1912,16 @@
     "vpnWorkerStartFailed": "无法启动 VPN 连接：{{detail}}",
     "exitProbeFailed": "无法连接代理出口节点以检查其位置。",
     "vlessUnsupported": {
-      "security": "此 VLESS 服务器未使用 REALITY。PrfNoir 仅支持搭配 REALITY 的 VLESS。",
-      "flow": "此 VLESS 服务器未使用 PrfNoir 所需的 XTLS Vision 流控。",
-      "transport": "PrfNoir 仅支持基于普通 TCP 的 VLESS —— 此服务器使用了其他传输方式（如 WebSocket 或 gRPC）。",
-      "encryption": "此 VLESS 服务器使用了 PrfNoir 不支持的加密设置。",
-      "headerType": "此 VLESS 服务器使用了 PrfNoir 不支持的头部混淆。",
-      "fingerprint": "此 VLESS URI 请求了 PrfNoir 不支持的 TLS 指纹。",
+      "security": "此 VLESS 服务器未使用 REALITY。AutoLunex 仅支持搭配 REALITY 的 VLESS。",
+      "flow": "此 VLESS 服务器未使用 AutoLunex 所需的 XTLS Vision 流控。",
+      "transport": "AutoLunex 仅支持基于普通 TCP 的 VLESS —— 此服务器使用了其他传输方式（如 WebSocket 或 gRPC）。",
+      "encryption": "此 VLESS 服务器使用了 AutoLunex 不支持的加密设置。",
+      "headerType": "此 VLESS 服务器使用了 AutoLunex 不支持的头部混淆。",
+      "fingerprint": "此 VLESS URI 请求了 AutoLunex 不支持的 TLS 指纹。",
       "sni": "VLESS URI 缺少 REALITY 所需的 SNI（sni）。",
       "publicKey": "VLESS URI 缺少 REALITY 公钥（pbk）。",
       "scheme": "这不是 VLESS 链接，必须以 vless:// 开头。",
-      "parameter": "VLESS URI 含有 PrfNoir 不支持的选项。",
+      "parameter": "VLESS URI 含有 AutoLunex 不支持的选项。",
       "malformed": "VLESS URI 无效。"
     },
     "camoufoxRemoved": "Camoufox 已不再受支持。请使用 Wayfern 重新创建此配置文件。",
@@ -1939,7 +1939,7 @@
       "importProfileHint": "从其他工具导入",
       "keyboardShortcuts": "键盘快捷键",
       "keyboardShortcutsHint": "查看所有快捷键",
-      "about": "关于 PrfNoir",
+      "about": "关于 AutoLunex",
       "aboutHint": "版本和应用信息"
     },
     "network": "网络",
@@ -2006,8 +2006,8 @@
     },
     "selfHosted": {
       "title": "自托管同步服务器",
-      "description": "将 PrfNoir 连接到您自己的 donut-sync 服务器，无需使用托管云即可同步配置文件、代理、组和扩展程序。",
-      "disabledWhileLoggedIn": "登录 PrfNoir 账户时无法使用自托管同步。请先退出登录以使用自定义服务器。",
+      "description": "将 AutoLunex 连接到您自己的 autolunex-sync 服务器，无需使用托管云即可同步配置文件、代理、组和扩展程序。",
+      "disabledWhileLoggedIn": "登录 AutoLunex 账户时无法使用自托管同步。请先退出登录以使用自定义服务器。",
       "connectionStatus": "连接：",
       "statusUnknown": "未测试",
       "testConnection": "测试连接",
@@ -2036,7 +2036,7 @@
       "stopProfile": "停止 {{name}}",
       "profileInfo": "信息 — {{name}}",
       "createProfile": "创建配置文件",
-      "about": "关于 PrfNoir"
+      "about": "关于 AutoLunex"
     }
   },
   "shortcuts": {
@@ -2053,13 +2053,13 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "退出 PrfNoir？",
+    "title": "退出 AutoLunex？",
     "description": "确定要关闭应用吗？",
     "cancel": "取消",
     "quit": "退出"
   },
   "tray": {
-    "show": "显示 PrfNoir",
+    "show": "显示 AutoLunex",
     "quit": "退出"
   },
   "onboarding": {
@@ -2080,13 +2080,13 @@
       "finish": "完成"
     },
     "thankYou": {
-      "title": "感谢您选择 PrfNoir",
+      "title": "感谢您选择 AutoLunex",
       "body": "希望它能让您的网络浏览更加私密——每个身份彼此独立，数据不会离开您的设备。祝您使用愉快！",
       "cta": "开始浏览"
     }
   },
   "welcome": {
-    "title": "欢迎使用 PrfNoir",
+    "title": "欢迎使用 AutoLunex",
     "tagline": "一款开源的反检测浏览器，可同时管理多个身份。",
     "skip": "跳过",
     "next": "下一步",
@@ -2130,7 +2130,7 @@
     },
     "license": {
       "title": "许可",
-      "body": "PrfNoir 是开源软件，可免费使用。",
+      "body": "AutoLunex 是开源软件，可免费使用。",
       "agree": "我知道了",
       "personalTitle": "个人使用",
       "personalDesc": "永久免费。",
@@ -2504,16 +2504,16 @@
     "vpnExtensionConfirmed": "已知的 VPN 或代理工具",
     "vpnExtensionLikely": "疑似 VPN 或代理工具",
     "vpnExtensionCapability": "拥有代理权限",
-    "vpnExtensionExplainer": "如果其中之一将流量转发到别处，浏览器的真实位置将不再与创建此配置文件时使用的时区、语言和地理位置一致，而 PrfNoir 无法从外部察觉。",
+    "vpnExtensionExplainer": "如果其中之一将流量转发到别处，浏览器的真实位置将不再与创建此配置文件时使用的时区、语言和地理位置一致，而 AutoLunex 无法从外部察觉。",
     "proxyCapableHeading": "可以更改代理的扩展",
-    "proxyCapableIntro": "它们看起来不是 VPN，但拥有 Chromium 的代理权限，下载管理器和调试工具同样需要该权限。PrfNoir 无法判断它们是否在使用它：",
-    "sourcePrfNoir": "由 PrfNoir 管理",
+    "proxyCapableIntro": "它们看起来不是 VPN，但拥有 Chromium 的代理权限，下载管理器和调试工具同样需要该权限。AutoLunex 无法判断它们是否在使用它：",
+    "sourceAutoLunex": "由 AutoLunex 管理",
     "sourceBrowser": "已安装在配置文件中",
     "measurementUnreliable": "此配置文件中有扩展拥有代理权限，因此出口检测结果可能并非浏览器实际使用的线路。",
-    "scanIncompleteEncrypted": "此配置文件已加密，因此只能检查由 PrfNoir 管理的扩展。",
-    "scanIncompleteEphemeral": "此配置文件尚无数据，因此只能检查由 PrfNoir 管理的扩展。",
+    "scanIncompleteEncrypted": "此配置文件已加密，因此只能检查由 AutoLunex 管理的扩展。",
+    "scanIncompleteEphemeral": "此配置文件尚无数据，因此只能检查由 AutoLunex 管理的扩展。",
     "scanIncompletePartial": "扩展扫描被中断，可能有部分扩展未列出。",
-    "probePending": "尚未测量代理出口。PrfNoir 会在启动过程中检查，如不匹配则停止。",
+    "probePending": "尚未测量代理出口。AutoLunex 会在启动过程中检查，如不匹配则停止。",
     "launchAnyway": "仍要启动",
     "dontBlockAgain": "不再因这一完全相同的不匹配而阻止",
     "dontWarnExtensions": "不再就这些扩展发出警告",
@@ -2521,6 +2521,6 @@
     "cancelledSummary": "已取消 {{total}} 次启动中的 {{cancelled}} 次",
     "vpnExtensionEntry": " {{version}} — {{capability}}、{{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}、{{source}}",
-    "scanIncompleteMissing": "此配置文件尚未启动过，因此只能检查由 PrfNoir 管理的扩展。"
+    "scanIncompleteMissing": "此配置文件尚未启动过，因此只能检查由 AutoLunex 管理的扩展。"
   }
 }

@@ -1988,15 +1988,7 @@ export default function Home() {
         ? t("pageTitle.import")
         : t(`pageTitle.${currentPage}`);
 
-  if (!licenseKeyVerified) {
-    return (
-      <LicenseKeyGate
-        onContinue={() => {
-          setLicenseKeyVerified(true);
-        }}
-      />
-    );
-  }
+
 
   return (
     <div className="flex h-dvh flex-col bg-background font-(family-name:--font-geist-sans)">
@@ -2093,22 +2085,9 @@ export default function Home() {
               }}
               onIntegrationsOpen={() => {
                 setSettingsDialogOpen(false);
-                setIntegrationsDialogOpen(true);
-                setCurrentPage("integrations");
-              }}
-              subPage={currentPage === "settings"}
-            />
-          )}
-
-          {integrationsDialogOpen && (
-            <IntegrationsDialog
-              isOpen={integrationsDialogOpen}
-              onClose={() => {
-                setIntegrationsDialogOpen(false);
                 setCurrentPage("profiles");
               }}
-              subPage={currentPage === "integrations"}
-              initialTab={integrationsInitialTab}
+              subPage={currentPage === "settings"}
             />
           )}
 
@@ -2136,19 +2115,6 @@ export default function Home() {
             />
           )}
 
-          {extensionManagementDialogOpen && (
-            <ExtensionManagementDialog
-              isOpen={extensionManagementDialogOpen}
-              onClose={() => {
-                setExtensionManagementDialogOpen(false);
-                setCurrentPage("profiles");
-              }}
-              limitedMode={false}
-              subPage={currentPage === "extensions"}
-              initialTab={extensionManagementInitialTab}
-            />
-          )}
-
           {importProfileDialogOpen && (
             <ImportProfileDialog
               isOpen={importProfileDialogOpen}
@@ -2158,22 +2124,6 @@ export default function Home() {
               }}
               crossOsUnlocked={crossOsUnlocked}
               subPage={currentPage === "import"}
-            />
-          )}
-
-          {cookieBotDialogOpen && (
-            <CookieBotPage
-              isOpen={cookieBotDialogOpen}
-              onClose={() => {
-                setCookieBotDialogOpen(false);
-                setCurrentPage("profiles");
-              }}
-              subPage={currentPage === "cookieBot"}
-              initialTab={cookieBotInitialTab}
-              profiles={profiles}
-              cloudUser={cloudUser}
-              onOpenProfileSync={handleOpenProfileSyncDialog}
-              onAssignProxy={handleAssignProfilesToProxy}
             />
           )}
 
@@ -2199,8 +2149,6 @@ export default function Home() {
           onOpenAbout={() => {
             setAboutDialogOpen(true);
           }}
-          cookieBotRunning={Object.keys(cookieBotLiveSessions).length > 0}
-          cookieBotUnlocked={canUseCookieBot(cloudUser)}
         />
       </div>
 

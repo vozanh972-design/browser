@@ -1,8 +1,8 @@
 [package]
 name = "donutbrowser"
-version = "0.29.1"
-description = "Anti-Detect Browser"
-authors = ["PrfNoir"]
+version = "1.0.0"
+description = "AutoLunex"
+authors = ["AutoLunex Team"]
 edition = "2021"
 default-run = "donutbrowser"
 
@@ -174,9 +174,11 @@ split-debuginfo = "unpacked"
 [profile.release]
 codegen-units = 1
 opt-level = 3
-lto = "thin"
-# Split debuginfo on macOS for faster linking (ignored on other platforms)
-split-debuginfo = "unpacked"
+lto = true
+panic = "abort"
+strip = true
+debug = false
+overflow-checks = false
 
 [profile.test]
 # Optimize test builds for faster compilation

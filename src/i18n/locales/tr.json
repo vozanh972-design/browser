@@ -134,12 +134,12 @@
       "title": "Varsayılan Tarayıcı",
       "setAsDefault": "Varsayılan Tarayıcı Olarak Ayarla",
       "alreadyDefault": "Zaten Varsayılan Tarayıcı",
-      "description": "Varsayılan olarak ayarlandığında, PrfNoir web bağlantılarını yönetir ve hangi profilin kullanılacağını seçmenize olanak tanır."
+      "description": "Varsayılan olarak ayarlandığında, AutoLunex web bağlantılarını yönetir ve hangi profilin kullanılacağını seçmenize olanak tanır."
     },
     "permissions": {
       "title": "Sistem İzinleri",
       "loading": "İzinler yükleniyor...",
-      "description": "Bu izinler, PrfNoir'dan başlatılan tarayıcıların sistem kaynaklarına erişmesine olanak tanır. Her web sitesi yine de sizden ayrı ayrı izin isteyecektir.",
+      "description": "Bu izinler, AutoLunex'dan başlatılan tarayıcıların sistem kaynaklarına erişmesine olanak tanır. Her web sitesi yine de sizden ayrı ayrı izin isteyecektir.",
       "microphone": "Mikrofon",
       "microphoneDescription": "Tarayıcı uygulamaları için mikrofon erişimi",
       "camera": "Kamera",
@@ -183,7 +183,7 @@
       "trialExpired": "Deneme süresi doldu",
       "trialExpiredDescription": "Kişisel kullanım ücretsiz kalır. Ticari kullanım lisans gerektirir.",
       "subscriptionActive": "Abone — {{plan}} planı",
-      "subscriptionActiveDescription": "PrfNoir aboneliğiniz etkin. Ticari kullanım, planınızın süresi boyunca lisanslıdır."
+      "subscriptionActiveDescription": "AutoLunex aboneliğiniz etkin. Ticari kullanım, planınızın süresi boyunca lisanslıdır."
     },
     "advanced": {
       "title": "Gelişmiş",
@@ -196,7 +196,7 @@
       "copyLogsDescription": "Son günlüklerin hassas verileri ayıklanmış bir paketini kopyalar (en fazla 5 MB). Ayıklama her tür kişisel veriyi belirleyemeyeceğinden paylaşmadan önce inceleyin."
     },
     "disableAutoUpdates": "Uygulama Otomatik Güncellemelerini Devre Dışı Bırak",
-    "disableAutoUpdatesDescription": "Uygulamanın PrfNoir güncellemelerini otomatik olarak denetlemesini ve yüklemesini engelleyin. Tarayıcı güncellemeleri bundan etkilenmez.",
+    "disableAutoUpdatesDescription": "Uygulamanın AutoLunex güncellemelerini otomatik olarak denetlemesini ve yüklemesini engelleyin. Tarayıcı güncellemeleri bundan etkilenmez.",
     "keepDecryptedProfilesInRam": "Şifresi Çözülmüş Profilleri RAM'de Tut",
     "keepDecryptedProfilesInRamDescription": "Daha hızlı başlatma için parola korumalı profillerin şifresi çözülmüş RAM kopyasını başlatmalar arasında koruyun. Diskteki kopya her durumda şifreli kalır.",
     "privacy": {
@@ -235,7 +235,7 @@
       "extensions": "Uzantılar"
     },
     "newProfile": "Yeni",
-    "donutLogo": "PrfNoir logosu",
+    "autolunexLogo": "AutoLunex logosu",
     "scrollGroupsLeft": "Grupları sola kaydır",
     "scrollGroupsRight": "Grupları sağa kaydır"
   },
@@ -1177,7 +1177,7 @@
     "launchHook": {
       "title": "Başlatma Kancası URL'si",
       "label": "Başlatma Kancası URL'si",
-      "description": "PrfNoir, profil her başlatıldığında bu URL'ye bir GET isteği gönderir.",
+      "description": "AutoLunex, profil her başlatıldığında bu URL'ye bir GET isteği gönderir.",
       "placeholder": "https://example.com/hooks/profile-launch",
       "invalidUrlHint": "Geçerli bir http:// veya https:// URL'si girin."
     },
@@ -1569,7 +1569,7 @@
   },
   "wayfernTerms": {
     "title": "Wayfern Şartlar ve Koşulları",
-    "description": "PrfNoir'ı kullanmadan önce Wayfern'ün Şartlar ve Koşullarını okuyup kabul etmelisiniz.",
+    "description": "AutoLunex'ı kullanmadan önce Wayfern'ün Şartlar ve Koşullarını okuyup kabul etmelisiniz.",
     "reviewLabel": "Lütfen Şartlar ve Koşulları şu adresten inceleyin:",
     "agreeNotice": "\"Kabul Ediyorum\"a tıklayarak bu şartlara bağlı kalmayı kabul edersiniz.",
     "acceptButton": "Kabul Ediyorum",
@@ -1580,7 +1580,7 @@
   "commercialTrial": {
     "title": "Ticari Deneme Süresi Doldu",
     "description": "2 haftalık ticari deneme süreniz sona erdi.",
-    "body": "PrfNoir'ı iş amaçlı kullanıyorsanız devam etmek için ticari lisans satın almanız gerekir. Kişisel kullanım için ücretsiz olarak kullanmaya devam edebilirsiniz.",
+    "body": "AutoLunex'ı iş amaçlı kullanıyorsanız devam etmek için ticari lisans satın almanız gerekir. Kişisel kullanım için ücretsiz olarak kullanmaya devam edebilirsiniz.",
     "understandButton": "Anladım",
     "failed": "Onay kaydedilemedi",
     "tryAgain": "Lütfen yeniden deneyin"
@@ -1588,10 +1588,10 @@
   "permissionDialog": {
     "titleMicrophone": "Mikrofon Erişimi Gerekli",
     "titleCamera": "Kamera Erişimi Gerekli",
-    "descMicrophone": "PrfNoir, web tarayıcılarında mikrofon işlevini etkinleştirmek için mikrofonunuza erişmelidir. Mikrofonunuzu kullanmak isteyen her web sitesi yine de sizden ayrıca izin isteyecektir.",
-    "descCamera": "PrfNoir, web tarayıcılarında kamera işlevini etkinleştirmek için kameranıza erişmelidir. Kameranızı kullanmak isteyen her web sitesi yine de sizden ayrıca izin isteyecektir.",
-    "grantedMicrophone": "İzin verildi! PrfNoir'dan başlatılan tarayıcılar artık mikrofonunuza erişebilir.",
-    "grantedCamera": "İzin verildi! PrfNoir'dan başlatılan tarayıcılar artık kameranıza erişebilir.",
+    "descMicrophone": "AutoLunex, web tarayıcılarında mikrofon işlevini etkinleştirmek için mikrofonunuza erişmelidir. Mikrofonunuzu kullanmak isteyen her web sitesi yine de sizden ayrıca izin isteyecektir.",
+    "descCamera": "AutoLunex, web tarayıcılarında kamera işlevini etkinleştirmek için kameranıza erişmelidir. Kameranızı kullanmak isteyen her web sitesi yine de sizden ayrıca izin isteyecektir.",
+    "grantedMicrophone": "İzin verildi! AutoLunex'dan başlatılan tarayıcılar artık mikrofonunuza erişebilir.",
+    "grantedCamera": "İzin verildi! AutoLunex'dan başlatılan tarayıcılar artık kameranıza erişebilir.",
     "notGrantedMicrophone": "İzin verilmedi. Mikrofonunuza erişim istemek için aşağıdaki düğmeye tıklayın.",
     "notGrantedCamera": "İzin verilmedi. Kameranıza erişim istemek için aşağıdaki düğmeye tıklayın.",
     "doneButton": "Bitti",
@@ -1694,7 +1694,7 @@
   },
   "appUpdate": {
     "toast": {
-      "updateFailed": "PrfNoir güncellenemedi",
+      "updateFailed": "AutoLunex güncellenemedi",
       "restartFailed": "Yeniden başlatılamadı",
       "updateReady": "Güncelleme hazır, uygulamak için yeniden başlatın",
       "manualDownloadRequired": "Elle indirme gerekli",
@@ -1787,7 +1787,7 @@
     },
     "warnings": {
       "forgetWarningTitle": "Önemli: bu parola kurtarılamaz",
-      "forgetWarningBody": "PrfNoir bu parolayı sıfırlayamaz, kurtaramaz veya atlayamaz. Unutursanız bu profilin verilerine erişimi kalıcı olarak kaybedersiniz."
+      "forgetWarningBody": "AutoLunex bu parolayı sıfırlayamaz, kurtaramaz veya atlayamaz. Unutursanız bu profilin verilerine erişimi kalıcı olarak kaybedersiniz."
     },
     "modes": {
       "set": "Belirle",
@@ -1832,7 +1832,7 @@
     "invalidLaunchHookUrl": "Geçersiz başlatma kancası URL'si. Tam bir http:// veya https:// URL'si kullanın.",
     "cookieDbLocked": "Çerezler okunamadı — veritabanı kilitli. Tarayıcıyı kapatıp yeniden deneyin.",
     "cookieDbUnavailable": "Çerezler okunamadı — çerez deposu kullanılamıyor.",
-    "selfHostedRequiresLogout": "Kendi sunucunuzu yapılandırmadan önce PrfNoir hesabınızdan çıkış yapın.",
+    "selfHostedRequiresLogout": "Kendi sunucunuzu yapılandırmadan önce AutoLunex hesabınızdan çıkış yapın.",
     "fingerprintRequiresPro": "Parmak izini görüntülemek veya düzenlemek etkin bir ücretli plan gerektirir. Koruma tüm planlara dahildir.",
     "proxyNotWorking": "Seçilen proxy çalışmıyor, bu nedenle profil oluşturulmadı.",
     "proxyPaymentRequired": "Seçilen proxy ödeme gerektiriyor (402) — aboneliği sona ermiş olabilir — bu nedenle profil oluşturulmadı.",
@@ -1855,9 +1855,9 @@
     "dnsRulesSaveFailed": "DNS kuralları kaydedilemedi.",
     "dnsRulesExportFailed": "DNS kuralları dışa aktarılamadı.",
     "fingerprintMatchFailed": "Parmak izi proxy'ye eşlenemedi.",
-    "proxySidecarVersionMismatch": "Bazı PrfNoir dosyaları farklı sürümlere ait. En son güncellemeyi yeniden yükleyin; profilleriniz güvende kalır.",
+    "proxySidecarVersionMismatch": "Bazı AutoLunex dosyaları farklı sürümlere ait. En son güncellemeyi yeniden yükleyin; profilleriniz güvende kalır.",
     "updateProfilesRunning": "Güncellemeyi yüklemeden önce çalışan tüm profilleri durdurun.",
-    "updatePreparationFailed": "PrfNoir arka plandaki bir ağ işlemini güvenli şekilde durduramadı. Bilgisayarınızı yeniden başlatıp güncellemeyi tekrar deneyin.",
+    "updatePreparationFailed": "AutoLunex arka plandaki bir ağ işlemini güvenli şekilde durduramadı. Bilgisayarınızı yeniden başlatıp güncellemeyi tekrar deneyin.",
     "wayfernTermsRequired": "MCP sunucusunu başlatmadan önce Wayfern Hüküm ve Koşullarını kabul edin.",
     "apiPortUnavailable": "API sunucusu kullanılabilir bir bağlantı noktası bulamadı.",
     "mcpServerAlreadyRunning": "MCP sunucusu zaten çalışıyor.",
@@ -1865,14 +1865,14 @@
     "mcpPortUnavailable": "MCP sunucusu kullanılabilir bir bağlantı noktası bulamadı.",
     "mcpConfigurationUnavailable": "MCP sunucusu yapılandırması kullanılamıyor. Sunucuyu yeniden başlatıp tekrar deneyin.",
     "mcpAgentUnknown": "Bu MCP istemcisi desteklenmiyor.",
-    "mcpAgentInstallFailed": "PrfNoir MCP istemcisine eklenemedi: {{detail}}",
-    "mcpAgentRemoveFailed": "PrfNoir MCP istemcisinden kaldırılamadı: {{detail}}",
+    "mcpAgentInstallFailed": "AutoLunex MCP istemcisine eklenemedi: {{detail}}",
+    "mcpAgentRemoveFailed": "AutoLunex MCP istemcisinden kaldırılamadı: {{detail}}",
     "vlessConfigInvalid": "VLESS URI'si geçersiz.",
     "xrayUnavailable": "Xray-core bu sistemde kullanılamıyor.",
     "xrayUnsupportedOs": "VLESS için macOS 12 veya sonraki bir sürüm gerekir.",
     "xrayStartFailed": "Xray-core başlatılamadı.",
-    "cloudNotSignedIn": "Bunu kullanmak için PrfNoir hesabınıza giriş yapın.",
-    "cloudUnreachable": "PrfNoir sunucularına ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.",
+    "cloudNotSignedIn": "Bunu kullanmak için AutoLunex hesabınıza giriş yapın.",
+    "cloudUnreachable": "AutoLunex sunucularına ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.",
     "cloudRequestFailed": "İstek başarısız oldu. Birazdan tekrar deneyin.",
     "remoteRateLimited": "Çok fazla istek. Biraz bekleyip tekrar deneyin.",
     "remoteNoCapacity": "Şu anda boş uzak makine yok. Birkaç dakika sonra tekrar deneyin.",
@@ -1912,16 +1912,16 @@
     "vpnWorkerStartFailed": "VPN bağlantısı başlatılamadı: {{detail}}",
     "exitProbeFailed": "Konumunu denetlemek için proxy çıkış düğümüne ulaşılamadı.",
     "vlessUnsupported": {
-      "security": "Bu VLESS sunucusu REALITY kullanmıyor. PrfNoir yalnızca REALITY ile VLESS'i destekler.",
-      "flow": "Bu VLESS sunucusu, PrfNoir'ın gerektirdiği XTLS Vision akışını kullanmıyor.",
-      "transport": "PrfNoir yalnızca düz TCP üzerinden VLESS'i destekler — bu sunucu farklı bir taşıma (WebSocket veya gRPC gibi) kullanıyor.",
-      "encryption": "Bu VLESS sunucusu, PrfNoir'ın desteklemediği bir şifreleme kullanıyor.",
-      "headerType": "Bu VLESS sunucusu, PrfNoir'ın desteklemediği bir başlık gizlemesi kullanıyor.",
-      "fingerprint": "Bu VLESS URI'si, PrfNoir'ın desteklemediği bir TLS parmak izi istiyor.",
+      "security": "Bu VLESS sunucusu REALITY kullanmıyor. AutoLunex yalnızca REALITY ile VLESS'i destekler.",
+      "flow": "Bu VLESS sunucusu, AutoLunex'ın gerektirdiği XTLS Vision akışını kullanmıyor.",
+      "transport": "AutoLunex yalnızca düz TCP üzerinden VLESS'i destekler — bu sunucu farklı bir taşıma (WebSocket veya gRPC gibi) kullanıyor.",
+      "encryption": "Bu VLESS sunucusu, AutoLunex'ın desteklemediği bir şifreleme kullanıyor.",
+      "headerType": "Bu VLESS sunucusu, AutoLunex'ın desteklemediği bir başlık gizlemesi kullanıyor.",
+      "fingerprint": "Bu VLESS URI'si, AutoLunex'ın desteklemediği bir TLS parmak izi istiyor.",
       "sni": "VLESS URI'sinde REALITY için gereken SNI (sni) eksik.",
       "publicKey": "VLESS URI'sinde REALITY genel anahtarı (pbk) eksik.",
       "scheme": "Bu bir VLESS bağlantısı değil. vless:// ile başlamalı.",
-      "parameter": "VLESS URI'si, PrfNoir'ın desteklemediği bir seçenek içeriyor.",
+      "parameter": "VLESS URI'si, AutoLunex'ın desteklemediği bir seçenek içeriyor.",
       "malformed": "VLESS URI'si geçersiz."
     },
     "camoufoxRemoved": "Camoufox artık desteklenmiyor. Bu profili Wayfern ile yeniden oluşturun.",
@@ -1939,7 +1939,7 @@
       "importProfileHint": "Başka bir araçtan profil getirin",
       "keyboardShortcuts": "Klavye kısayolları",
       "keyboardShortcutsHint": "Tüm kısayolları görüntüle",
-      "about": "PrfNoir Hakkında",
+      "about": "AutoLunex Hakkında",
       "aboutHint": "Sürüm ve uygulama bilgileri"
     },
     "network": "Ağ",
@@ -2006,8 +2006,8 @@
     },
     "selfHosted": {
       "title": "Kendi eşitleme sunucunuz",
-      "description": "Barındırılan bulutu kullanmadan profilleri, proxy'leri, grupları ve uzantıları eşitlemek için PrfNoir'u kendi donut-sync sunucunuza yönlendirin.",
-      "disabledWhileLoggedIn": "PrfNoir hesabınızda oturum açıkken kendi sunucunuzla eşitleme kullanılamaz. Özel bir sunucu kullanmak için çıkış yapın.",
+      "description": "Barındırılan bulutu kullanmadan profilleri, proxy'leri, grupları ve uzantıları eşitlemek için AutoLunex'u kendi autolunex-sync sunucunuza yönlendirin.",
+      "disabledWhileLoggedIn": "AutoLunex hesabınızda oturum açıkken kendi sunucunuzla eşitleme kullanılamaz. Özel bir sunucu kullanmak için çıkış yapın.",
       "connectionStatus": "Bağlantı:",
       "statusUnknown": "Test edilmedi",
       "testConnection": "Bağlantıyı test et",
@@ -2036,7 +2036,7 @@
       "stopProfile": "{{name}} profilini durdur",
       "profileInfo": "Bilgi — {{name}}",
       "createProfile": "Profil oluştur",
-      "about": "PrfNoir Hakkında"
+      "about": "AutoLunex Hakkında"
     }
   },
   "shortcuts": {
@@ -2053,13 +2053,13 @@
     "goCookieBot": "Cookie Bot"
   },
   "closeConfirm": {
-    "title": "PrfNoir kapatılsın mı?",
+    "title": "AutoLunex kapatılsın mı?",
     "description": "Uygulamayı kapatmak istediğinizden emin misiniz?",
     "cancel": "İptal",
     "quit": "Çık"
   },
   "tray": {
-    "show": "PrfNoir'ı Göster",
+    "show": "AutoLunex'ı Göster",
     "quit": "Çık"
   },
   "onboarding": {
@@ -2080,13 +2080,13 @@
       "finish": "Bitir"
     },
     "thankYou": {
-      "title": "PrfNoir'ı seçtiğiniz için teşekkürler",
+      "title": "AutoLunex'ı seçtiğiniz için teşekkürler",
       "body": "Umarız gezinmenizi daha gizli hale getirmenize yardımcı olur — her kimlik kendine ait kalır ve hiçbir şey makinenizden dışarı çıkmaz. İyi kullanımlar.",
       "cta": "Gezinmeye başla"
     }
   },
   "welcome": {
-    "title": "PrfNoir'a Hoş Geldiniz",
+    "title": "AutoLunex'a Hoş Geldiniz",
     "tagline": "Aynı anda birçok kimliği yönetmek için açık kaynaklı bir anti-detect tarayıcı.",
     "skip": "Atla",
     "next": "İleri",
@@ -2130,7 +2130,7 @@
     },
     "license": {
       "title": "Lisanslama",
-      "body": "PrfNoir açık kaynaklıdır ve kullanımı ücretsizdir.",
+      "body": "AutoLunex açık kaynaklıdır ve kullanımı ücretsizdir.",
       "agree": "Anladım",
       "personalTitle": "Kişisel kullanım",
       "personalDesc": "Sonsuza dek ücretsiz.",
@@ -2504,16 +2504,16 @@
     "vpnExtensionConfirmed": "Bilinen VPN veya proxy aracı",
     "vpnExtensionLikely": "VPN veya proxy aracı gibi görünüyor",
     "vpnExtensionCapability": "Proxy iznine sahip",
-    "vpnExtensionExplainer": "Bunlardan biri trafiğinizi başka bir yere yönlendirirse, tarayıcının gerçek konumu artık bu profilin oluşturulduğu saat dilimi, dil ve coğrafi konumla eşleşmez ve PrfNoir bunu dışarıdan algılayamaz.",
+    "vpnExtensionExplainer": "Bunlardan biri trafiğinizi başka bir yere yönlendirirse, tarayıcının gerçek konumu artık bu profilin oluşturulduğu saat dilimi, dil ve coğrafi konumla eşleşmez ve AutoLunex bunu dışarıdan algılayamaz.",
     "proxyCapableHeading": "Proxy'yi değiştirebilen uzantılar",
-    "proxyCapableIntro": "Bunlar VPN'e benzemiyor, ancak Chromium'un proxy iznine sahipler; bu izne indirme yöneticileri ve hata ayıklama araçları da ihtiyaç duyar. PrfNoir, herhangi birinin bunu kullanıp kullanmadığını anlayamaz:",
-    "sourcePrfNoir": "PrfNoir tarafından yönetiliyor",
+    "proxyCapableIntro": "Bunlar VPN'e benzemiyor, ancak Chromium'un proxy iznine sahipler; bu izne indirme yöneticileri ve hata ayıklama araçları da ihtiyaç duyar. AutoLunex, herhangi birinin bunu kullanıp kullanmadığını anlayamaz:",
+    "sourceAutoLunex": "AutoLunex tarafından yönetiliyor",
     "sourceBrowser": "Profile yüklenmiş",
     "measurementUnreliable": "Bu profildeki bir uzantı proxy iznine sahip, bu nedenle çıkış kontrolü tarayıcının gerçekte kullandığı rotayı yansıtmayabilir.",
-    "scanIncompleteEncrypted": "Bu profil şifreli olduğundan yalnızca PrfNoir tarafından yönetilen uzantılar denetlenebildi.",
-    "scanIncompleteEphemeral": "Bu profilde henüz veri olmadığından yalnızca PrfNoir tarafından yönetilen uzantılar denetlenebildi.",
+    "scanIncompleteEncrypted": "Bu profil şifreli olduğundan yalnızca AutoLunex tarafından yönetilen uzantılar denetlenebildi.",
+    "scanIncompleteEphemeral": "Bu profilde henüz veri olmadığından yalnızca AutoLunex tarafından yönetilen uzantılar denetlenebildi.",
     "scanIncompletePartial": "Uzantı taraması yarıda kesildi, bu nedenle bazıları listelenmemiş olabilir.",
-    "probePending": "Proxy çıkışı henüz ölçülmedi. PrfNoir başlatma sırasında kontrol edecek ve eşleşmezse duracak.",
+    "probePending": "Proxy çıkışı henüz ölçülmedi. AutoLunex başlatma sırasında kontrol edecek ve eşleşmezse duracak.",
     "launchAnyway": "Yine de başlat",
     "dontBlockAgain": "Bu tam uyuşmazlık için bir daha engelleme",
     "dontWarnExtensions": "Bu uzantılar için bir daha uyarma",
@@ -2521,6 +2521,6 @@
     "cancelledSummary": "{{total}} başlatmadan {{cancelled}} tanesi iptal edildi",
     "vpnExtensionEntry": " {{version}} — {{capability}}, {{source}}",
     "vpnExtensionEntryNoVersion": " — {{capability}}, {{source}}",
-    "scanIncompleteMissing": "Bu profil henüz başlatılmadığından yalnızca PrfNoir tarafından yönetilen uzantılar denetlenebildi."
+    "scanIncompleteMissing": "Bu profil henüz başlatılmadığından yalnızca AutoLunex tarafından yönetilen uzantılar denetlenebildi."
   }
 }

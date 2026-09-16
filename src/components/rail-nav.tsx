@@ -23,19 +23,16 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 export type AppPage =
   | "profiles"
   | "proxies"
-  | "extensions"
   | "groups"
-  | "cookieBot"
   | "vpns"
   | "settings"
-  | "integrations"
   | "account"
   | "import"
   | "shortcuts";
 
 const CLICK_THRESHOLD = 5;
 const CLICK_WINDOW_MS = 2000;
-const LOGO_HIDDEN_KEY = "donut-logo-hidden";
+const LOGO_HIDDEN_KEY = "autolunex-logo-hidden";
 
 function useLogoEasterEgg({
   currentPage,
@@ -159,8 +156,6 @@ interface RailNavProps {
   currentPage: AppPage;
   onNavigate: (page: AppPage) => void;
   onOpenAbout: () => void;
-  cookieBotRunning?: boolean;
-  cookieBotUnlocked?: boolean;
 }
 
 interface RailItem {
@@ -172,17 +167,9 @@ interface RailItem {
 const TOP_ITEMS: RailItem[] = [
   { page: "profiles", Icon: LuUser, labelKey: "rail.profiles" },
   { page: "proxies", Icon: FiWifi, labelKey: "rail.network" },
-  { page: "extensions", Icon: LuPuzzle, labelKey: "rail.extensions" },
   { page: "groups", Icon: LuUsers, labelKey: "rail.groups" },
-  { page: "integrations", Icon: LuPlug, labelKey: "rail.integrations" },
   { page: "account", Icon: LuCloud, labelKey: "rail.account" },
 ];
-
-const COOKIE_BOT_ITEM: RailItem = {
-  page: "cookieBot",
-  Icon: LuCookie,
-  labelKey: "rail.cookieBot",
-};
 
 interface MoreMenuItem {
   page: AppPage;
@@ -210,14 +197,10 @@ export function RailNav({
   currentPage,
   onNavigate,
   onOpenAbout,
-  cookieBotRunning = false,
-  cookieBotUnlocked = false,
 }: RailNavProps) {
   const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
-  const visibleTopItems = cookieBotUnlocked
-    ? [...TOP_ITEMS.slice(0, 4), COOKIE_BOT_ITEM, ...TOP_ITEMS.slice(4)]
-    : TOP_ITEMS;
+  const visibleTopItems = TOP_ITEMS;
 
   const {
     logoRef,
@@ -308,15 +291,10 @@ export function RailNav({
                   {active && (
                     <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground" />
                   )}
-                  {page === "cookieBot" && cookieBotRunning && (
-                    <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-success" />
-                  )}
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={8}>
-                {page === "cookieBot" && cookieBotRunning
-                  ? t("rail.cookieBotRunning")
-                  : t(labelKey)}
+                {t(labelKey)}
               </TooltipContent>
             </Tooltip>
           );
