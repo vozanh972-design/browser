@@ -3005,6 +3005,7 @@ mod tests {
       "cloud_get_wayfern_token",
       "cloud_refresh_wayfern_token",
       "lock_profile",
+      "ensure_active_browsers_downloaded",
     ];
 
     // Extract command names from the generate_handler! macro in this file
