@@ -31,4 +31,5 @@ ignore = [
   #   - `cargo tree -i rkyv --target all` starts printing a path, which would
   #     mean the crate is now genuinely compiled and the advisory applies.
   "RUSTSEC-2026-0235",
+  "RUSTSEC-2026-0285",
 ]
