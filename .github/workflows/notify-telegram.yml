@@ -197,13 +197,11 @@ jobs:
               parse_mode: "HTML",
               disable_web_page_preview: true,
               text: (
-                "<b>PrfNoir " + $version + " released</b>\n\n" +
+                "<b>AutoLunex " + $version + " released</b>\n\n" +
                 $changes + "\n" +
                 "<b>Download</b>\n" +
-                "<a href=\"" + $dl + "/PrfNoir_" + $vnum + "_aarch64.dmg\">macOS (Apple Silicon)</a> · " +
-                "<a href=\"" + $dl + "/PrfNoir_" + $vnum + "_x64.dmg\">macOS (Intel)</a>\n" +
-                "<a href=\"" + $dl + "/PrfNoir_" + $vnum + "_x64-setup.exe\">Windows x64</a> · " +
-                "<a href=\"" + $dl + "/PrfNoir_" + $vnum + "_amd64.AppImage\">Linux x64</a>\n\n" +
+                "<a href=\"" + $dl + "/AutoLunex_" + $vnum + "_x64-setup.exe\">Windows Installer (x64)</a> · " +
+                "<a href=\"" + $dl + "/AutoLunex_" + $vnum + "_x64-portable.zip\">Portable (x64)</a>\n\n" +
                 "<a href=\"" + $release_url + "\">Full release notes</a>"
               )
             }')

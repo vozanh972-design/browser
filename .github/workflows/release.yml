@@ -230,7 +230,7 @@ jobs:
           mkdir -p "$ASSETS_DIR"
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir "$ASSETS_DIR"
           cd "$ASSETS_DIR"
-          sha256sum PrfNoir* > SHA256SUMS.txt
+          sha256sum AutoLunex* > SHA256SUMS.txt
           cat SHA256SUMS.txt
           gh release upload "$TAG" SHA256SUMS.txt --clobber --repo "$GITHUB_REPOSITORY"
 
@@ -337,7 +337,7 @@ jobs:
           cat > /tmp/install-links.md << LINKS
           ### Windows
 
-          [Download Windows Installer (x64)](${BASE}/PrfNoir_${VERSION}_x64-setup.exe) · [Portable (x64)](${BASE}/PrfNoir_${VERSION}_x64-portable.zip)
+          [Download Windows Installer (x64)](${BASE}/AutoLunex_${VERSION}_x64-setup.exe) · [Portable (x64)](${BASE}/AutoLunex_${VERSION}_x64-portable.zip)
           LINKS
 
           # Strip leading whitespace from heredoc
