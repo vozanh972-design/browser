@@ -1642,8 +1642,8 @@ mod tests {
     let profiles_dir = manager.get_profiles_dir();
 
     assert!(
-      profiles_dir.to_string_lossy().contains("PrfNoir"),
-      "Profiles dir should contain PrfNoir"
+      profiles_dir.to_string_lossy().contains("AutoLunex"),
+      "Profiles dir should contain AutoLunex"
     );
     assert!(
       profiles_dir.to_string_lossy().contains("profiles"),
@@ -1659,8 +1659,8 @@ mod tests {
     let path_str = binaries_dir.to_string_lossy();
 
     assert!(
-      path_str.contains("PrfNoir"),
-      "Binaries dir should contain PrfNoir"
+      path_str.contains("AutoLunex"),
+      "Binaries dir should contain AutoLunex"
     );
     assert!(
       path_str.contains("binaries"),

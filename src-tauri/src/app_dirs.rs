@@ -241,8 +241,8 @@ mod tests {
   fn test_app_name() {
     let name = app_name();
     assert!(
-      name == "PrfNoir" || name == "PrfNoirDev",
-      "app_name should be PrfNoir or PrfNoirDev, got: {name}"
+      name == "AutoLunex" || name == "AutoLunexDev",
+      "app_name should be AutoLunex or AutoLunexDev, got: {name}"
     );
   }
 
