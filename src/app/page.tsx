@@ -1366,11 +1366,6 @@ export default function Home() {
     setSelectedProfiles([]);
   }, [selectedProfiles, handleAssignProfilesToProxy]);
 
-  const handleProxyAssignmentComplete = useCallback(() => {
-    setProxyAssignmentDialogOpen(false);
-    setSelectedProfilesForProxy([]);
-  }, []);
-
   const [pendingBulkAction, setPendingBulkAction] = useState<{
     action: "run" | "stop";
     profiles: BrowserProfile[];
@@ -1458,16 +1453,6 @@ export default function Home() {
     }
     void executeBulkStop(targets);
   }, [selectedProfiles, profiles, runningProfiles, executeBulkStop, t]);
-
-  const handleCopyCookiesToProfile = useCallback((profile: BrowserProfile) => {
-    setSelectedProfilesForCookies([profile.id]);
-    setCookieCopyDialogOpen(true);
-  }, []);
-
-  const handleOpenCookieManagement = useCallback((profile: BrowserProfile) => {
-    setCurrentProfileForCookieManagement(profile);
-    setCookieManagementDialogOpen(true);
-  }, []);
 
   const handleGroupAssignmentComplete = useCallback(() => {
     // No need to manually reload - useProfileEvents will handle the update
