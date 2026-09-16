@@ -45,9 +45,9 @@ pub fn log_dir_override() -> Option<PathBuf> {
 
 pub fn app_name() -> &'static str {
   if cfg!(debug_assertions) {
-    "PrfNoirDev"
+    "AutoLunexDev"
   } else {
-    "PrfNoir"
+    "AutoLunex"
   }
 }
 
