@@ -54,7 +54,6 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { useProfileEvents } from "@/hooks/use-profile-events";
 import { useProxyEvents } from "@/hooks/use-proxy-events";
 import { useSyncSessions } from "@/hooks/use-sync-session";
-import { useUpdateNotifications } from "@/hooks/use-update-notifications";
 import { useVpnEvents } from "@/hooks/use-vpn-events";
 import { useWayfernTerms } from "@/hooks/use-wayfern-terms";
 import { parseBackendError, translateBackendError } from "@/lib/backend-errors";

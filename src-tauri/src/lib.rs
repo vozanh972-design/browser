@@ -1675,7 +1675,7 @@ fn setup_system_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::E
   // Bootstrap labels only — the frontend pushes localized labels via
   // `update_tray_menu` on mount and on language change, and the menu is only
   // opened after a minimize-to-tray (post-mount), so these are never shown.
-  let show_item = MenuItemBuilder::with_id("tray_show", "Show PrfNoir").build(app)?;
+  let show_item = MenuItemBuilder::with_id("tray_show", "Show AutoLunex").build(app)?;
   let quit_item = MenuItemBuilder::with_id("tray_quit", "Quit").build(app)?;
   let tray_menu = MenuBuilder::new(app)
     .item(&show_item)
@@ -1702,7 +1702,7 @@ fn setup_system_tray(app: &tauri::AppHandle) -> Result<(), Box<dyn std::error::E
   TrayIconBuilder::with_id("main")
     .icon(tray_image)
     .icon_as_template(cfg!(target_os = "macos"))
-    .tooltip("PrfNoir")
+    .tooltip(app_dirs::app_name())
     .menu(&tray_menu)
     .show_menu_on_left_click(false)
     .on_menu_event(|app_handle, event| match event.id().as_ref() {
@@ -1852,7 +1852,7 @@ pub fn run_with_builder(
       // Create the main window programmatically
       #[allow(unused_variables)]
       let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-        .title("PrfNoir")
+        .title("AutoLunex")
         .inner_size(880.0, 500.0)
         .min_inner_size(640.0, 400.0)
         .resizable(true)

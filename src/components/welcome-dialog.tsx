@@ -12,17 +12,14 @@ import {
   LuMic,
   LuNetwork,
   LuShieldCheck,
-  LuTriangleAlert,
   LuUsers,
 } from "react-icons/lu";
 import { Logo } from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { useBrowserSetup } from "@/hooks/use-browser-setup";
 import { usePermissions } from "@/hooks/use-permissions";
-import { getBrowserDisplayName } from "@/lib/browser-utils";
 
-type WelcomeStep = "intro" | "permissions" | "setup";
+type WelcomeStep = "intro" | "permissions";
 
 const panelSpring = {
   type: "spring",
@@ -45,89 +42,15 @@ const FEATURES = [
   { key: "welcome.features.items.groups", Icon: LuFolders },
 ] as const;
 
-const BYTE_UNITS = ["byte", "kilobyte", "megabyte", "gigabyte"] as const;
-
-function formatBytes(bytes: number, locale: string): string {
-  const exponent = Math.min(
-    BYTE_UNITS.length - 1,
-    bytes > 0 ? Math.floor(Math.log(bytes) / Math.log(1024)) : 0,
-  );
-  const value = bytes / 1024 ** exponent;
-  return new Intl.NumberFormat(locale, {
-    style: "unit",
-    unit: BYTE_UNITS[exponent],
-    unitDisplay: "short",
-    maximumFractionDigits: exponent === 0 ? 0 : 1,
-  }).format(value);
-}
-
-function formatDuration(seconds: number, locale: string): string {
-  const total = Math.max(0, Math.round(seconds));
-  const formatUnit = (
-    value: number,
-    unit: "minute" | "second",
-    minimumIntegerDigits = 1,
-  ) =>
-    new Intl.NumberFormat(locale, {
-      style: "unit",
-      unit,
-      unitDisplay: "narrow",
-      minimumIntegerDigits,
-    }).format(value);
-
-  if (total < 60) return formatUnit(total, "second");
-  const minutes = Math.floor(total / 60);
-  const remainder = total % 60;
-  return `${formatUnit(minutes, "minute")} ${formatUnit(
-    remainder,
-    "second",
-    2,
-  )}`;
-}
-
-function SetupProgress({ value, label }: { value: number; label: string }) {
-  const normalizedValue = Math.min(100, Math.max(0, value));
-  const determined = normalizedValue > 0;
-
-  return (
-    <div
-      role="progressbar"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      aria-valuenow={determined ? normalizedValue : undefined}
-      className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
-    >
-      {determined ? (
-        <motion.div
-          className="h-full origin-left rounded-full bg-primary"
-          initial={{ scaleX: 0 }}
-          animate={{ scaleX: normalizedValue / 100 }}
-          transition={{ type: "spring", stiffness: 120, damping: 24 }}
-        />
-      ) : (
-        <div className="h-full w-1/3 rounded-full bg-primary motion-safe:animate-progress-indeterminate motion-reduce:translate-x-0" />
-      )}
-    </div>
-  );
-}
-
 export function WelcomeDialog({
   isOpen,
-  needsSetup,
   onComplete,
 }: {
   isOpen: boolean;
-  /**
-   * Whether this user still needs the browser-download + profile-creation flow.
-   * False when they already have a profile — then the welcome and commercial-use
-   * steps still show, but "continue" finishes onboarding instead of proceeding
-   * to permissions/download.
-   */
-  needsSetup: boolean;
+  needsSetup?: boolean;
   onComplete: () => void;
 }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const reduceMotion = useReducedMotion();
   const {
     requestPermission,
@@ -144,24 +67,13 @@ export function WelcomeDialog({
   const visibleSteps: WelcomeStep[] = [
     "intro",
     ...(showPermissionsStep ? (["permissions"] as const) : []),
-    ...(needsSetup ? (["setup"] as const) : []),
   ];
   const currentStepIndex = Math.max(0, visibleSteps.indexOf(step));
   const panelTransition = reduceMotion
     ? ({ duration: 0.15 } as const)
     : panelSpring;
-  // Where the "skip" / "continue" affordances go: into the setup flow when a
-  // browser/profile is still needed, otherwise straight to completion.
-  const advanceToSetup = () => {
-    if (needsSetup) setStep("setup");
-    else onComplete();
-  };
-  const [requesting, setRequesting] = useState(false);
 
-  // Track the required browser's download + extraction the whole time the
-  // dialog is open, so progress is live by the time the user reaches setup.
-  const setup = useBrowserSetup("wayfern", isOpen);
-  const browserName = getBrowserDisplayName("wayfern");
+  const [requesting, setRequesting] = useState(false);
 
   const requestPermissions = useCallback(async () => {
     setRequesting(true);
@@ -176,9 +88,9 @@ export function WelcomeDialog({
       console.error("Permission request failed:", err);
     } finally {
       setRequesting(false);
-      setStep("setup");
+      onComplete();
     }
-  }, [isCameraAccessGranted, isMicrophoneAccessGranted, requestPermission]);
+  }, [isCameraAccessGranted, isMicrophoneAccessGranted, onComplete, requestPermission]);
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
@@ -269,7 +181,7 @@ export function WelcomeDialog({
                   variant="ghost"
                   size="sm"
                   className="text-muted-foreground hover:text-foreground"
-                  onClick={advanceToSetup}
+                  onClick={onComplete}
                 >
                   {t("welcome.skip")}
                 </Button>
@@ -278,7 +190,7 @@ export function WelcomeDialog({
                   className="gap-1.5"
                   onClick={() => {
                     if (showPermissionsStep) setStep("permissions");
-                    else advanceToSetup();
+                    else onComplete();
                   }}
                 >
                   {t("welcome.next")}
@@ -323,7 +235,7 @@ export function WelcomeDialog({
                   size="sm"
                   className="text-muted-foreground hover:text-foreground"
                   disabled={requesting}
-                  onClick={advanceToSetup}
+                  onClick={onComplete}
                 >
                   {t("welcome.permissions.skip")}
                 </Button>
@@ -343,156 +255,6 @@ export function WelcomeDialog({
                     : t("welcome.permissions.grant")}
                 </Button>
               </div>
-            </motion.div>
-          )}
-
-          {step === "setup" && (
-            <motion.div
-              key="setup"
-              variants={panelVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={panelTransition}
-              className="flex flex-col items-center gap-6 text-center"
-            >
-              {setup.phase === "error" ? (
-                <>
-                  <div className="flex flex-col items-center gap-2">
-                    <h2 className="flex items-center justify-center gap-2 text-2xl font-semibold tracking-tight text-balance text-destructive-text">
-                      <LuTriangleAlert className="size-5 shrink-0" />
-                      {t("welcome.ready.errorTitle")}
-                    </h2>
-                    <p className="max-w-[55ch] text-base/7 text-pretty text-muted-foreground sm:text-sm/6">
-                      {setup.error?.stage === "downloading"
-                        ? t("welcome.ready.errorDownload", {
-                            browser: browserName,
-                          })
-                        : setup.error?.stage === "extracting" ||
-                            setup.error?.stage === "verifying"
-                          ? t("welcome.ready.errorExtraction", {
-                              browser: browserName,
-                            })
-                          : t("welcome.ready.errorGeneric", {
-                              browser: browserName,
-                            })}
-                    </p>
-                  </div>
-
-                  {/* No escape hatch here: a browser must finish downloading
-                      before onboarding can complete, so the only action on
-                      failure is to retry. */}
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setup.retry();
-                    }}
-                  >
-                    {t("welcome.ready.retry")}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="flex flex-col items-center gap-2">
-                    <h2 className="text-2xl font-semibold tracking-tight text-balance">
-                      {t("welcome.ready.title")}
-                    </h2>
-                    <p className="max-w-[55ch] text-base/7 text-pretty text-muted-foreground sm:text-sm/6">
-                      {setup.phase === "ready"
-                        ? t("welcome.ready.descReady")
-                        : setup.phase === "extracting"
-                          ? t("welcome.ready.descExtracting")
-                          : t("welcome.ready.descDownloading")}
-                    </p>
-                  </div>
-
-                  {setup.phase === "downloading" && (
-                    <div className="flex w-full max-w-xs flex-col gap-2">
-                      <SetupProgress
-                        value={setup.downloadPercent}
-                        label={t("welcome.ready.downloading")}
-                      />
-                      <div className="flex items-center justify-between text-base/7 text-muted-foreground tabular-nums sm:text-sm/6">
-                        <span className="inline-flex items-center gap-1.5">
-                          <LuLoaderCircle className="size-4 shrink-0 animate-spin" />
-                          {t("welcome.ready.downloading")}
-                        </span>
-                        <span>{setup.downloadPercent}%</span>
-                      </div>
-                      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-0.5 text-sm text-muted-foreground tabular-nums">
-                        <span>
-                          {setup.totalBytes != null
-                            ? t("welcome.ready.stats", {
-                                downloaded: formatBytes(
-                                  setup.downloadedBytes,
-                                  i18n.language,
-                                ),
-                                total: formatBytes(
-                                  setup.totalBytes,
-                                  i18n.language,
-                                ),
-                              })
-                            : formatBytes(setup.downloadedBytes, i18n.language)}
-                        </span>
-                        {setup.speedBytesPerSec > 0 && (
-                          <span>
-                            {t("welcome.ready.speed", {
-                              speed: formatBytes(
-                                setup.speedBytesPerSec,
-                                i18n.language,
-                              ),
-                            })}
-                          </span>
-                        )}
-                        {setup.etaSeconds != null &&
-                          Number.isFinite(setup.etaSeconds) &&
-                          setup.etaSeconds > 0 && (
-                            <span>
-                              {t("welcome.ready.timeLeft", {
-                                time: formatDuration(
-                                  setup.etaSeconds,
-                                  i18n.language,
-                                ),
-                              })}
-                            </span>
-                          )}
-                      </div>
-                    </div>
-                  )}
-
-                  {setup.phase === "extracting" && (
-                    <div className="flex w-full max-w-xs flex-col gap-2">
-                      {setup.extractionOvertime ? (
-                        <div className="flex items-center justify-center gap-1.5 text-base/7 text-muted-foreground tabular-nums sm:text-sm/6">
-                          <LuLoaderCircle className="size-4 shrink-0 animate-spin" />
-                          {t("welcome.ready.almostFinished")}
-                        </div>
-                      ) : (
-                        <>
-                          <SetupProgress
-                            value={setup.extractionPercent}
-                            label={t("welcome.ready.extracting")}
-                          />
-                          <div className="flex items-center justify-between text-base/7 text-muted-foreground tabular-nums sm:text-sm/6">
-                            <span className="inline-flex items-center gap-1.5">
-                              <LuLoaderCircle className="size-4 shrink-0 animate-spin" />
-                              {t("welcome.ready.extracting")}
-                            </span>
-                            <span>{setup.extractionPercent}%</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {setup.phase === "ready" && (
-                    <Button size="sm" className="gap-1.5" onClick={onComplete}>
-                      <LuArrowRight className="size-4 shrink-0" />
-                      {t("welcome.ready.cta")}
-                    </Button>
-                  )}
-                </>
-              )}
             </motion.div>
           )}
         </AnimatePresence>
