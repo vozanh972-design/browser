@@ -1605,33 +1605,16 @@ export default function Home() {
     // Check for startup URLs (when app was launched as default browser)
     void checkCurrentUrl();
 
-    // Set up periodic update checks (every 30 minutes)
-    const updateInterval = setInterval(
-      () => {
-        void checkForUpdates();
-      },
-      30 * 60 * 1000,
-    );
-
     // Check for missing binaries after initial profile load
     if (!profilesLoading && profiles.length > 0) {
       void checkMissingBinaries();
     }
 
-    // Proactively download Wayfern if not already available
-    if (!profilesLoading) {
-      void invoke("ensure_active_browsers_downloaded").catch((err: unknown) => {
-        console.error("Failed to auto-download browsers:", err);
-      });
-    }
-
     return () => {
       disposed = true;
-      clearInterval(updateInterval);
       cleanup?.();
     };
   }, [
-    checkForUpdates,
     listenForUrlEvents,
     checkCurrentUrl,
     checkMissingBinaries,
