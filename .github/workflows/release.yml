@@ -100,11 +100,6 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Install dependencies (Ubuntu only)
-        if: matrix.platform == 'ubuntu-22.04' || matrix.platform == 'ubuntu-22.04-arm'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev pkg-config unzip xdg-utils
 
       - name: Rust cache
         uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 #v2.9.1
@@ -155,48 +150,11 @@ jobs:
       - name: Download verified Xray-core sidecar
         run: node src-tauri/download-xray.mjs --target ${{ matrix.target }}
 
-      - name: Import Apple certificate
-        if: matrix.platform == 'macos-latest'
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_KEY: ${{ secrets.APPLE_CERTIFICATE_KEY }}
-        run: |
-          CERT_PATH=$RUNNER_TEMP/cert.cer
-          KEY_PATH=$RUNNER_TEMP/cert.key
-          PEM_PATH=$RUNNER_TEMP/cert.pem
-          P12_PATH=$RUNNER_TEMP/build_certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          KEYCHAIN_PASSWORD=$(openssl rand -base64 32)
-          P12_PASSWORD=$(openssl rand -base64 32)
-
-          echo "$APPLE_CERTIFICATE" | base64 --decode > $CERT_PATH
-          echo "$APPLE_CERTIFICATE_KEY" | base64 --decode > $KEY_PATH
-
-          openssl x509 -inform DER -in $CERT_PATH -out $PEM_PATH
-          openssl pkcs12 -export -out $P12_PATH -inkey $KEY_PATH -in $PEM_PATH -passout pass:$P12_PASSWORD
-
-          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-
-          security import $P12_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH login.keychain-db
-
-          echo "Available signing identities:"
-          security find-identity -v -p codesigning $KEYCHAIN_PATH
-
-          rm -f $CERT_PATH $KEY_PATH $PEM_PATH $P12_PATH
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f #v1.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           TARGET: ${{ matrix.target }}
           # tauri-action invokes `pnpm tauri build`, which runs
           # `beforeBuildCommand` from tauri.conf.json. That rebuilds the
@@ -207,7 +165,7 @@ jobs:
         with:
           projectPath: ./src-tauri
           tagName: ${{ github.ref_name }}
-          releaseName: "PrfNoir ${{ github.ref_name }}"
+          releaseName: "AutoLunex ${{ github.ref_name }}"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: false
           prerelease: false
@@ -220,23 +178,17 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           VERSION="${TAG#v}"
-          PORTABLE_DIR="PrfNoir-Portable"
+          PORTABLE_DIR="AutoLunex-Portable"
           mkdir -p "$PORTABLE_DIR"
 
           # Copy main executable
-          cp "src-tauri/target/${{ matrix.target }}/release/donutbrowser.exe" "$PORTABLE_DIR/PrfNoir.exe"
+          cp "src-tauri/target/${{ matrix.target }}/release/donutbrowser.exe" "$PORTABLE_DIR/AutoLunex.exe"
 
           # Copy sidecar binaries
           cp "src-tauri/target/${{ matrix.target }}/release/donut-proxy.exe" "$PORTABLE_DIR/"
           cp "src-tauri/binaries/xray-${{ matrix.target }}.exe" "$PORTABLE_DIR/xray.exe"
           mkdir -p "$PORTABLE_DIR/licenses"
           cp "src-tauri/binaries/xray-LICENSE.txt" "$PORTABLE_DIR/licenses/Xray-core-LICENSE.txt"
-          # The daemon is currently disabled (no Cargo bin target), so it isn't
-          # built. Copy it only if a build produced it, so the absent binary
-          # doesn't fail the job.
-          if [ -f "src-tauri/target/${{ matrix.target }}/release/donut-daemon.exe" ]; then
-            cp "src-tauri/target/${{ matrix.target }}/release/donut-daemon.exe" "$PORTABLE_DIR/"
-          fi
 
           # Copy WebView2Loader if present
           if [ -f "src-tauri/target/${{ matrix.target }}/release/WebView2Loader.dll" ]; then
@@ -247,7 +199,7 @@ jobs:
           touch "$PORTABLE_DIR/.portable"
 
           # Create ZIP
-          7z a "PrfNoir_${VERSION}_x64-portable.zip" "$PORTABLE_DIR"
+          7z a "AutoLunex_${VERSION}_x64-portable.zip" "$PORTABLE_DIR"
 
       - name: Upload portable ZIP to release
         if: matrix.platform == 'windows-latest'
@@ -257,13 +209,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           VERSION="${TAG#v}"
-          gh release upload "$TAG" "PrfNoir_${VERSION}_x64-portable.zip" --clobber
-
-      - name: Clean up Apple certificate
-        if: matrix.platform == 'macos-latest' && always()
-        run: |
-          security delete-keychain $RUNNER_TEMP/app-signing.keychain-db || true
-          rm -f $RUNNER_TEMP/build_certificate.p12 || true
+          gh release upload "$TAG" "AutoLunex_${VERSION}_x64-portable.zip" --clobber
 
   # Runs after every matrix leg (including the portable ZIP upload) so the
   # sums cover the complete, final asset set. The app self-updater refuses to

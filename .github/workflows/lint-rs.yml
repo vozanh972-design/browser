@@ -63,11 +63,6 @@ jobs:
       - name: Install cargo-audit
         run: cargo install cargo-audit
 
-      - name: Install dependencies (Ubuntu only)
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update
-          sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev openvpn unzip
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
