@@ -640,6 +640,9 @@ export default function Home() {
     [processingUrls],
   );
 
+  // Updates are disabled for offline standalone build
+  const isUpdating = useCallback((_browser: string) => false, []);
+
   // Check for startup URLs but only process them once
   const [hasCheckedStartupUrl, setHasCheckedStartupUrl] = useState(false);
   const checkCurrentUrl = useCallback(async () => {
