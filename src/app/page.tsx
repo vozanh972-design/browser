@@ -640,12 +640,6 @@ export default function Home() {
     [processingUrls],
   );
 
-  // Auto-update functionality - use the existing hook for compatibility
-  const updateNotifications = useUpdateNotifications();
-  const { checkForUpdates, isUpdating } = updateNotifications;
-
-  // useAppUpdateNotifications();
-
   // Check for startup URLs but only process them once
   const [hasCheckedStartupUrl, setHasCheckedStartupUrl] = useState(false);
   const checkCurrentUrl = useCallback(async () => {

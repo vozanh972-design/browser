@@ -90,7 +90,12 @@ export function WelcomeDialog({
       setRequesting(false);
       onComplete();
     }
-  }, [isCameraAccessGranted, isMicrophoneAccessGranted, onComplete, requestPermission]);
+  }, [
+    isCameraAccessGranted,
+    isMicrophoneAccessGranted,
+    onComplete,
+    requestPermission,
+  ]);
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
