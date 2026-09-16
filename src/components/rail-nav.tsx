@@ -7,11 +7,8 @@ import { FiWifi } from "react-icons/fi";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
 import {
   LuCloud,
-  LuCookie,
   LuInfo,
   LuKeyboard,
-  LuPlug,
-  LuPuzzle,
   LuUser,
   LuUsers,
 } from "react-icons/lu";

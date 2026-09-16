@@ -24,12 +24,8 @@ import {
   LuCheck,
   LuChevronDown,
   LuChevronUp,
-  LuCookie,
   LuInfo,
-  LuLock,
-  LuMoon,
   LuPlay,
-  LuPuzzle,
   LuSquare,
   LuTrash2,
   LuTriangleAlert,
@@ -339,171 +335,7 @@ const BULK_ENROL_CONFIRM_THRESHOLD = 10;
  */
 const RUN_DID_NOT_START = new Set(["skipped", "failed", "cancelled"]);
 
-interface SyncStatusDot {
-  color: string;
-  tooltip: string;
-  animate: boolean;
-  encrypted: boolean;
-}
-
-function getProfileSyncStatusDot(
-  profile: BrowserProfile,
-  liveStatus:
-    | "syncing"
-    | "waiting"
-    | "synced"
-    | "error"
-    | "disabled"
-    | undefined,
-  t: (key: string, options?: Record<string, unknown>) => string,
-  errorMessage?: string,
-): SyncStatusDot | null {
-  const encrypted = profile.sync_mode === "Encrypted";
-  const status =
-    liveStatus ??
-    (profile.sync_mode && profile.sync_mode !== "Disabled"
-      ? "synced"
-      : "disabled");
-
-  switch (status) {
-    case "syncing":
-      return {
-        color: "bg-warning",
-        tooltip: t("profileTable.syncTooltipSyncing"),
-        animate: true,
-        encrypted,
-      };
-    case "waiting":
-      return {
-        color: "bg-warning",
-        tooltip: t("profileTable.syncTooltipCloseToSync"),
-        animate: false,
-        encrypted,
-      };
-    case "synced":
-      return {
-        color: "bg-success",
-        tooltip: profile.last_sync
-          ? t("profileTable.syncTooltipSyncedAt", {
-              time: new Date(profile.last_sync * 1000).toLocaleString(),
-            })
-          : t("profileTable.syncTooltipSynced"),
-        animate: false,
-        encrypted,
-      };
-    case "error":
-      return {
-        color: "bg-destructive",
-        tooltip: errorMessage
-          ? t("profileTable.syncTooltipErrorWith", { error: errorMessage })
-          : t("profileTable.syncTooltipError"),
-        animate: false,
-        encrypted,
-      };
-    case "disabled":
-      if (profile.last_sync) {
-        return {
-          color: "bg-muted-foreground",
-          tooltip: t("profileTable.syncTooltipDisabledWithLast", {
-            time: formatRelativeTime(profile.last_sync),
-          }),
-          animate: false,
-          encrypted: false,
-        };
-      }
-      return null;
-    default:
-      return null;
-  }
-}
-
-// Inline extension-group dropdown for the Ext column. Matches the
-// proxy column's Popover-style picker — no nested dialog.
-function ExtCell({
-  profile,
-  meta,
-}: {
-  profile: BrowserProfile;
-  meta: TableMeta;
-}) {
-  const [open, setOpen] = React.useState(false);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const groupId = profile.extension_group_id ?? null;
-  const group = groupId
-    ? meta.extensionGroups.find((g) => g.id === groupId)
-    : undefined;
-  const label = group?.name ?? meta.t("profiles.table.extDefault");
-
-  const onPick = async (nextId: string | null) => {
-    setIsSaving(true);
-    try {
-      await invoke("assign_extension_group_to_profile", {
-        profileId: profile.id,
-        extensionGroupId: nextId,
-      });
-    } catch (err) {
-      console.error("Failed to assign extension group:", err);
-    } finally {
-      setIsSaving(false);
-      setOpen(false);
-    }
-  };
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          disabled={isSaving}
-          className="flex h-7 w-full items-center gap-1.5 rounded px-1.5 text-left text-xs text-muted-foreground transition-colors duration-100 hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-        >
-          <LuPuzzle className="size-3 shrink-0" />
-          <span className="flex-1 truncate" title={label}>
-            {label}
-          </span>
-          <LuChevronDown className="size-3 shrink-0 text-muted-foreground" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-0" align="start">
-        <Command>
-          <CommandInput placeholder={meta.t("profiles.table.extSearch")} />
-          <CommandList>
-            <CommandEmpty>{meta.t("profiles.table.extEmpty")}</CommandEmpty>
-            <CommandGroup>
-              <CommandItem
-                value="__default__"
-                onSelect={() => {
-                  void onPick(null);
-                }}
-              >
-                {groupId === null && <LuCheck className="mr-2 size-3.5" />}
-                <span className={groupId === null ? "" : "ml-5"}>
-                  {meta.t("profiles.table.extDefault")}
-                </span>
-              </CommandItem>
-              {meta.extensionGroups.map((g) => (
-                <CommandItem
-                  key={g.id}
-                  value={g.name}
-                  onSelect={() => {
-                    void onPick(g.id);
-                  }}
-                >
-                  {groupId === g.id && <LuCheck className="mr-2 size-3.5" />}
-                  <span className={groupId === g.id ? "" : "ml-5"}>
-                    {g.name}
-                  </span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-// Inline DNS blocklist dropdown — same Popover/Command pattern as Ext.
+// Inline DNS blocklist dropdown — same Popover/Command pattern.
 function DnsCell({
   profile,
   meta,
@@ -1414,11 +1246,9 @@ interface ProfilesDataTableProps {
   onBulkDelete?: () => void;
   onBulkGroupAssignment?: () => void;
   onBulkProxyAssignment?: () => void;
-  onBulkCopyCookies?: () => void;
   onBulkRun?: () => void;
   onBulkStop?: () => void;
   bulkActionsUnlocked?: boolean;
-  onBulkExtensionGroupAssignment?: () => void;
   onAssignExtensionGroup?: (profileIds: string[]) => void;
   onOpenProfileSyncDialog?: (profile: BrowserProfile) => void;
   onToggleProfileSync?: (profile: BrowserProfile) => void;
@@ -1469,11 +1299,9 @@ export function ProfilesDataTable({
   onBulkDelete,
   onBulkGroupAssignment,
   onBulkProxyAssignment,
-  onBulkCopyCookies,
   onBulkRun,
   onBulkStop,
   bulkActionsUnlocked = false,
-  onBulkExtensionGroupAssignment,
   onAssignExtensionGroup,
   onOpenProfileSyncDialog,
   onToggleProfileSync,

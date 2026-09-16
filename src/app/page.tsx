@@ -12,20 +12,13 @@ import { AccountPage } from "@/components/account-page";
 import { CloneProfileDialog } from "@/components/clone-profile-dialog";
 import { CommandPalette } from "@/components/command-palette";
 import { CommercialTrialModal } from "@/components/commercial-trial-modal";
-import { CookieBotPage, type CookieBotTab } from "@/components/cookie-bot-page";
-import { CookieCopyDialog } from "@/components/cookie-copy-dialog";
-import { CookieManagementDialog } from "@/components/cookie-management-dialog";
 import { CreateProfileDialog } from "@/components/create-profile-dialog";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import { DeviceCodeVerifyDialog } from "@/components/device-code-verify-dialog";
-import { ExtensionGroupAssignmentDialog } from "@/components/extension-group-assignment-dialog";
-import { ExtensionManagementDialog } from "@/components/extension-management-dialog";
 import { GroupAssignmentDialog } from "@/components/group-assignment-dialog";
 import { GroupManagementDialog } from "@/components/group-management-dialog";
 import HomeHeader from "@/components/home-header";
 import { ImportProfileDialog } from "@/components/import-profile-dialog";
-import { IntegrationsDialog } from "@/components/integrations-dialog";
-import { LicenseKeyGate } from "@/components/license-key-gate";
 import { ONBOARDING_TOUR } from "@/components/onboarding-provider";
 import { PermissionDialog } from "@/components/permission-dialog";
 import {
@@ -55,7 +48,6 @@ import { WelcomeDialog } from "@/components/welcome-dialog";
 import { WindowResizeWarningDialog } from "@/components/window-resize-warning-dialog";
 import { useCloudAuth } from "@/hooks/use-cloud-auth";
 import { useCommercialTrial } from "@/hooks/use-commercial-trial";
-import { cookieBotScopeFor, useCookieBot } from "@/hooks/use-cookie-bot";
 import { useGroupEvents } from "@/hooks/use-group-events";
 import type { PermissionType } from "@/hooks/use-permissions";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -66,7 +58,7 @@ import { useUpdateNotifications } from "@/hooks/use-update-notifications";
 import { useVpnEvents } from "@/hooks/use-vpn-events";
 import { useWayfernTerms } from "@/hooks/use-wayfern-terms";
 import { parseBackendError, translateBackendError } from "@/lib/backend-errors";
-import { canUseCookieBot, getEntitlements } from "@/lib/entitlements";
+import { getEntitlements } from "@/lib/entitlements";
 import { isLicenseValidLocally } from "@/lib/license";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import {
@@ -134,13 +126,7 @@ interface PendingUrl {
 export default function Home() {
   const { t } = useTranslation();
 
-  // Pre-app license key gate. Shown before anything else in the app; once a
-  // key has been entered (or was previously stored) the normal interface
-  // below renders exactly as before. Purely a front-door UI step — it does
-  // not affect any existing app functionality.
-  const [licenseKeyVerified, setLicenseKeyVerified] = useState(() =>
-    isLicenseValidLocally(),
-  );
+
 
   // On boot: if a valid license is already stored locally, tell the Rust
   // backend immediately so Pro features (cross-OS fingerprints, Cookie Bot,
@@ -313,34 +299,6 @@ export default function Home() {
   // The rail needs to show a live run from every page, so the shell subscribes
   // to the shared cookie-bot store too. It is a module singleton, so this costs
   // one more listener and no extra request. This is also what starts the event
-  // stream for a user who signs in without restarting the app.
-  const { liveSessions: cookieBotLiveSessions } = useCookieBot(
-    canUseCookieBot(cloudUser),
-    cookieBotScopeFor(cloudUser),
-  );
-
-  const [selfHostedSyncConfigured, setSelfHostedSyncConfigured] =
-    useState(false);
-
-  const checkSelfHostedSync = useCallback(async () => {
-    try {
-      const settings = await invoke<SyncSettings>("get_sync_settings");
-      const hasConfig = Boolean(
-        settings.sync_server_url && settings.sync_token,
-      );
-      setSelfHostedSyncConfigured(hasConfig && !cloudUser);
-    } catch {
-      setSelfHostedSyncConfigured(false);
-    }
-  }, [cloudUser]);
-
-  // Cloud sync follows `cloudBackup`, NOT `crossOsFingerprints`. They agreed on
-  // every plan until Solo, which buys 20 cloud backups and deliberately has no
-  // fingerprint editing — so deriving sync from the fingerprint capability put a
-  // Pro badge on the one feature a Solo customer is paying for.
-  const cloudBackupUnlocked = getEntitlements(cloudUser).cloudBackup;
-  const syncUnlocked = cloudBackupUnlocked || selfHostedSyncConfigured;
-
   const [currentPage, setCurrentPage] = useState<AppPage>("profiles");
   const [accountDialogOpen, setAccountDialogOpen] = useState(false);
   // Tracks which tab inside the shared proxy-management page should be active.
@@ -348,24 +306,13 @@ export default function Home() {
   const [proxyManagementInitialTab, setProxyManagementInitialTab] = useState<
     "proxies" | "vpns"
   >("proxies");
-  const [extensionManagementInitialTab, setExtensionManagementInitialTab] =
-    useState<"extensions" | "groups">("extensions");
-  const [integrationsInitialTab, setIntegrationsInitialTab] = useState<
-    "api" | "mcp"
-  >("api");
-  const [cookieBotDialogOpen, setCookieBotDialogOpen] = useState(false);
-  const [cookieBotInitialTab, setCookieBotInitialTab] =
-    useState<CookieBotTab>("overview");
   const [createProfileDialogOpen, setCreateProfileDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-  const [integrationsDialogOpen, setIntegrationsDialogOpen] = useState(false);
   const [importProfileDialogOpen, setImportProfileDialogOpen] = useState(false);
   const [proxyManagementDialogOpen, setProxyManagementDialogOpen] =
     useState(false);
   const [wayfernConfigDialogOpen, setWayfernConfigDialogOpen] = useState(false);
   const [groupManagementDialogOpen, setGroupManagementDialogOpen] =
-    useState(false);
-  const [extensionManagementDialogOpen, setExtensionManagementDialogOpen] =
     useState(false);
   const [groupAssignmentDialogOpen, setGroupAssignmentDialogOpen] =
     useState(false);
@@ -477,12 +424,9 @@ export default function Home() {
     // sub-pages on top of each other.
     setSettingsDialogOpen(false);
     setProxyManagementDialogOpen(false);
-    setExtensionManagementDialogOpen(false);
     setGroupManagementDialogOpen(false);
-    setIntegrationsDialogOpen(false);
     setImportProfileDialogOpen(false);
     setAccountDialogOpen(false);
-    setCookieBotDialogOpen(false);
 
     setCurrentPage(page);
     switch (page) {
@@ -495,17 +439,8 @@ export default function Home() {
         setProxyManagementInitialTab("proxies");
         setProxyManagementDialogOpen(true);
         break;
-      case "extensions":
-        setExtensionManagementDialogOpen(true);
-        break;
       case "groups":
         setGroupManagementDialogOpen(true);
-        break;
-      case "cookieBot":
-        setCookieBotDialogOpen(true);
-        break;
-      case "integrations":
-        setIntegrationsDialogOpen(true);
         break;
       case "import":
         setImportProfileDialogOpen(true);
@@ -555,43 +490,9 @@ export default function Home() {
           }
           break;
         }
-        case "goExtensions": {
-          // Mod+E: flip extensions↔groups tab inside the dialog when already there.
-          if (currentPage === "extensions") {
-            setExtensionManagementInitialTab((cur) =>
-              cur === "extensions" ? "groups" : "extensions",
-            );
-          } else {
-            handleRailNavigate("extensions");
-          }
-          break;
-        }
         case "goGroups":
           handleRailNavigate("groups");
           break;
-        case "goCookieBot": {
-          if (!canUseCookieBot(cloudUser)) break;
-          // Mod+B: navigate first time; flip overview↔activity while already
-          // there, matching how Mod+I flips the integrations tabs.
-          if (currentPage === "cookieBot") {
-            setCookieBotInitialTab((cur) =>
-              cur === "overview" ? "activity" : "overview",
-            );
-          } else {
-            setCookieBotInitialTab("overview");
-            handleRailNavigate("cookieBot");
-          }
-          break;
-        }
-        case "goIntegrations": {
-          // Mod+I: flip api↔mcp tab when already on integrations.
-          if (currentPage === "integrations") {
-            setIntegrationsInitialTab((cur) => (cur === "api" ? "mcp" : "api"));
-          } else {
-            handleRailNavigate("integrations");
-          }
-          break;
-        }
         case "goAccount":
           handleRailNavigate("account");
           break;
@@ -600,7 +501,7 @@ export default function Home() {
           break;
       }
     },
-    [handleRailNavigate, currentPage, proxyManagementInitialTab, cloudUser],
+    [handleRailNavigate, currentPage, proxyManagementInitialTab],
   );
 
   // Ordered list the digit shortcuts and palette consume. "__all__" is index 1
@@ -1988,8 +1889,6 @@ export default function Home() {
         ? t("pageTitle.import")
         : t(`pageTitle.${currentPage}`);
 
-
-
   return (
     <div className="flex h-dvh flex-col bg-background font-(family-name:--font-geist-sans)">
       <HomeHeader
@@ -2039,13 +1938,9 @@ export default function Home() {
                 onBulkDelete={handleBulkDelete}
                 onBulkGroupAssignment={handleBulkGroupAssignment}
                 onBulkProxyAssignment={handleBulkProxyAssignment}
-                onBulkCopyCookies={handleBulkCopyCookies}
                 onBulkRun={handleBulkRun}
                 onBulkStop={handleBulkStop}
                 bulkActionsUnlocked={automationUnlocked}
-                onBulkExtensionGroupAssignment={
-                  handleBulkExtensionGroupAssignment
-                }
                 onAssignExtensionGroup={handleAssignExtensionGroup}
                 onOpenProfileSyncDialog={handleOpenProfileSyncDialog}
                 onToggleProfileSync={handleToggleProfileSync}
