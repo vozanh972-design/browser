@@ -5,13 +5,7 @@ import { useTranslation } from "react-i18next";
 import { FaDownload } from "react-icons/fa";
 import { FiWifi } from "react-icons/fi";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
-import {
-  LuCloud,
-  LuInfo,
-  LuKeyboard,
-  LuUser,
-  LuUsers,
-} from "react-icons/lu";
+import { LuCloud, LuInfo, LuKeyboard, LuUser, LuUsers } from "react-icons/lu";
 import { launchDonutClone } from "@/lib/donut-physics";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";

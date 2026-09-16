@@ -83,7 +83,6 @@ import type {
   BrowserProfile,
   ConsistencyResult,
   PreLaunchChecks,
-  SyncSettings,
   WayfernConfig,
 } from "@/types";
 
@@ -125,8 +124,6 @@ interface PendingUrl {
 
 export default function Home() {
   const { t } = useTranslation();
-
-
 
   // On boot: if a valid license is already stored locally, tell the Rust
   // backend immediately so Pro features (cross-OS fingerprints, Cookie Bot,
@@ -1383,40 +1380,10 @@ export default function Home() {
     setExtensionGroupAssignmentDialogOpen(true);
   }, []);
 
-  const handleBulkExtensionGroupAssignment = useCallback(() => {
-    if (selectedProfiles.length === 0) return;
-    handleAssignExtensionGroup(selectedProfiles);
-    setSelectedProfiles([]);
-  }, [selectedProfiles, handleAssignExtensionGroup]);
-
-  const handleExtensionGroupAssignmentComplete = useCallback(() => {
-    setExtensionGroupAssignmentDialogOpen(false);
-    setSelectedProfilesForExtensionGroup([]);
+  const handleAssignProxyComplete = useCallback(() => {
+    setProxyAssignmentDialogOpen(false);
+    setSelectedProfilesForProxy([]);
   }, []);
-
-  const handleAssignProfilesToProxy = useCallback((profileIds: string[]) => {
-    setSelectedProfilesForProxy(profileIds);
-    setProxyAssignmentDialogOpen(true);
-  }, []);
-
-  const handleBulkProxyAssignment = useCallback(() => {
-    if (selectedProfiles.length === 0) return;
-    handleAssignProfilesToProxy(selectedProfiles);
-    setSelectedProfiles([]);
-  }, [selectedProfiles, handleAssignProfilesToProxy]);
-
-  const handleBulkCopyCookies = useCallback(() => {
-    if (selectedProfiles.length === 0) return;
-    const eligibleProfiles = profiles.filter(
-      (p) => selectedProfiles.includes(p.id) && p.browser === "wayfern",
-    );
-    if (eligibleProfiles.length === 0) {
-      showErrorToast(t("errors.cookieCopyUnsupportedBrowser"));
-      return;
-    }
-    setSelectedProfilesForCookies(eligibleProfiles.map((p) => p.id));
-    setCookieCopyDialogOpen(true);
-  }, [selectedProfiles, profiles, t]);
 
   const [pendingBulkAction, setPendingBulkAction] = useState<{
     action: "run" | "stop";
@@ -1837,11 +1804,6 @@ export default function Home() {
       checkAllPermissions();
     }
   }, [isInitialized, firstRunOnboarding, checkAllPermissions]);
-
-  // Check self-hosted sync config on mount and when cloud user changes
-  useEffect(() => {
-    void checkSelfHostedSync();
-  }, [checkSelfHostedSync]);
 
   // Filter data by selected group and search query
   const filteredProfiles = useMemo(() => {

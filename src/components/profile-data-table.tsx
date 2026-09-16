@@ -117,7 +117,6 @@ import {
 } from "@/lib/cookie-bot";
 import { DNS_BLOCKLIST_LEVELS } from "@/lib/dns-blocklist-levels";
 import { canUseCookieBot } from "@/lib/entitlements";
-import { formatRelativeTime } from "@/lib/flag-utils";
 import type { RemoteHandoffState } from "@/lib/remote-sessions";
 import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
@@ -1767,26 +1766,6 @@ export function ProfilesDataTable({
       setIsUnenrolling(false);
     }
   }, [botUnenrolProfile, refreshCookieBotState, t]);
-
-  const handleBulkCookieBotEnrol = React.useCallback(() => {
-    const targets = profiles.filter((p) => selectedProfiles.includes(p.id));
-    if (targets.length === 0) return;
-    const eligible = targets.filter((p) => preflight(p).eligible);
-    // Same guard as bulk run: an action that can touch nothing says so instead
-    // of opening a dialog whose only outcome is a refusal.
-    if (eligible.length === 0) {
-      showErrorToast(t("cookieBot.actionBar.noneEligible"));
-      return;
-    }
-    // Ten or more is the threshold bulk run and stop already use, and enrolling
-    // is the heavier commitment of the three: each row books a nightly job
-    // against a shared budget.
-    if (eligible.length >= BULK_ENROL_CONFIRM_THRESHOLD) {
-      setPendingBulkEnrol(targets);
-      return;
-    }
-    setBotScheduleDialog({ profiles: targets, existing: null });
-  }, [profiles, selectedProfiles, t]);
 
   // Use shared browser state hook
   const browserState = useBrowserState(
