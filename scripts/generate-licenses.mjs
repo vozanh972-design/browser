@@ -179,7 +179,6 @@ function generateInventory() {
     const metadata = JSON.parse(
       commandOutput("cargo", [
         "metadata",
-        "--locked",
         "--format-version",
         "1",
         "--filter-platform",
