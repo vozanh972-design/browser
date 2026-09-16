@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === "production",
   },
+  turbopack: {},
   webpack: (config, { dev, isServer }) => {
     if (!dev && !isServer) {
       config.optimization = config.optimization || {};
