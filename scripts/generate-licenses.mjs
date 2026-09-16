@@ -15,16 +15,12 @@ const XRAY_SOURCE_OUTPUT_PATH = resolve(
 const MAX_COMMAND_OUTPUT = 64 * 1024 * 1024;
 
 export const RELEASE_TARGETS = [
-  "aarch64-apple-darwin",
-  "x86_64-apple-darwin",
-  "aarch64-unknown-linux-gnu",
-  "x86_64-unknown-linux-gnu",
   "x86_64-pc-windows-msvc",
 ];
 
 export const MANUAL_LICENSES = [
   {
-    name: "Donut Browser",
+    name: "AutoLunex",
     license: "AGPL-3.0-only",
   },
   {
@@ -172,7 +168,7 @@ function generateInventory() {
   const pnpmReport = JSON.parse(
     commandOutput("pnpm", [
       "--filter",
-      "donutbrowser",
+      "autolunex",
       "licenses",
       "list",
       "--prod",

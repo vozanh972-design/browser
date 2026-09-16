@@ -536,6 +536,10 @@
     "license": "Apache-2.0 OR MIT"
   },
   {
+    "name": "AutoLunex",
+    "license": "AGPL-3.0-only"
+  },
+  {
     "name": "av-scenechange",
     "license": "MIT"
   },
@@ -1078,10 +1082,6 @@
   {
     "name": "dom_query",
     "license": "MIT"
-  },
-  {
-    "name": "Donut Browser",
-    "license": "AGPL-3.0-only"
   },
   {
     "name": "downcast-rs",
