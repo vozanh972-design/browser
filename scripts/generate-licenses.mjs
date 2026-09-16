@@ -14,9 +14,7 @@ const XRAY_SOURCE_OUTPUT_PATH = resolve(
 );
 const MAX_COMMAND_OUTPUT = 64 * 1024 * 1024;
 
-export const RELEASE_TARGETS = [
-  "x86_64-pc-windows-msvc",
-];
+export const RELEASE_TARGETS = ["x86_64-pc-windows-msvc"];
 
 export const MANUAL_LICENSES = [
   {
