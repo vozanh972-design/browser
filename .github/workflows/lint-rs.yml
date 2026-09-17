@@ -78,27 +78,6 @@ jobs:
           echo "target=${HOST_TARGET}" >> $GITHUB_OUTPUT
           echo "Host target: ${HOST_TARGET}"
 
-      - name: Build sidecar binaries
-        shell: bash
-        working-directory: ./src-tauri
-        run: |
-          cargo build --bin donut-proxy --release
-
-      - name: Copy sidecar binaries to Tauri binaries
-        shell: bash
-        run: |
-          mkdir -p src-tauri/binaries
-          HOST_TARGET="${{ steps.host_target.outputs.target }}"
-          if [[ "$HOST_TARGET" == *"windows"* ]]; then
-            cp src-tauri/target/release/donut-proxy.exe src-tauri/binaries/donut-proxy-${HOST_TARGET}.exe
-          else
-            cp src-tauri/target/release/donut-proxy src-tauri/binaries/donut-proxy-${HOST_TARGET}
-            chmod +x src-tauri/binaries/donut-proxy-${HOST_TARGET}
-          fi
-
-      - name: Download verified Xray-core sidecar
-        run: node src-tauri/download-xray.mjs --target ${{ steps.host_target.outputs.target }}
-
       - name: Run rustfmt check
         run: cargo fmt --all -- --check
         working-directory: src-tauri

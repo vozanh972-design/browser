@@ -12,7 +12,10 @@
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
     "format": "biome check src/ --write --unsafe",
-    "lint": "biome check src/ && tsc --noEmit"
+    "format:js": "biome check src/ --write --unsafe",
+    "lint": "pnpm lint:js",
+    "lint:js": "biome check src/ && tsc --noEmit",
+    "test": "node --test src/lib/themes.test.mjs"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.7",
