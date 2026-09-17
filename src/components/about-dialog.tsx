@@ -17,7 +17,6 @@ import { FadingScrollArea } from "@/components/ui/fading-scroll-area";
 import { Input } from "@/components/ui/input";
 import { StepTransition } from "@/components/ui/step-transition";
 import licenses from "@/generated/licenses.json";
-import xraySource from "@/generated/xray-source.json";
 import { launchDonutClone } from "@/lib/donut-physics";
 import { Logo } from "./icons/logo";
 import { RippleButton } from "./ui/ripple";
@@ -319,28 +318,12 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                         key={`${name}-${license}`}
                         className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,45%)] items-baseline gap-3 border-b border-border/60 py-2.5 last:border-b-0"
                       >
-                        {name === "Xray-core" ? (
-                          <button
-                            type="button"
-                            onClick={() => void openUrl(xraySource.sourceUrl)}
-                            aria-label={t("about.openSource", { name })}
-                            title={t("about.openSource", { name })}
-                            className="flex min-w-0 items-center gap-1.5 rounded-sm text-left text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.98] motion-reduce:transform-none"
-                          >
-                            <span className="truncate">{name}</span>
-                            <LuExternalLink
-                              aria-hidden="true"
-                              className="size-3.5 shrink-0 text-muted-foreground"
-                            />
-                          </button>
-                        ) : (
-                          <span
-                            className="truncate text-sm font-medium text-foreground"
-                            title={name}
-                          >
-                            {name}
-                          </span>
-                        )}
+                        <span
+                          className="truncate text-sm font-medium text-foreground"
+                          title={name}
+                        >
+                          {name}
+                        </span>
                         <code className="break-words text-right text-xs text-muted-foreground">
                           {license}
                         </code>
