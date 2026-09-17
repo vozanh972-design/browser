@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { LuCoins, LuKey, LuLogOut, LuPlus, LuUser } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { getCurrentOS, type OperatingSystem } from "@/lib/platform";
 import { cn } from "@/lib/utils";
-import { Logo } from "./icons/logo";
 
 export interface XsmmAccountInfo {
   username: string;
@@ -15,6 +15,8 @@ export interface XsmmAccountInfo {
 
 interface AppHeaderProps {
   pageTitle?: string;
+  activePlatform?: "facebook" | "instagram";
+  onPlatformChange?: (platform: "facebook" | "instagram") => void;
   xsmmAccount?: XsmmAccountInfo;
   onXsmmLoginClick?: () => void;
   onXsmmLogoutClick?: () => void;
@@ -23,6 +25,8 @@ interface AppHeaderProps {
 
 export function AppHeader({
   pageTitle,
+  activePlatform = "facebook",
+  onPlatformChange,
   xsmmAccount,
   onXsmmLoginClick,
   onXsmmLogoutClick,
@@ -35,7 +39,6 @@ export function AppHeader({
   }, []);
 
   const isMacOS = platform === "macos";
-  const isWindows = platform === "windows";
 
   return (
     <header
@@ -43,27 +46,46 @@ export function AppHeader({
       className={cn(
         "relative flex h-11 w-full shrink-0 select-none items-center justify-between border-b border-border/40 bg-background/80 px-4 backdrop-blur-md",
         isMacOS && "pl-20",
-        isWindows && "pr-36",
       )}
     >
-      {/* Left: Branding & Breadcrumb */}
+      {/* Left: Platform Tabs (Facebook & Instagram) */}
       <div
         data-tauri-drag-region
-        className="flex items-center gap-2.5 pointer-events-none"
+        className="flex items-center gap-2 pointer-events-auto"
       >
-        <div className="flex items-center gap-2">
-          <Logo className="size-4.5 shrink-0" />
-          <span className="text-xs font-semibold tracking-tight text-foreground">
-            AutoLunex
-          </span>
-        </div>
+        <button
+          type="button"
+          onClick={() => onPlatformChange?.("facebook")}
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all cursor-pointer",
+            activePlatform === "facebook"
+              ? "border-[#1877F2]/40 bg-[#1877F2]/15 text-[#1877F2] font-semibold shadow-xs"
+              : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+          )}
+        >
+          <FaFacebook className="size-3.5 text-[#1877F2]" />
+          <span>Facebook</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onPlatformChange?.("instagram")}
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all cursor-pointer",
+            activePlatform === "instagram"
+              ? "border-[#E1306C]/40 bg-[#E1306C]/15 text-[#E1306C] font-semibold shadow-xs"
+              : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+          )}
+        >
+          <FaInstagram className="size-3.5 text-[#E1306C]" />
+          <span>Instagram</span>
+        </button>
+
         {pageTitle && (
-          <>
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-1">
             <span className="text-muted-foreground/30">/</span>
-            <span className="text-xs font-medium text-muted-foreground">
-              {pageTitle}
-            </span>
-          </>
+            <span>{pageTitle}</span>
+          </div>
         )}
       </div>
 

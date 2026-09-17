@@ -219,18 +219,6 @@ export function WindowDragArea() {
     );
   }
 
-  // Windows: minimize/maximize/close controls anchored at the top-right
-  // corner of the sys-bar. The HomeHeader's own drag-region overlay handles
-  // window dragging via Tauri 2, so we don't need a separate draggable spacer
-  // covering the whole width.
-  return (
-    <div
-      className="fixed top-0 right-0 z-50 flex h-11 items-center select-none"
-      aria-hidden="false"
-    >
-      {(["minimize", "maximize", "close"] as WindowControl[]).map(
-        renderControl,
-      )}
-    </div>
-  );
+  // Windows: controls (- [] x) removed as requested
+  return null;
 }

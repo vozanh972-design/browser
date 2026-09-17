@@ -60,6 +60,9 @@ export default function HomePage() {
   });
   const [accounts, setAccounts] = useState<FacebookAccount[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [currentPlatform, setCurrentPlatform] = useState<
+    "facebook" | "instagram"
+  >("facebook");
 
   const handleXsmmLoginSuccess = (user: {
     username: string;
@@ -155,7 +158,7 @@ export default function HomePage() {
   const getPageTitle = (page: AppPage) => {
     switch (page) {
       case "profiles":
-        return "Tài khoản Facebook";
+        return "";
       case "proxies":
         return t("rail.network", "Network");
       case "groups":
@@ -177,17 +180,13 @@ export default function HomePage() {
     <div className="flex h-dvh flex-col bg-background text-foreground font-(family-name:--font-geist-sans) overflow-hidden select-none">
       {/* Top titlebar với drag region & thông tin XSMM */}
       <AppHeader
+        activePlatform={currentPlatform}
+        onPlatformChange={setCurrentPlatform}
         pageTitle={getPageTitle(currentPage)}
         xsmmAccount={xsmmAccount}
         onXsmmLoginClick={() => setIsXsmmLoginOpen(true)}
         onXsmmLogoutClick={handleXsmmLogout}
-        onNewClick={() => {
-          if (!xsmmAccount.isLoggedIn) {
-            setIsXsmmLoginOpen(true);
-          } else {
-            setIsAddFacebookOpen(true);
-          }
-        }}
+        onNewClick={() => setIsAddFacebookOpen(true)}
       />
 
       {/* Main content area */}
@@ -486,6 +485,7 @@ export default function HomePage() {
         isOpen={isAddFacebookOpen}
         onClose={() => setIsAddFacebookOpen(false)}
         onAddAccounts={handleAddAccounts}
+        isXsmmLoggedIn={xsmmAccount.isLoggedIn}
       />
 
       {/* Dialog Đăng nhập XSMM */}

@@ -21,6 +21,7 @@ interface AddFacebookAccountDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onAddAccounts?: (accounts: string[], format: string) => void;
+  isXsmmLoggedIn?: boolean;
 }
 
 const FORMAT_OPTIONS = [
@@ -36,6 +37,7 @@ export function AddFacebookAccountDialog({
   isOpen,
   onClose,
   onAddAccounts,
+  isXsmmLoggedIn = false,
 }: AddFacebookAccountDialogProps) {
   // 6 nút định dạng: mặc định KHÔNG chọn sẵn nút nào
   const [selectedFormat, setSelectedFormat] = useState<string[]>([]);
@@ -44,7 +46,9 @@ export function AddFacebookAccountDialog({
   // Trạng thái đăng nhập XSMM và ô nhập Token
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [xsmmToken, setXsmmToken] = useState("");
-  const [isLoggedInXsmm, setIsLoggedInXsmm] = useState(false);
+  const [localLoggedInXsmm, setLocalLoggedInXsmm] = useState(false);
+
+  const isAuthedXsmm = isXsmmLoggedIn || localLoggedInXsmm;
 
   // Xử lý chọn/bỏ chọn định dạng
   const toggleFormat = (id: string) => {
@@ -62,7 +66,7 @@ export function AddFacebookAccountDialog({
 
   const handleSaveToken = () => {
     if (xsmmToken.trim()) {
-      setIsLoggedInXsmm(true);
+      setLocalLoggedInXsmm(true);
       setShowTokenInput(false);
     }
   };
@@ -187,12 +191,12 @@ export function AddFacebookAccountDialog({
               <div className="flex items-center gap-2">
                 <LuKey className="size-4 text-primary" />
                 <span className="text-xs font-medium text-foreground">
-                  {isLoggedInXsmm
+                  {isAuthedXsmm
                     ? "Đã đăng nhập XSMM"
                     : "Bạn cần đăng nhập XSMM trước"}
                 </span>
               </div>
-              {!isLoggedInXsmm ? (
+              {!isAuthedXsmm ? (
                 <Button
                   type="button"
                   size="sm"
@@ -211,7 +215,7 @@ export function AddFacebookAccountDialog({
             </div>
 
             {/* Dòng hiện ra để nhập Token khi bấm nút Đăng nhập */}
-            {showTokenInput && !isLoggedInXsmm && (
+            {showTokenInput && !isAuthedXsmm && (
               <div className="flex flex-col gap-2 pt-2 border-t border-border/50 animate-in fade-in duration-200">
                 <Label className="text-[11px] text-muted-foreground">
                   Nhập Access Token XSMM của bạn:
