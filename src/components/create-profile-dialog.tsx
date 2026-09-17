@@ -147,7 +147,9 @@ export function CreateProfileDialog({
         const acc = validAccounts[i];
         const profileName =
           acc.uid.trim() ||
-          (acc.cookie.trim() ? "Cookie-Profile" : `Profile-${Date.now()}-${i + 1}`);
+          (acc.cookie.trim()
+            ? "Cookie-Profile"
+            : `Profile-${Date.now()}-${i + 1}`);
         await onCreateProfile({
           name: profileName,
           browserStr: "wayfern",
@@ -185,7 +187,8 @@ export function CreateProfileDialog({
                   Thứ tự định dạng dòng (1 dòng = 1 tài khoản)
                 </span>
                 <span className="text-[11px] text-muted-foreground">
-                  Bật/tắt các trường cần nhập (ngăn cách bởi dấu | hoặc phím Tab)
+                  Bật/tắt các trường cần nhập (ngăn cách bởi dấu | hoặc phím
+                  Tab)
                 </span>
               </div>
 
