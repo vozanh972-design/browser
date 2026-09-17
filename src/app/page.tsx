@@ -3,9 +3,11 @@
 import { motion } from "motion/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FaFacebook } from "react-icons/fa";
+import { FaDownload, FaFacebook } from "react-icons/fa";
+import { FiWifi } from "react-icons/fi";
 import {
   LuActivity,
+  LuCloud,
   LuCopy,
   LuFolder,
   LuKey,
@@ -13,6 +15,7 @@ import {
   LuShieldCheck,
   LuTrash2,
   LuUserCheck,
+  LuUsers,
 } from "react-icons/lu";
 import { AboutDialog } from "@/components/about-dialog";
 import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dialog";
