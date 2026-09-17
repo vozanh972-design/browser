@@ -15,33 +15,12 @@
     "core:window:allow-is-maximized",
     "core:window:allow-minimize",
     "core:window:allow-toggle-maximize",
-    {
-      "identifier": "opener:allow-open-url",
-      "allow": [
-        {
-          "url": "https://*"
-        },
-        {
-          "url": "http://*"
-        },
-        {
-          "url": "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
-        },
-        {
-          "url": "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera"
-        }
-      ]
-    },
+    "opener:default",
     "fs:allow-read-text-file",
     "fs:allow-write-text-file",
-    "deep-link:allow-get-current",
     "dialog:allow-open",
     "dialog:allow-save",
-    "macos-permissions:allow-request-microphone-permission",
-    "macos-permissions:allow-request-camera-permission",
-    "macos-permissions:allow-check-microphone-permission",
-    "macos-permissions:allow-check-camera-permission",
-    "log:default",
-    "clipboard-manager:allow-write-text"
+    "clipboard-manager:allow-write-text",
+    "window-state:default"
   ]
 }
