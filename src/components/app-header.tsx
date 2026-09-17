@@ -1,23 +1,31 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LuPlus } from "react-icons/lu";
+import { LuCoins, LuKey, LuLogOut, LuPlus, LuUser } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { getCurrentOS, type OperatingSystem } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
 
+export interface XsmmAccountInfo {
+  username: string;
+  balance: string;
+  isLoggedIn: boolean;
+}
+
 interface AppHeaderProps {
   pageTitle?: string;
-  searchQuery?: string;
-  onSearchQueryChange?: (query: string) => void;
+  xsmmAccount?: XsmmAccountInfo;
+  onXsmmLoginClick?: () => void;
+  onXsmmLogoutClick?: () => void;
   onNewClick?: () => void;
 }
 
 export function AppHeader({
   pageTitle,
-  searchQuery,
-  onSearchQueryChange,
+  xsmmAccount,
+  onXsmmLoginClick,
+  onXsmmLogoutClick,
   onNewClick,
 }: AppHeaderProps) {
   const [platform, setPlatform] = useState<OperatingSystem>("macos");
@@ -33,7 +41,7 @@ export function AppHeader({
     <header
       data-tauri-drag-region
       className={cn(
-        "relative flex h-12 w-full shrink-0 select-none items-center justify-between border-b border-border/40 bg-background/80 px-4 backdrop-blur-md",
+        "relative flex h-11 w-full shrink-0 select-none items-center justify-between border-b border-border/40 bg-background/80 px-4 backdrop-blur-md",
         isMacOS && "pl-20",
         isWindows && "pr-36",
       )}
@@ -41,17 +49,17 @@ export function AppHeader({
       {/* Left: Branding & Breadcrumb */}
       <div
         data-tauri-drag-region
-        className="flex items-center gap-3 pointer-events-none"
+        className="flex items-center gap-2.5 pointer-events-none"
       >
         <div className="flex items-center gap-2">
-          <Logo className="size-5 shrink-0" />
-          <span className="text-sm font-semibold tracking-tight text-foreground">
+          <Logo className="size-4.5 shrink-0" />
+          <span className="text-xs font-semibold tracking-tight text-foreground">
             AutoLunex
           </span>
         </div>
         {pageTitle && (
           <>
-            <span className="text-muted-foreground/40">/</span>
+            <span className="text-muted-foreground/30">/</span>
             <span className="text-xs font-medium text-muted-foreground">
               {pageTitle}
             </span>
@@ -59,19 +67,49 @@ export function AppHeader({
         )}
       </div>
 
-      {/* Center/Right: Action & Search Bar */}
-      <div className="flex items-center gap-2 pointer-events-auto">
-        {onSearchQueryChange !== undefined && (
-          <div className="relative">
-            <input
-              type="text"
-              value={searchQuery ?? ""}
-              onChange={(e) => onSearchQueryChange(e.target.value)}
-              placeholder="Tìm kiếm..."
-              className="h-7 w-44 rounded-lg border border-border bg-muted/30 px-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+      {/* Right: XSMM User + Balance & Action */}
+      <div className="flex items-center gap-2.5 pointer-events-auto">
+        {xsmmAccount?.isLoggedIn ? (
+          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
+            {/* User */}
+            <div className="flex items-center gap-1.5 font-medium text-foreground">
+              <LuUser className="size-3.5 text-primary" />
+              <span className="max-w-[120px] truncate">{xsmmAccount.username}</span>
+            </div>
+
+            <span className="h-3 w-px bg-border" />
+
+            {/* Balance */}
+            <div className="flex items-center gap-1 font-semibold text-emerald-400">
+              <LuCoins className="size-3.5 text-amber-400" />
+              <span>{xsmmAccount.balance}</span>
+            </div>
+
+            {/* Logout button */}
+            {onXsmmLogoutClick && (
+              <button
+                type="button"
+                onClick={onXsmmLogoutClick}
+                title="Đăng xuất XSMM"
+                className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
+              >
+                <LuLogOut className="size-3.5" />
+              </button>
+            )}
           </div>
+        ) : (
+          onXsmmLoginClick && (
+            <button
+              type="button"
+              onClick={onXsmmLoginClick}
+              className="flex h-7 items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
+            >
+              <LuKey className="size-3" />
+              <span>Đăng nhập XSMM</span>
+            </button>
+          )
         )}
+
         {onNewClick && (
           <Button
             size="sm"

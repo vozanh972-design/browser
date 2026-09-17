@@ -3,17 +3,16 @@
 import { motion } from "motion/react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FaDownload, FaFacebook } from "react-icons/fa";
-import { FiWifi } from "react-icons/fi";
+import { FaFacebook } from "react-icons/fa";
 import {
   LuActivity,
-  LuCloud,
   LuCopy,
   LuFolder,
+  LuKey,
   LuPlus,
+  LuShieldCheck,
   LuTrash2,
   LuUserCheck,
-  LuUsers,
 } from "react-icons/lu";
 import { AboutDialog } from "@/components/about-dialog";
 import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dialog";
@@ -22,6 +21,7 @@ import { AppSettingsDialog } from "@/components/app-settings-dialog";
 import { type AppPage, RailNav } from "@/components/rail-nav";
 import { ShortcutsPage } from "@/components/shortcuts-page";
 import { Button } from "@/components/ui/button";
+import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";
 
@@ -42,9 +42,42 @@ export default function HomePage() {
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [isAddFacebookOpen, setIsAddFacebookOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isXsmmLoginOpen, setIsXsmmLoginOpen] = useState(false);
+  const [xsmmAccount, setXsmmAccount] = useState<{
+    username: string;
+    balance: string;
+    token: string;
+    isLoggedIn: boolean;
+  }>({
+    username: "",
+    balance: "",
+    token: "",
+    isLoggedIn: false,
+  });
   const [accounts, setAccounts] = useState<FacebookAccount[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+
+  const handleXsmmLoginSuccess = (user: {
+    username: string;
+    balance: string;
+    token: string;
+  }) => {
+    setXsmmAccount({
+      ...user,
+      isLoggedIn: true,
+    });
+    showSuccessToast(`Đăng nhập XSMM thành công! Chào mừng ${user.username}`);
+  };
+
+  const handleXsmmLogout = () => {
+    setXsmmAccount({
+      username: "",
+      balance: "",
+      token: "",
+      isLoggedIn: false,
+    });
+    showSuccessToast("Đã đăng xuất tài khoản XSMM");
+  };
 
   const handleRailNavigate = useCallback((page: AppPage) => {
     if (page === "settings") {
@@ -96,15 +129,7 @@ export default function HomePage() {
     showSuccessToast("Đã sao chép vào bộ nhớ tạm!");
   };
 
-  const filteredAccounts = accounts.filter((acc) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      acc.uid.toLowerCase().includes(q) ||
-      acc.mail?.toLowerCase().includes(q) ||
-      acc.rawText.toLowerCase().includes(q)
-    );
-  });
+  const filteredAccounts = accounts;
 
   const getPageTitle = (page: AppPage) => {
     switch (page) {
@@ -129,14 +154,19 @@ export default function HomePage() {
 
   return (
     <div className="flex h-dvh flex-col bg-background text-foreground font-(family-name:--font-geist-sans) overflow-hidden select-none">
-      {/* Top titlebar với drag region & nút + Mới */}
+      {/* Top titlebar với drag region & thông tin XSMM */}
       <AppHeader
         pageTitle={getPageTitle(currentPage)}
-        searchQuery={currentPage === "profiles" ? searchQuery : undefined}
-        onSearchQueryChange={
-          currentPage === "profiles" ? setSearchQuery : undefined
-        }
-        onNewClick={() => setIsAddFacebookOpen(true)}
+        xsmmAccount={xsmmAccount}
+        onXsmmLoginClick={() => setIsXsmmLoginOpen(true)}
+        onXsmmLogoutClick={handleXsmmLogout}
+        onNewClick={() => {
+          if (!xsmmAccount.isLoggedIn) {
+            setIsXsmmLoginOpen(true);
+          } else {
+            setIsAddFacebookOpen(true);
+          }
+        }}
       />
 
       {/* Main content area */}
@@ -181,12 +211,21 @@ export default function HomePage() {
                     <span className="text-xs font-medium">Kết nối XSMM</span>
                     <LuActivity className="size-3.5" />
                   </div>
-                  <div className="flex items-center gap-1.5 text-xl font-bold text-success">
-                    <span className="size-2 rounded-full bg-success animate-pulse" />
-                    <span>Sẵn sàng</span>
-                  </div>
+                  {xsmmAccount.isLoggedIn ? (
+                    <div className="flex items-center gap-1.5 text-xl font-bold text-success">
+                      <span className="size-2 rounded-full bg-success animate-pulse" />
+                      <span>Đã kết nối</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-xl font-bold text-amber-500">
+                      <span className="size-2 rounded-full bg-amber-500" />
+                      <span>Chưa kết nối</span>
+                    </div>
+                  )}
                   <span className="text-[11px] text-muted-foreground">
-                    Hệ thống xác thực
+                    {xsmmAccount.isLoggedIn
+                      ? xsmmAccount.username
+                      : "Yêu cầu đăng nhập"}
                   </span>
                 </div>
 
@@ -203,7 +242,30 @@ export default function HomePage() {
               </div>
 
               {/* Danh sách hoặc Empty State */}
-              {accounts.length === 0 ? (
+              {!xsmmAccount.isLoggedIn ? (
+                /* CHƯA ĐĂNG NHẬP XSMM: Chỉ hiện phần đăng nhập XSMM */
+                <div className="flex min-h-[360px] flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-muted/10 p-8 text-center">
+                  <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-inner">
+                    <LuShieldCheck className="size-7" />
+                  </div>
+                  <h3 className="text-base font-semibold text-foreground">
+                    Chưa kết nối tài khoản XSMM
+                  </h3>
+                  <p className="mt-1.5 max-w-sm text-xs text-muted-foreground leading-relaxed">
+                    Bạn cần đăng nhập tài khoản XSMM bằng Access Token để sử dụng hệ thống và quản lý tài khoản Facebook.
+                  </p>
+                  <div className="mt-5 flex gap-2">
+                    <Button
+                      onClick={() => setIsXsmmLoginOpen(true)}
+                      className="cursor-pointer gap-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-xs"
+                    >
+                      <LuKey className="size-4" />
+                      <span>+ Đăng nhập tài khoản XSMM</span>
+                    </Button>
+                  </div>
+                </div>
+              ) : accounts.length === 0 ? (
+                /* ĐÃ ĐĂNG NHẬP XSMM: Hiện empty state thêm tài khoản Facebook */
                 <div className="flex min-h-[360px] flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/10 p-8 text-center">
                   <div className="flex size-14 items-center justify-center rounded-2xl bg-[#1877F2]/10 mb-4 text-[#1877F2]">
                     <FaFacebook className="size-7" />
@@ -432,6 +494,13 @@ export default function HomePage() {
         isOpen={isAddFacebookOpen}
         onClose={() => setIsAddFacebookOpen(false)}
         onAddAccounts={handleAddAccounts}
+      />
+
+      {/* Dialog Đăng nhập XSMM */}
+      <XsmmLoginDialog
+        isOpen={isXsmmLoginOpen}
+        onClose={() => setIsXsmmLoginOpen(false)}
+        onLoginSuccess={handleXsmmLoginSuccess}
       />
 
       {/* Settings Dialog */}
