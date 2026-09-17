@@ -31,10 +31,14 @@ import { showSuccessToast } from "@/lib/toast-utils";
 interface FacebookAccount {
   id: string;
   uid: string;
+  name?: string;
   pass?: string;
   twoFactor?: string;
   cookie?: string;
   mail?: string;
+  tag?: string;
+  note?: string;
+  proxy?: string;
   status: "live" | "checkpoint" | "unverified";
   rawText: string;
 }
@@ -98,6 +102,9 @@ export default function HomePage() {
       const account: FacebookAccount = {
         id: `${Date.now()}-${idx}`,
         uid: parts[0] || `acc_${idx + 1}`,
+        tag: "Không có thẻ",
+        note: "Không có ghi chú",
+        proxy: "Chưa chọn",
         status: "unverified",
         rawText: line,
       };
@@ -130,6 +137,20 @@ export default function HomePage() {
   const handleCopy = (text: string) => {
     void navigator.clipboard.writeText(text);
     showSuccessToast("Đã sao chép vào bộ nhớ tạm!");
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === accounts.length && accounts.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(accounts.map((a) => a.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
+    );
   };
 
   const filteredAccounts = accounts;
@@ -181,188 +202,164 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
-              className="mx-auto flex w-full max-w-5xl flex-col gap-5"
+              className="flex w-full flex-1 flex-col gap-3"
             >
-              {/* Stat overview cards */}
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="flex flex-col gap-1 rounded-xl border border-border bg-card p-3.5">
-                  <div className="flex items-center justify-between text-muted-foreground">
-                    <span className="text-xs font-medium">Tổng tài khoản</span>
-                    <FaFacebook className="size-3.5 text-[#1877F2]" />
-                  </div>
-                  <div className="text-xl font-bold">{accounts.length}</div>
-                  <span className="text-[11px] text-muted-foreground">
-                    Tài khoản đã thêm
+              {/* Group tabs like Image 2 */}
+              <div className="flex items-center gap-6 border-b border-border/40 pb-2.5 text-xs select-none">
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 font-semibold text-foreground border-b-2 border-primary pb-2.5 -mb-3"
+                >
+                  <span>Tất cả</span>
+                  <span className="text-muted-foreground font-normal">
+                    {accounts.length}
                   </span>
-                </div>
-
-                <div className="flex flex-col gap-1 rounded-xl border border-border bg-card p-3.5">
-                  <div className="flex items-center justify-between text-muted-foreground">
-                    <span className="text-xs font-medium">Trạng thái Live</span>
-                    <LuUserCheck className="size-3.5 text-success" />
-                  </div>
-                  <div className="text-xl font-bold text-success">
-                    {accounts.filter((a) => a.status === "live").length}
-                  </div>
-                  <span className="text-[11px] text-muted-foreground">
-                    Đang hoạt động tốt
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-1 rounded-xl border border-border bg-card p-3.5">
-                  <div className="flex items-center justify-between text-muted-foreground">
-                    <span className="text-xs font-medium">Kết nối XSMM</span>
-                    <LuActivity className="size-3.5" />
-                  </div>
-                  {xsmmAccount.isLoggedIn ? (
-                    <div className="flex items-center gap-1.5 text-xl font-bold text-success">
-                      <span className="size-2 rounded-full bg-success animate-pulse" />
-                      <span>Đã kết nối</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 text-xl font-bold text-amber-500">
-                      <span className="size-2 rounded-full bg-amber-500" />
-                      <span>Chưa kết nối</span>
-                    </div>
-                  )}
-                  <span className="text-[11px] text-muted-foreground">
-                    {xsmmAccount.isLoggedIn
-                      ? xsmmAccount.username
-                      : "Yêu cầu đăng nhập"}
-                  </span>
-                </div>
-
-                <div className="flex flex-col gap-1 rounded-xl border border-border bg-card p-3.5">
-                  <div className="flex items-center justify-between text-muted-foreground">
-                    <span className="text-xs font-medium">Đã chọn</span>
-                    <LuFolder className="size-3.5" />
-                  </div>
-                  <div className="text-xl font-bold">{selectedIds.length}</div>
-                  <span className="text-[11px] text-muted-foreground">
-                    Thao tác hàng loạt
-                  </span>
-                </div>
+                </button>
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                >
+                  <span>Nhóm mặc định</span>
+                </button>
               </div>
 
-              {/* Danh sách hoặc Empty State */}
-              {!xsmmAccount.isLoggedIn ? (
-                /* CHƯA ĐĂNG NHẬP XSMM: Chỉ hiện phần đăng nhập XSMM */
-                <div className="flex min-h-[360px] flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-border/80 bg-muted/10 p-8 text-center">
-                  <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20 shadow-inner">
-                    <LuShieldCheck className="size-7" />
+              {/* Table View matching Image 2 */}
+              <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-card/40 overflow-hidden shadow-xs">
+                {/* Table Header */}
+                <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/20 select-none">
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedIds.length === accounts.length &&
+                        accounts.length > 0
+                      }
+                      onChange={toggleSelectAll}
+                      className="size-3.5 rounded border-border cursor-pointer accent-primary"
+                    />
                   </div>
-                  <h3 className="text-base font-semibold text-foreground">
-                    Chưa kết nối tài khoản XSMM
-                  </h3>
-                  <p className="mt-1.5 max-w-sm text-xs text-muted-foreground leading-relaxed">
-                    Bạn cần đăng nhập tài khoản XSMM bằng Access Token để sử
-                    dụng hệ thống và quản lý tài khoản Facebook.
-                  </p>
-                  <div className="mt-5 flex gap-2">
-                    <Button
-                      onClick={() => setIsXsmmLoginOpen(true)}
-                      className="cursor-pointer gap-2 bg-amber-500 hover:bg-amber-600 text-black font-semibold shadow-xs"
-                    >
-                      <LuKey className="size-4" />
-                      <span>+ Đăng nhập tài khoản XSMM</span>
-                    </Button>
+                  <div className="flex items-center gap-1 hover:text-foreground cursor-pointer">
+                    <span>Tên</span>
+                    <span className="text-[10px]">▲</span>
                   </div>
+                  <div>Thẻ</div>
+                  <div>Ghi chú</div>
+                  <div>Proxy / VPN</div>
+                  <div>TIỆN ÍCH</div>
+                  <div>DNS</div>
+                  <div>Bot</div>
+                  <div className="text-right pr-2">Thao tác</div>
                 </div>
-              ) : accounts.length === 0 ? (
-                /* ĐÃ ĐĂNG NHẬP XSMM: Hiện empty state thêm tài khoản Facebook */
-                <div className="flex min-h-[360px] flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/10 p-8 text-center">
-                  <div className="flex size-14 items-center justify-center rounded-2xl bg-[#1877F2]/10 mb-4 text-[#1877F2]">
-                    <FaFacebook className="size-7" />
-                  </div>
-                  <h3 className="text-base font-semibold text-foreground">
-                    Chưa có tài khoản Facebook nào
-                  </h3>
-                  <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                    Thêm danh sách tài khoản Facebook đầu tiên của bạn để bắt
-                    đầu quản lý.
-                  </p>
-                  <div className="mt-5 flex gap-2">
-                    <Button
-                      onClick={() => setIsAddFacebookOpen(true)}
-                      className="cursor-pointer gap-2"
-                    >
-                      <LuPlus className="size-4" />
-                      <span>Thêm tài khoản Facebook</span>
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col rounded-xl border border-border bg-card overflow-hidden shadow-xs">
-                  <div className="flex items-center justify-between border-b border-border/60 px-4 py-2.5 bg-muted/20">
-                    <span className="text-xs font-semibold">
-                      Danh sách tài khoản ({filteredAccounts.length})
-                    </span>
-                    <Button
-                      size="sm"
-                      onClick={() => setIsAddFacebookOpen(true)}
-                      className="h-7 text-xs gap-1 cursor-pointer"
-                    >
-                      <LuPlus className="size-3.5" />
-                      <span>Thêm mới</span>
-                    </Button>
-                  </div>
 
-                  <div className="divide-y divide-border/40 overflow-x-auto">
+                {/* Table Rows or Empty State */}
+                {accounts.length === 0 ? (
+                  <div className="flex flex-1 flex-col items-center justify-center py-28 text-center select-none">
+                    {!xsmmAccount.isLoggedIn ? (
+                      <div className="flex flex-col items-center gap-2.5">
+                        <div className="flex size-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                          <LuShieldCheck className="size-6" />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground">
+                          Chưa kết nối tài khoản XSMM
+                        </p>
+                        <p className="text-[11px] text-muted-foreground max-w-xs leading-relaxed">
+                          Vui lòng đăng nhập tài khoản XSMM để quản lý và tự động
+                          hóa tài khoản Facebook.
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsXsmmLoginOpen(true)}
+                          className="mt-2 h-7.5 text-xs bg-amber-500 hover:bg-amber-600 text-black font-semibold cursor-pointer gap-1.5"
+                        >
+                          <LuKey className="size-3.5" />
+                          <span>Đăng nhập tài khoản XSMM</span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="flex size-12 items-center justify-center rounded-xl bg-[#1877F2]/10 text-[#1877F2]">
+                          <FaFacebook className="size-6" />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground">
+                          Chưa có tài khoản nào
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          Bấm nút "+ Mới" ở góc trên bên phải để thêm tài khoản
+                          Facebook.
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsAddFacebookOpen(true)}
+                          className="mt-2 h-7.5 text-xs cursor-pointer gap-1.5"
+                        >
+                          <LuPlus className="size-3.5" />
+                          <span>Thêm tài khoản Facebook</span>
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border/30 overflow-y-auto max-h-[calc(100vh-180px)]">
                     {filteredAccounts.map((acc) => (
                       <div
                         key={acc.id}
-                        className="flex items-center justify-between px-4 py-3 text-xs hover:bg-muted/30 transition-colors"
+                        className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2 text-xs text-foreground hover:bg-muted/30 transition-colors"
                       >
-                        <div className="flex items-center gap-3">
-                          <FaFacebook className="size-4 text-[#1877F2] shrink-0" />
-                          <div className="flex flex-col">
-                            <span className="font-mono font-semibold text-foreground">
-                              {acc.uid}
-                            </span>
-                            {acc.mail && (
-                              <span className="text-[11px] text-muted-foreground">
-                                {acc.mail}
-                              </span>
-                            )}
-                          </div>
+                        <div className="flex items-center justify-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.includes(acc.id)}
+                            onChange={() => toggleSelectOne(acc.id)}
+                            className="size-3.5 rounded border-border cursor-pointer accent-primary"
+                          />
                         </div>
-
-                        <div className="flex items-center gap-4">
-                          {acc.twoFactor && (
-                            <span className="font-mono text-[11px] bg-muted/60 px-2 py-0.5 rounded text-muted-foreground">
-                              2FA: {acc.twoFactor}
-                            </span>
-                          )}
-
-                          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <span className="size-2 rounded-full bg-muted-foreground/50" />
-                            <span>Chưa kiểm tra</span>
-                          </span>
-
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleCopy(acc.rawText)}
-                              title="Sao chép toàn bộ"
-                              className="p-1.5 text-muted-foreground hover:text-foreground rounded hover:bg-muted transition-colors cursor-pointer"
-                            >
-                              <LuCopy className="size-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteAccount(acc.id)}
-                              title="Xóa tài khoản"
-                              className="p-1.5 text-muted-foreground hover:text-destructive rounded hover:bg-muted transition-colors cursor-pointer"
-                            >
-                              <LuTrash2 className="size-3.5" />
-                            </button>
-                          </div>
+                        <div className="flex items-center gap-2 font-mono font-medium truncate pr-2">
+                          <FaFacebook className="size-3.5 text-[#1877F2] shrink-0" />
+                          <span className="truncate">{acc.uid}</span>
+                        </div>
+                        <div className="text-muted-foreground truncate pr-2">
+                          {acc.tag || "Không có thẻ"}
+                        </div>
+                        <div className="text-muted-foreground truncate pr-2">
+                          {acc.note || "Không có ghi chú"}
+                        </div>
+                        <div className="text-muted-foreground truncate pr-2">
+                          {acc.proxy || "Chưa chọn"}
+                        </div>
+                        <div className="text-muted-foreground truncate pr-2">
+                          {acc.twoFactor
+                            ? `2FA: ${acc.twoFactor}`
+                            : "Mặc định"}
+                        </div>
+                        <div className="text-muted-foreground">
+                          —
+                        </div>
+                        <div className="text-muted-foreground">
+                          —
+                        </div>
+                        <div className="flex items-center justify-end gap-1 pr-1">
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(acc.rawText)}
+                            title="Sao chép toàn bộ"
+                            className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
+                          >
+                            <LuCopy className="size-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAccount(acc.id)}
+                            title="Xóa tài khoản"
+                            className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
+                          >
+                            <LuTrash2 className="size-3.5" />
+                          </button>
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </motion.div>
           )}
 
