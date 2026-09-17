@@ -281,10 +281,7 @@ export function CreateProfileDialog({
 
                 {/* 3. 2FA */}
                 <div className="space-y-1.5">
-                  <Label
-                    htmlFor="field-2fa"
-                    className="text-xs font-medium"
-                  >
+                  <Label htmlFor="field-2fa" className="text-xs font-medium">
                     3. 2FA
                   </Label>
                   <Input
@@ -298,10 +295,7 @@ export function CreateProfileDialog({
 
                 {/* 4. Cookie */}
                 <div className="space-y-1.5">
-                  <Label
-                    htmlFor="field-cookie"
-                    className="text-xs font-medium"
-                  >
+                  <Label htmlFor="field-cookie" className="text-xs font-medium">
                     4. Cookie
                   </Label>
                   <Input
@@ -315,10 +309,7 @@ export function CreateProfileDialog({
 
                 {/* 5. Token */}
                 <div className="space-y-1.5">
-                  <Label
-                    htmlFor="field-token"
-                    className="text-xs font-medium"
-                  >
+                  <Label htmlFor="field-token" className="text-xs font-medium">
                     5. Token
                   </Label>
                   <Input
@@ -332,10 +323,7 @@ export function CreateProfileDialog({
 
                 {/* 6. Proxy */}
                 <div className="space-y-1.5">
-                  <Label
-                    htmlFor="field-proxy"
-                    className="text-xs font-medium"
-                  >
+                  <Label htmlFor="field-proxy" className="text-xs font-medium">
                     6. Proxy
                   </Label>
                   <Input
