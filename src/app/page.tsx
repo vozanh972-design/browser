@@ -538,74 +538,9 @@ export default function Home() {
     };
   }, [runShortcut, selectGroupByDigit, orderedGroupTargets.length]);
 
-  // Check for missing binaries and offer to download them
+  // Check for missing binaries and offer to download them (disabled)
   const checkMissingBinaries = useCallback(async () => {
-    try {
-      const missingBinaries = await invoke<[string, string, string][]>(
-        "check_missing_binaries",
-      );
-
-      // Also check for missing GeoIP database
-      const missingGeoIP = await invoke<boolean>(
-        "check_missing_geoip_database",
-      );
-
-      if (missingBinaries.length > 0 || missingGeoIP) {
-        if (missingBinaries.length > 0) {
-          console.log("Found missing binaries:", missingBinaries);
-        }
-        if (missingGeoIP) {
-          console.log("Found missing GeoIP database");
-        }
-
-        // Group missing binaries by browser type to avoid concurrent downloads
-        const browserMap = new Map<string, string[]>();
-        for (const [profileName, browser, version] of missingBinaries) {
-          if (!browserMap.has(browser)) {
-            browserMap.set(browser, []);
-          }
-          const versions = browserMap.get(browser);
-          if (versions) {
-            versions.push(`${version} (for ${profileName})`);
-          }
-        }
-
-        // Show a toast notification about missing binaries and auto-download them
-        let missingList = Array.from(browserMap.entries())
-          .map(([browser, versions]) => `${browser}: ${versions.join(", ")}`)
-          .join(", ");
-
-        if (missingGeoIP) {
-          if (missingList) {
-            missingList += ", GeoIP database";
-          } else {
-            missingList = "GeoIP database";
-          }
-        }
-
-        console.log(`Downloading missing components: ${missingList}`);
-
-        try {
-          // Download missing binaries and GeoIP database sequentially to prevent conflicts
-          const downloaded = await invoke<string[]>(
-            "ensure_all_binaries_exist",
-          );
-          if (downloaded.length > 0) {
-            console.log(
-              "Successfully downloaded missing components:",
-              downloaded,
-            );
-          }
-        } catch (downloadError) {
-          console.error(
-            "Failed to download missing components:",
-            downloadError,
-          );
-        }
-      }
-    } catch (err: unknown) {
-      console.error("Failed to check missing components:", err);
-    }
+    // Disabled automatic downloading of external binaries
   }, []);
 
   const [processingUrls, setProcessingUrls] = useState<Set<string>>(new Set());

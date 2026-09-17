@@ -128,28 +128,6 @@ jobs:
           echo "Checking from src-tauri perspective:"
           ls -la src-tauri/../dist || echo "Warning: dist not accessible from src-tauri"
 
-      - name: Build sidecar binaries
-        shell: bash
-        working-directory: ./src-tauri
-        env:
-          GITHUB_REF_NAME: ${{ github.ref_name }}
-        run: |
-          cargo build --bin donut-proxy --target ${{ matrix.target }} --release
-
-      - name: Copy sidecar binaries to Tauri binaries
-        shell: bash
-        run: |
-          mkdir -p src-tauri/binaries
-          if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
-            cp src-tauri/target/${{ matrix.target }}/release/donut-proxy.exe src-tauri/binaries/donut-proxy-${{ matrix.target }}.exe
-          else
-            cp src-tauri/target/${{ matrix.target }}/release/donut-proxy src-tauri/binaries/donut-proxy-${{ matrix.target }}
-            chmod +x src-tauri/binaries/donut-proxy-${{ matrix.target }}
-          fi
-
-      - name: Download verified Xray-core sidecar
-        run: node src-tauri/download-xray.mjs --target ${{ matrix.target }}
-
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f #v1.0.0
         env:
@@ -183,12 +161,6 @@ jobs:
 
           # Copy main executable
           cp "src-tauri/target/${{ matrix.target }}/release/donutbrowser.exe" "$PORTABLE_DIR/AutoLunex.exe"
-
-          # Copy sidecar binaries
-          cp "src-tauri/target/${{ matrix.target }}/release/donut-proxy.exe" "$PORTABLE_DIR/"
-          cp "src-tauri/binaries/xray-${{ matrix.target }}.exe" "$PORTABLE_DIR/xray.exe"
-          mkdir -p "$PORTABLE_DIR/licenses"
-          cp "src-tauri/binaries/xray-LICENSE.txt" "$PORTABLE_DIR/licenses/Xray-core-LICENSE.txt"
 
           # Copy WebView2Loader if present
           if [ -f "src-tauri/target/${{ matrix.target }}/release/WebView2Loader.dll" ]; then

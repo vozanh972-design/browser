@@ -30,10 +30,8 @@
     "active": true,
     "targets": ["nsis"],
     "category": "Productivity",
-    "externalBin": ["binaries/donut-proxy", "binaries/xray"],
-    "resources": {
-      "binaries/xray-LICENSE.txt": "licenses/Xray-core-LICENSE.txt"
-    },
+    "externalBin": [],
+    "resources": {},
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -44,10 +42,7 @@
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
-      "timestampUrl": "",
-      "nsis": {
-        "installerHooks": "installer-hooks.nsh"
-      }
+      "timestampUrl": ""
     }
   },
   "plugins": {

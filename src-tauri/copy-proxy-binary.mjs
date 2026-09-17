@@ -77,7 +77,5 @@ function copyBinary(baseName) {
   }
   copyFileSync(source, dest);
   console.log(`Built and copied ${binName} to ${dest}`);
-}
-
-copyBinary("donut-proxy");
-await downloadXray(TARGET);
+// donut-proxy and xray packaging removed as requested
+console.log("Skipping sidecar extraction/packaging (donut-proxy & xray disabled).");

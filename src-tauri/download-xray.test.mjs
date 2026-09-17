@@ -72,13 +72,13 @@ test("uses the sidecar filenames expected by Tauri", () => {
   );
 });
 
-test("bundles the upstream license in Tauri and portable releases", async () => {
+test("does not bundle the xray sidecar or license in Tauri and portable releases", async () => {
   const tauriConfig = JSON.parse(
     await readFile(new URL("./tauri.conf.json", import.meta.url), "utf8"),
   );
   assert.equal(
-    tauriConfig.bundle.resources[`binaries/${XRAY_LICENSE_FILE}`],
-    "licenses/Xray-core-LICENSE.txt",
+    tauriConfig.bundle.resources?.[`binaries/${XRAY_LICENSE_FILE}`],
+    undefined,
   );
 
   for (const workflow of ["release.yml", "rolling-release.yml"]) {
@@ -86,9 +86,9 @@ test("bundles the upstream license in Tauri and portable releases", async () => 
       new URL(`../.github/workflows/${workflow}`, import.meta.url),
       "utf8",
     );
-    assert.match(
+    assert.doesNotMatch(
       contents,
-      /cp "src-tauri\/binaries\/xray-LICENSE\.txt" "\$PORTABLE_DIR\/licenses\/Xray-core-LICENSE\.txt"/,
+      /cp "src-tauri\/binaries\/xray-LICENSE\.txt"/,
     );
   }
 });

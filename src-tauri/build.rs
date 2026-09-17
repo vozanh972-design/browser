@@ -55,58 +55,22 @@ fn main() {
   // This ensures tauri_build is re-run after sidecar binaries are copied
   println!("cargo:rerun-if-changed=binaries");
 
-  // Only run tauri_build if all external binaries exist
-  // This allows building donut-proxy sidecar without the other binaries present
-  if external_binaries_exist() {
-    tauri_build::build();
+  tauri_build::build();
 
-    // tauri_build embeds the manifest for bin targets only (cargo:rustc-link-arg-bins).
-    // Test binaries (including `cargo test --lib`) also need the comctl32 v6 manifest
-    // or they crash with STATUS_ENTRYPOINT_NOT_FOUND (0xc0000139). We embed the
-    // manifest for all targets, then suppress the duplicate for bins with /MANIFEST:NO
-    // (tauri_build's resource-embedded manifest still takes effect for bins).
-    #[cfg(target_os = "windows")]
-    {
-      embed_windows_manifest();
-      println!("cargo:rustc-link-arg-bins=/MANIFEST:NO");
-    }
-  } else {
-    println!("cargo:warning=Skipping tauri_build: external binaries not found. This is expected when building sidecar binaries.");
-
-    #[cfg(target_os = "windows")]
+  // tauri_build embeds the manifest for bin targets only (cargo:rustc-link-arg-bins).
+  // Test binaries (including `cargo test --lib`) also need the comctl32 v6 manifest
+  // or they crash with STATUS_ENTRYPOINT_NOT_FOUND (0xc0000139). We embed the
+  // manifest for all targets, then suppress the duplicate for bins with /MANIFEST:NO
+  // (tauri_build's resource-embedded manifest still takes effect for bins).
+  #[cfg(target_os = "windows")]
+  {
     embed_windows_manifest();
+    println!("cargo:rustc-link-arg-bins=/MANIFEST:NO");
   }
 }
 
 fn external_binaries_exist() -> bool {
-  use std::env;
-  use std::path::PathBuf;
-
-  let manifest_dir = match env::var("CARGO_MANIFEST_DIR") {
-    Ok(dir) => dir,
-    Err(_) => return false,
-  };
-
-  let target = match env::var("TARGET") {
-    Ok(t) => t,
-    Err(_) => return false,
-  };
-
-  let binaries_dir = PathBuf::from(&manifest_dir).join("binaries");
-
-  // Check for all required external binaries (must match tauri.conf.json externalBin)
-  let donut_proxy_name = if target.contains("windows") {
-    format!("donut-proxy-{}.exe", target)
-  } else {
-    format!("donut-proxy-{}", target)
-  };
-  let xray_name = if target.contains("windows") {
-    format!("xray-{}.exe", target)
-  } else {
-    format!("xray-{}", target)
-  };
-
-  binaries_dir.join(&donut_proxy_name).exists() && binaries_dir.join(&xray_name).exists()
+  true
 }
 
 fn ensure_dist_folder_exists() {

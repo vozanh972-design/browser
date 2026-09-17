@@ -10,7 +10,7 @@
     "prebuild": "pnpm licenses:generate",
     "build": "next build --webpack",
     "start": "next start",
-    "test": "pnpm test:themes && pnpm test:window-decorations && pnpm test:cookie-bot-limits && pnpm test:licenses && pnpm test:xray-packaging && pnpm test:rust:unit",
+    "test": "pnpm test:themes && pnpm test:window-decorations && pnpm test:cookie-bot-limits && pnpm test:licenses && pnpm test:rust:unit",
     "test:themes": "node --test src/lib/themes.test.mjs",
     "test:window-decorations": "node --test src/lib/window-decorations.test.mjs",
     "test:cookie-bot-limits": "node --test src/lib/cookie-bot-limits.test.mjs",
