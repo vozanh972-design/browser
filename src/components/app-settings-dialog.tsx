@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SUPPORTED_LANGUAGES, type SupportedLanguage } from "@/i18n";
+import { SUPPORTED_LANGUAGES } from "@/i18n";
 import { THEMES } from "@/lib/themes";
 
 interface AppSettingsDialogProps {
@@ -39,7 +39,10 @@ export function AppSettingsDialog({ isOpen, onClose }: AppSettingsDialogProps) {
         <DialogHeader>
           <DialogTitle>{t("rail.settings", "Settings")}</DialogTitle>
           <DialogDescription>
-            {t("settings.description", "Customize appearance and application preferences.")}
+            {t(
+              "settings.description",
+              "Customize appearance and application preferences.",
+            )}
           </DialogDescription>
         </DialogHeader>
 

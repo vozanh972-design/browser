@@ -25,9 +25,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
         <MotionConfig reducedMotion="user">
           <WindowDragArea />
           <CloseConfirmDialog />
-          <TooltipProvider>
-            {children}
-          </TooltipProvider>
+          <TooltipProvider>{children}</TooltipProvider>
           <Toaster />
         </MotionConfig>
       </CustomThemeProvider>

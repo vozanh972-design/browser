@@ -15,7 +15,6 @@ import {
   LuPlus,
   LuSettings,
   LuSparkles,
-  LuUser,
   LuUsers,
 } from "react-icons/lu";
 import { AboutDialog } from "@/components/about-dialog";
@@ -69,7 +68,9 @@ export default function HomePage() {
       <AppHeader
         pageTitle={getPageTitle(currentPage)}
         searchQuery={currentPage === "profiles" ? searchQuery : undefined}
-        onSearchQueryChange={currentPage === "profiles" ? setSearchQuery : undefined}
+        onSearchQueryChange={
+          currentPage === "profiles" ? setSearchQuery : undefined
+        }
       />
 
       {/* Main content area */}
@@ -93,7 +94,8 @@ export default function HomePage() {
                     </h1>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Giao diện đã sẵn sàng để bạn phát triển tính năng mới cho ứng dụng.
+                    Giao diện đã sẵn sàng để bạn phát triển tính năng mới cho
+                    ứng dụng.
                   </p>
                 </div>
                 <Button className="flex items-center gap-2 cursor-pointer shadow-xs">
@@ -161,7 +163,8 @@ export default function HomePage() {
                   Không gian làm việc trống
                 </h3>
                 <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                  Tất cả các chức năng cũ đã được lược bỏ thành công. Bạn có thể bắt đầu xây dựng giao diện và logic của app mới tại đây.
+                  Tất cả các chức năng cũ đã được lược bỏ thành công. Bạn có thể
+                  bắt đầu xây dựng giao diện và logic của app mới tại đây.
                 </p>
                 <div className="mt-5 flex gap-2">
                   <Button
@@ -239,7 +242,9 @@ export default function HomePage() {
                 <div className="flex items-center gap-2.5">
                   <LuCloud className="size-5 text-primary" />
                   <div>
-                    <h2 className="text-lg font-semibold">Tài khoản & Đám mây</h2>
+                    <h2 className="text-lg font-semibold">
+                      Tài khoản & Đám mây
+                    </h2>
                     <p className="text-xs text-muted-foreground">
                       Quản lý tài khoản người dùng, đồng bộ hoặc license.
                     </p>
@@ -264,7 +269,9 @@ export default function HomePage() {
                 <div className="flex items-center gap-2.5">
                   <FaDownload className="size-5 text-primary" />
                   <div>
-                    <h2 className="text-lg font-semibold">Nhập dữ liệu (Import)</h2>
+                    <h2 className="text-lg font-semibold">
+                      Nhập dữ liệu (Import)
+                    </h2>
                     <p className="text-xs text-muted-foreground">
                       Nhập file, dữ liệu hoặc cấu hình từ bên ngoài.
                     </p>
