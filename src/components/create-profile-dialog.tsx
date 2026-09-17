@@ -101,12 +101,18 @@ export function CreateProfileDialog({
 
   // Add the 6 filled inputs as a new row into the table
   const handleAddRow = useCallback(() => {
-    if (!uid.trim() && !pass.trim() && !cookie.trim() && !token.trim() && !proxy.trim()) {
+    if (
+      !uid.trim() &&
+      !pass.trim() &&
+      !cookie.trim() &&
+      !token.trim() &&
+      !proxy.trim()
+    ) {
       return;
     }
 
     const newRow: AccountRow = {
-      id: "row-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7),
+      id: `row-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       uid: uid.trim(),
       pass: pass.trim(),
       twoFactor: twoFactor.trim(),
@@ -129,12 +135,15 @@ export function CreateProfileDialog({
   const handleImportBulk = useCallback(() => {
     if (!bulkInput.trim()) return;
 
-    const lines = bulkInput.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const lines = bulkInput
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
     const parsedRows: AccountRow[] = lines.map((line, index) => {
       // Split by | or tab
       const parts = line.includes("\t") ? line.split("\t") : line.split("|");
       return {
-        id: "bulk-" + Date.now() + "-" + index,
+        id: `bulk-${Date.now()}-${index}`,
         uid: parts[0]?.trim() || "",
         pass: parts[1]?.trim() || "",
         twoFactor: parts[2]?.trim() || "",
@@ -166,7 +175,7 @@ export function CreateProfileDialog({
         // Create profiles from table rows
         for (let i = 0; i < tableRows.length; i++) {
           const row = tableRows[i];
-          const profileName = row.uid || "Account-" + (i + 1);
+          const profileName = row.uid || `Account-${i + 1}`;
           await onCreateProfile({
             name: profileName,
             browserStr: "wayfern",
@@ -177,7 +186,9 @@ export function CreateProfileDialog({
         }
       } else {
         // Create single profile from the 6 inputs if filled
-        const profileName = uid.trim() || (cookie.trim() ? "Cookie-Profile" : "Profile-" + Date.now());
+        const profileName =
+          uid.trim() ||
+          (cookie.trim() ? "Cookie-Profile" : `Profile-${Date.now()}`);
         await onCreateProfile({
           name: profileName,
           browserStr: "wayfern",
@@ -225,7 +236,13 @@ export function CreateProfileDialog({
                   variant="outline"
                   className="h-8 gap-1.5 text-xs"
                   onClick={handleAddRow}
-                  disabled={!uid.trim() && !pass.trim() && !cookie.trim() && !token.trim() && !proxy.trim()}
+                  disabled={
+                    !uid.trim() &&
+                    !pass.trim() &&
+                    !cookie.trim() &&
+                    !token.trim() &&
+                    !proxy.trim()
+                  }
                 >
                   <LuPlus className="size-3.5" />
                   Thêm vào bảng
@@ -264,56 +281,68 @@ export function CreateProfileDialog({
 
                 {/* 3. 2FA */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="field-2fa" className="text-xs font-medium">
+                  <Label
+                    htmlFor="field-2fa"
+                    className="text-xs font-medium"
+                  >
                     3. 2FA
                   </Label>
                   <Input
                     id="field-2fa"
                     value={twoFactor}
                     onChange={(e) => setTwoFactor(e.target.value)}
-                    placeholder="Mã 2FA / Secret key..."
+                    placeholder="Khóa bí mật 2FA..."
                     className="h-9 font-mono text-xs"
                   />
                 </div>
 
                 {/* 4. Cookie */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="field-cookie" className="text-xs font-medium">
+                  <Label
+                    htmlFor="field-cookie"
+                    className="text-xs font-medium"
+                  >
                     4. Cookie
                   </Label>
                   <Input
                     id="field-cookie"
                     value={cookie}
                     onChange={(e) => setCookie(e.target.value)}
-                    placeholder="Cookie tài khoản..."
+                    placeholder="sb=...; c_user=...;"
                     className="h-9 font-mono text-xs"
                   />
                 </div>
 
                 {/* 5. Token */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="field-token" className="text-xs font-medium">
+                  <Label
+                    htmlFor="field-token"
+                    className="text-xs font-medium"
+                  >
                     5. Token
                   </Label>
                   <Input
                     id="field-token"
                     value={token}
                     onChange={(e) => setToken(e.target.value)}
-                    placeholder="Access token..."
+                    placeholder="EAAAAU..."
                     className="h-9 font-mono text-xs"
                   />
                 </div>
 
                 {/* 6. Proxy */}
                 <div className="space-y-1.5">
-                  <Label htmlFor="field-proxy" className="text-xs font-medium">
+                  <Label
+                    htmlFor="field-proxy"
+                    className="text-xs font-medium"
+                  >
                     6. Proxy
                   </Label>
                   <Input
                     id="field-proxy"
                     value={proxy}
                     onChange={(e) => setProxy(e.target.value)}
-                    placeholder="ip:port:user:pass..."
+                    placeholder="IP:Port hoặc IP:Port:User:Pass"
                     className="h-9 font-mono text-xs"
                   />
                 </div>
@@ -330,7 +359,9 @@ export function CreateProfileDialog({
                   onClick={() => setShowBulkInput((prev) => !prev)}
                 >
                   <LuClipboardList className="size-3.5" />
-                  {showBulkInput ? "Ẩn khung nhập hàng loạt" : "Dán dữ liệu hàng loạt (UID|Pass|2FA|Cookie|Token|Proxy)"}
+                  {showBulkInput
+                    ? "Ẩn khung nhập hàng loạt"
+                    : "Dán dữ liệu hàng loạt (UID|Pass|2FA|Cookie|Token|Proxy)"}
                 </Button>
                 {tableRows.length > 0 && (
                   <Button
@@ -355,7 +386,11 @@ export function CreateProfileDialog({
                     className="font-mono text-xs"
                   />
                   <div className="flex justify-end">
-                    <Button size="sm" className="h-8 gap-1.5 text-xs" onClick={handleImportBulk}>
+                    <Button
+                      size="sm"
+                      className="h-8 gap-1.5 text-xs"
+                      onClick={handleImportBulk}
+                    >
                       <LuFileSpreadsheet className="size-3.5" />
                       Nhập vào bảng
                     </Button>
@@ -378,14 +413,18 @@ export function CreateProfileDialog({
                     <Table>
                       <TableHeader className="bg-muted/50 sticky top-0 z-10 backdrop-blur-sm">
                         <TableRow>
-                          <TableHead className="w-12 text-center text-xs">#</TableHead>
+                          <TableHead className="w-12 text-center text-xs">
+                            #
+                          </TableHead>
                           <TableHead className="text-xs">UID</TableHead>
                           <TableHead className="text-xs">Pass</TableHead>
                           <TableHead className="text-xs">2FA</TableHead>
                           <TableHead className="text-xs">Cookie</TableHead>
                           <TableHead className="text-xs">Token</TableHead>
                           <TableHead className="text-xs">Proxy</TableHead>
-                          <TableHead className="w-16 text-center text-xs">Xóa</TableHead>
+                          <TableHead className="w-16 text-center text-xs">
+                            Xóa
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -403,13 +442,22 @@ export function CreateProfileDialog({
                             <TableCell className="max-w-[100px] truncate font-mono text-xs text-muted-foreground">
                               {row.twoFactor || "-"}
                             </TableCell>
-                            <TableCell className="max-w-[140px] truncate font-mono text-xs text-muted-foreground" title={row.cookie}>
+                            <TableCell
+                              className="max-w-[140px] truncate font-mono text-xs text-muted-foreground"
+                              title={row.cookie}
+                            >
                               {row.cookie || "-"}
                             </TableCell>
-                            <TableCell className="max-w-[110px] truncate font-mono text-xs text-muted-foreground" title={row.token}>
+                            <TableCell
+                              className="max-w-[110px] truncate font-mono text-xs text-muted-foreground"
+                              title={row.token}
+                            >
                               {row.token || "-"}
                             </TableCell>
-                            <TableCell className="max-w-[130px] truncate font-mono text-xs text-muted-foreground" title={row.proxy}>
+                            <TableCell
+                              className="max-w-[130px] truncate font-mono text-xs text-muted-foreground"
+                              title={row.proxy}
+                            >
                               {row.proxy || "-"}
                             </TableCell>
                             <TableCell className="text-center">
@@ -434,7 +482,8 @@ export function CreateProfileDialog({
                       Chưa có tài khoản nào trong bảng
                     </p>
                     <p className="text-xs text-muted-foreground/70 mt-1 max-w-sm">
-                      Điền thông tin vào 6 ô bên trên rồi nhấn &quot;Thêm vào bảng&quot;, hoặc sử dụng chức năng dán dữ liệu hàng loạt.
+                      Điền thông tin vào 6 ô bên trên rồi nhấn &quot;Thêm vào
+                      bảng&quot;, hoặc sử dụng chức năng dán dữ liệu hàng loạt.
                     </p>
                   </div>
                 )}
@@ -455,7 +504,11 @@ export function CreateProfileDialog({
             <RippleButton variant="outline" onClick={handleClose}>
               {t("common.buttons.close", "Đóng")}
             </RippleButton>
-            <LoadingButton onClick={handleCreate} isLoading={isCreating} disabled={!canCreate}>
+            <LoadingButton
+              onClick={handleCreate}
+              isLoading={isCreating}
+              disabled={!canCreate}
+            >
               {t("common.buttons.create", "Tạo")}
             </LoadingButton>
           </div>

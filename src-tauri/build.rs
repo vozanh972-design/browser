@@ -69,10 +69,6 @@ fn main() {
   }
 }
 
-fn external_binaries_exist() -> bool {
-  true
-}
-
 fn ensure_dist_folder_exists() {
   use std::fs;
   use std::path::PathBuf;
