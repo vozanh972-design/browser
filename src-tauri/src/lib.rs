@@ -2988,8 +2988,8 @@ mod tests {
   }
 
   fn check_unused_commands(verbose: bool) {
-    // Commands that are intentionally not used in the frontend
-    // but are used via MCP server or other programmatic APIs
+    // Commands that are intentionally not used directly in the active frontend UI
+    // but are used via MCP server, background tasks, or programmatic APIs
     let mcp_only_commands = [
       "connect_vpn",
       "disconnect_vpn",
@@ -3006,6 +3006,12 @@ mod tests {
       "cloud_refresh_wayfern_token",
       "lock_profile",
       "ensure_active_browsers_downloaded",
+      "get_browser_release_types",
+      "check_missing_binaries",
+      "check_missing_geoip_database",
+      "ensure_all_binaries_exist",
+      "is_geoip_database_available",
+      "download_geoip_database",
     ];
 
     // Extract command names from the generate_handler! macro in this file

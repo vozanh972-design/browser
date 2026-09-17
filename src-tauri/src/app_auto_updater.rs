@@ -2312,15 +2312,8 @@ not-a-hash  PrfNoir_0.29.0_amd64.deb
       serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
     assert_eq!(
       config["bundle"]["windows"]["nsis"]["installerHooks"].as_str(),
-      Some("installer-hooks.nsh")
+      None
     );
-
-    let hooks = include_str!("../installer-hooks.nsh");
-    assert!(hooks.contains("NSIS_HOOK_PREINSTALL"));
-    assert!(hooks.contains("IfFileExists \"$INSTDIR\\donut-proxy.exe\""));
-    assert!(hooks.contains("taskkill.exe"));
-    assert!(hooks.contains("donut-proxy.exe"));
-    assert!(hooks.contains("Delete \"$INSTDIR\\donut-proxy.exe\""));
   }
 
   #[test]
