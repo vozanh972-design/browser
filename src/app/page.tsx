@@ -8,7 +8,7 @@ import { FiWifi } from "react-icons/fi";
 import {
   LuActivity,
   LuBox,
-  LuCheckCircle2,
+  LuCheckCircle,
   LuCloud,
   LuFolder,
   LuLayers,
@@ -123,7 +123,7 @@ export default function HomePage() {
                     <LuActivity className="size-4" />
                   </div>
                   <div className="flex items-center gap-1.5 text-2xl font-bold text-success">
-                    <LuCheckCircle2 className="size-5" />
+                    <LuCheckCircle className="size-5" />
                     <span>Online</span>
                   </div>
                   <span className="text-xs text-muted-foreground">
