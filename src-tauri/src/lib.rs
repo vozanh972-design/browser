@@ -34,10 +34,7 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_clipboard_manager::init())
     .plugin(tauri_plugin_window_state::Builder::new().build())
-    .invoke_handler(tauri::generate_handler![
-      get_system_info,
-      confirm_quit,
-    ])
+    .invoke_handler(tauri::generate_handler![get_system_info, confirm_quit,])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
 }
