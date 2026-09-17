@@ -74,7 +74,9 @@ export function AppHeader({
             {/* User */}
             <div className="flex items-center gap-1.5 font-medium text-foreground">
               <LuUser className="size-3.5 text-primary" />
-              <span className="max-w-[120px] truncate">{xsmmAccount.username}</span>
+              <span className="max-w-[120px] truncate">
+                {xsmmAccount.username}
+              </span>
             </div>
 
             <span className="h-3 w-px bg-border" />

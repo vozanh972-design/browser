@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { LuKey, LuShieldCheck } from "react-icons/lu";
@@ -17,7 +17,11 @@ import { Label } from "@/components/ui/label";
 interface XsmmLoginDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (user: { username: string; balance: string; token: string }) => void;
+  onLoginSuccess: (user: {
+    username: string;
+    balance: string;
+    token: string;
+  }) => void;
 }
 
 export function XsmmLoginDialog({
@@ -73,7 +77,10 @@ export function XsmmLoginDialog({
 
         <div className="flex flex-col gap-3 py-3">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="xsmm-token" className="text-xs font-medium text-foreground">
+            <Label
+              htmlFor="xsmm-token"
+              className="text-xs font-medium text-foreground"
+            >
               Access Token XSMM <span className="text-destructive">*</span>
             </Label>
             <div className="relative">

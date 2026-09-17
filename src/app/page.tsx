@@ -252,7 +252,8 @@ export default function HomePage() {
                     Chưa kết nối tài khoản XSMM
                   </h3>
                   <p className="mt-1.5 max-w-sm text-xs text-muted-foreground leading-relaxed">
-                    Bạn cần đăng nhập tài khoản XSMM bằng Access Token để sử dụng hệ thống và quản lý tài khoản Facebook.
+                    Bạn cần đăng nhập tài khoản XSMM bằng Access Token để sử
+                    dụng hệ thống và quản lý tài khoản Facebook.
                   </p>
                   <div className="mt-5 flex gap-2">
                     <Button
