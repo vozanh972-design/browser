@@ -6,15 +6,12 @@ import { useTranslation } from "react-i18next";
 import { FaDownload, FaFacebook } from "react-icons/fa";
 import { FiWifi } from "react-icons/fi";
 import {
-  LuActivity,
   LuCloud,
   LuCopy,
-  LuFolder,
   LuKey,
   LuPlus,
   LuShieldCheck,
   LuTrash2,
-  LuUserCheck,
   LuUsers,
 } from "react-icons/lu";
 import { AboutDialog } from "@/components/about-dialog";
@@ -263,8 +260,8 @@ export default function HomePage() {
                           Chưa kết nối tài khoản XSMM
                         </p>
                         <p className="text-[11px] text-muted-foreground max-w-xs leading-relaxed">
-                          Vui lòng đăng nhập tài khoản XSMM để quản lý và tự động
-                          hóa tài khoản Facebook.
+                          Vui lòng đăng nhập tài khoản XSMM để quản lý và tự
+                          động hóa tài khoản Facebook.
                         </p>
                         <Button
                           size="sm"
@@ -327,16 +324,10 @@ export default function HomePage() {
                           {acc.proxy || "Chưa chọn"}
                         </div>
                         <div className="text-muted-foreground truncate pr-2">
-                          {acc.twoFactor
-                            ? `2FA: ${acc.twoFactor}`
-                            : "Mặc định"}
+                          {acc.twoFactor ? `2FA: ${acc.twoFactor}` : "Mặc định"}
                         </div>
-                        <div className="text-muted-foreground">
-                          —
-                        </div>
-                        <div className="text-muted-foreground">
-                          —
-                        </div>
+                        <div className="text-muted-foreground">—</div>
+                        <div className="text-muted-foreground">—</div>
                         <div className="flex items-center justify-end gap-1 pr-1">
                           <button
                             type="button"
