@@ -4,7 +4,6 @@ import { MotionConfig } from "motion/react";
 import { useEffect } from "react";
 import { CloseConfirmDialog } from "@/components/close-confirm-dialog";
 import { I18nProvider } from "@/components/i18n-provider";
-import { OnboardingProvider } from "@/components/onboarding-provider";
 import { CustomThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -27,7 +26,7 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
           <WindowDragArea />
           <CloseConfirmDialog />
           <TooltipProvider>
-            <OnboardingProvider>{children}</OnboardingProvider>
+            {children}
           </TooltipProvider>
           <Toaster />
         </MotionConfig>
