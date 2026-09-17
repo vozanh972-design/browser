@@ -5,7 +5,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuArrowLeft, LuExternalLink, LuSearch } from "react-icons/lu";
+import { LuArrowLeft, LuSearch } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

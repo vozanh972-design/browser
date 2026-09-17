@@ -70,7 +70,8 @@ export default function HomePage() {
         const val = parts[kIdx];
         if (!val) return;
         if (key.includes("uid")) account.uid = val;
-        else if (key.includes("mật khẩu") || key.includes("pass")) account.pass = val;
+        else if (key.includes("mật khẩu") || key.includes("pass"))
+          account.pass = val;
         else if (key.includes("2fa")) account.twoFactor = val;
         else if (key.includes("cookie")) account.cookie = val;
         else if (key.includes("mail")) account.mail = val;
@@ -80,7 +81,9 @@ export default function HomePage() {
     });
 
     setAccounts((prev) => [...newAccounts, ...prev]);
-    showSuccessToast(`Đã thêm ${newAccounts.length} tài khoản Facebook thành công!`);
+    showSuccessToast(
+      `Đã thêm ${newAccounts.length} tài khoản Facebook thành công!`,
+    );
   };
 
   const handleDeleteAccount = (id: string) => {
@@ -209,7 +212,8 @@ export default function HomePage() {
                     Chưa có tài khoản Facebook nào
                   </h3>
                   <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                    Thêm danh sách tài khoản Facebook đầu tiên của bạn để bắt đầu quản lý.
+                    Thêm danh sách tài khoản Facebook đầu tiên của bạn để bắt
+                    đầu quản lý.
                   </p>
                   <div className="mt-5 flex gap-2">
                     <Button
