@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getXsmmUser } from "@/lib/xsmm-api";
 
 interface XsmmLoginDialogProps {
   isOpen: boolean;
@@ -33,7 +34,7 @@ export function XsmmLoginDialog({
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     const trimmed = token.trim();
     if (!trimmed) {
       setError("Vui lòng nhập Access Token XSMM.");
@@ -43,17 +44,29 @@ export function XsmmLoginDialog({
     setLoading(true);
     setError("");
 
-    setTimeout(() => {
+    const res = await getXsmmUser(trimmed);
+
+    if (!res.success || !res.user) {
       setLoading(false);
-      const shortId = trimmed.length > 8 ? trimmed.slice(0, 8) : trimmed;
-      onLoginSuccess({
-        username: `XSMM_${shortId}`,
-        balance: "100.000 đ",
-        token: trimmed,
-      });
-      setToken("");
-      onClose();
-    }, 400);
+      setError(res.error || "Mã Access Token không đúng hoặc đã hết hạn.");
+      return;
+    }
+
+    setLoading(false);
+    const balance = `${res.user.points.toLocaleString("vi-VN")} xu`;
+    try {
+      localStorage.setItem("xsmm_token", trimmed);
+    } catch {
+      // ignore storage error
+    }
+
+    onLoginSuccess({
+      username: res.user.username,
+      balance,
+      token: trimmed,
+    });
+    setToken("");
+    onClose();
   };
 
   return (

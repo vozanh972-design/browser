@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { FaFacebook } from "react-icons/fa";
+import { useEffect, useState } from "react";
+import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { LuCheck, LuKey, LuRotateCcw } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { getXsmmUser } from "@/lib/xsmm-api";
 import { cn } from "@/lib/utils";
 
 interface AddFacebookAccountDialogProps {
@@ -22,9 +23,15 @@ interface AddFacebookAccountDialogProps {
   onClose: () => void;
   onAddAccounts?: (accounts: string[], format: string) => void;
   isXsmmLoggedIn?: boolean;
+  platform?: "facebook" | "instagram";
+  onXsmmLoginSuccess?: (user: {
+    username: string;
+    balance: string;
+    token: string;
+  }) => void;
 }
 
-const FORMAT_OPTIONS = [
+const FACEBOOK_FORMAT_OPTIONS = [
   { id: "uid", label: "UID" },
   { id: "pass", label: "Mật khẩu" },
   { id: "2fa", label: "2FA" },
@@ -33,13 +40,25 @@ const FORMAT_OPTIONS = [
   { id: "passmail", label: "Pass Mail" },
 ];
 
+const INSTAGRAM_FORMAT_OPTIONS = [
+  { id: "cookie", label: "Cookie" },
+  { id: "proxy", label: "Proxy" },
+];
+
 export function AddFacebookAccountDialog({
   isOpen,
   onClose,
   onAddAccounts,
   isXsmmLoggedIn = false,
+  platform = "facebook",
+  onXsmmLoginSuccess,
 }: AddFacebookAccountDialogProps) {
-  // 6 nút định dạng: mặc định KHÔNG chọn sẵn nút nào
+  const isInstagram = platform === "instagram";
+  const formatOptions = isInstagram
+    ? INSTAGRAM_FORMAT_OPTIONS
+    : FACEBOOK_FORMAT_OPTIONS;
+
+  // Nút định dạng: mặc định KHÔNG chọn sẵn nút nào
   const [selectedFormat, setSelectedFormat] = useState<string[]>([]);
   const [accountText, setAccountText] = useState("");
 
@@ -47,6 +66,15 @@ export function AddFacebookAccountDialog({
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [xsmmToken, setXsmmToken] = useState("");
   const [localLoggedInXsmm, setLocalLoggedInXsmm] = useState(false);
+  const [tokenError, setTokenError] = useState("");
+  const [tokenLoading, setTokenLoading] = useState(false);
+
+  // Reset selected formats when platform changes or dialog opens
+  useEffect(() => {
+    setSelectedFormat([]);
+    setAccountText("");
+    setTokenError("");
+  }, [platform, isOpen]);
 
   const isAuthedXsmm = isXsmmLoggedIn || localLoggedInXsmm;
 
@@ -64,10 +92,31 @@ export function AddFacebookAccountDialog({
     setSelectedFormat([]);
   };
 
-  const handleSaveToken = () => {
-    if (xsmmToken.trim()) {
+  const handleSaveToken = async () => {
+    const trimmed = xsmmToken.trim();
+    if (!trimmed) return;
+
+    setTokenLoading(true);
+    setTokenError("");
+
+    const res = await getXsmmUser(trimmed);
+    setTokenLoading(false);
+
+    if (res.success && res.user) {
       setLocalLoggedInXsmm(true);
       setShowTokenInput(false);
+      try {
+        localStorage.setItem("xsmm_token", trimmed);
+      } catch {
+        // ignore
+      }
+      onXsmmLoginSuccess?.({
+        username: res.user.username,
+        balance: `${res.user.points.toLocaleString("vi-VN")} xu`,
+        token: trimmed,
+      });
+    } else {
+      setTokenError(res.error || "Token không hợp lệ hoặc đã hết hạn");
     }
   };
 
@@ -78,7 +127,7 @@ export function AddFacebookAccountDialog({
     .filter((l) => l.length > 0);
 
   const formatString = selectedFormat
-    .map((id) => FORMAT_OPTIONS.find((f) => f.id === id)?.label)
+    .map((id) => formatOptions.find((f) => f.id === id)?.label)
     .filter(Boolean)
     .join("|");
 
@@ -94,20 +143,31 @@ export function AddFacebookAccountDialog({
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            <FaFacebook className="size-5 text-[#1877F2]" />
-            <DialogTitle>Thêm tài khoản Facebook</DialogTitle>
+            {isInstagram ? (
+              <FaInstagram className="size-5 text-[#E1306C]" />
+            ) : (
+              <FaFacebook className="size-5 text-[#1877F2]" />
+            )}
+            <DialogTitle>
+              {isInstagram
+                ? "Thêm tài khoản Instagram"
+                : "Thêm tài khoản Facebook"}
+            </DialogTitle>
           </div>
           <DialogDescription>
-            Nhập danh sách tài khoản theo định dạng tự chọn bên dưới.
+            {isInstagram
+              ? "Nhập danh sách tài khoản Instagram theo định dạng tự chọn bên dưới."
+              : "Nhập danh sách tài khoản Facebook theo định dạng tự chọn bên dưới."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
-          {/* Phần chọn định dạng - 6 nút mặc định không chọn sẵn */}
+          {/* Phần chọn định dạng */}
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Chọn định dạng nhập ({selectedFormat.length}/6)
+                Chọn định dạng nhập ({selectedFormat.length}/
+                {formatOptions.length})
               </Label>
               {selectedFormat.length > 0 && (
                 <button
@@ -121,9 +181,14 @@ export function AddFacebookAccountDialog({
               )}
             </div>
 
-            {/* 6 nút định dạng */}
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-              {FORMAT_OPTIONS.map((opt) => {
+            {/* Nút định dạng */}
+            <div
+              className={cn(
+                "grid gap-2",
+                isInstagram ? "grid-cols-2" : "grid-cols-3 sm:grid-cols-6",
+              )}
+            >
+              {formatOptions.map((opt) => {
                 const index = selectedFormat.indexOf(opt.id);
                 const isSelected = index !== -1;
                 return (
@@ -224,20 +289,29 @@ export function AddFacebookAccountDialog({
                   <Input
                     type="text"
                     value={xsmmToken}
-                    onChange={(e) => setXsmmToken(e.target.value)}
+                    onChange={(e) => {
+                      setXsmmToken(e.target.value);
+                      if (tokenError) setTokenError("");
+                    }}
                     placeholder="Dán token XSMM vào đây..."
                     className="h-8 text-xs font-mono flex-1"
+                    disabled={tokenLoading}
                   />
                   <Button
                     type="button"
                     size="sm"
                     onClick={handleSaveToken}
-                    disabled={!xsmmToken.trim()}
+                    disabled={!xsmmToken.trim() || tokenLoading}
                     className="h-8 text-xs cursor-pointer px-4"
                   >
-                    Xác nhận
+                    {tokenLoading ? "Đang xác thực..." : "Xác nhận"}
                   </Button>
                 </div>
+                {tokenError && (
+                  <p className="text-[11px] text-destructive font-medium">
+                    {tokenError}
+                  </p>
+                )}
               </div>
             )}
           </div>

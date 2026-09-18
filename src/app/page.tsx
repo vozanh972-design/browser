@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FaDownload, FaFacebook } from "react-icons/fa";
+import { FaDownload, FaFacebook, FaInstagram } from "react-icons/fa";
 import { FiWifi } from "react-icons/fi";
 import {
   LuCloud,
@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";
+import { cn } from "@/lib/utils";
+import { getXsmmUser } from "@/lib/xsmm-api";
 
 interface FacebookAccount {
   id: string;
@@ -36,6 +38,7 @@ interface FacebookAccount {
   tag?: string;
   note?: string;
   proxy?: string;
+  platform?: "facebook" | "instagram";
   status: "live" | "checkpoint" | "unverified";
   rawText: string;
 }
@@ -64,6 +67,27 @@ export default function HomePage() {
     "facebook" | "instagram"
   >("facebook");
 
+  // Khôi phục phiên đăng nhập XSMM nếu đã lưu token
+  useEffect(() => {
+    try {
+      const savedToken = localStorage.getItem("xsmm_token");
+      if (savedToken) {
+        void getXsmmUser(savedToken).then((res) => {
+          if (res.success && res.user) {
+            setXsmmAccount({
+              username: res.user.username,
+              balance: `${res.user.points.toLocaleString("vi-VN")} xu`,
+              token: savedToken,
+              isLoggedIn: true,
+            });
+          }
+        });
+      }
+    } catch {
+      // ignore storage error
+    }
+  }, []);
+
   const handleXsmmLoginSuccess = (user: {
     username: string;
     balance: string;
@@ -77,6 +101,11 @@ export default function HomePage() {
   };
 
   const handleXsmmLogout = () => {
+    try {
+      localStorage.removeItem("xsmm_token");
+    } catch {
+      // ignore
+    }
     setXsmmAccount({
       username: "",
       balance: "",
@@ -105,6 +134,7 @@ export default function HomePage() {
         tag: "Không có thẻ",
         note: "Không có ghi chú",
         proxy: "Chưa chọn",
+        platform: currentPlatform,
         status: "unverified",
         rawText: line,
       };
@@ -117,6 +147,7 @@ export default function HomePage() {
           account.pass = val;
         else if (key.includes("2fa")) account.twoFactor = val;
         else if (key.includes("cookie")) account.cookie = val;
+        else if (key.includes("proxy")) account.proxy = val;
         else if (key.includes("mail")) account.mail = val;
       });
 
@@ -125,7 +156,7 @@ export default function HomePage() {
 
     setAccounts((prev) => [...newAccounts, ...prev]);
     showSuccessToast(
-      `Đã thêm ${newAccounts.length} tài khoản Facebook thành công!`,
+      `Đã thêm ${newAccounts.length} tài khoản ${currentPlatform === "instagram" ? "Instagram" : "Facebook"} thành công!`,
     );
   };
 
@@ -139,11 +170,18 @@ export default function HomePage() {
     showSuccessToast("Đã sao chép vào bộ nhớ tạm!");
   };
 
+  const filteredAccounts = accounts.filter(
+    (a) => (a.platform || "facebook") === currentPlatform,
+  );
+
   const toggleSelectAll = () => {
-    if (selectedIds.length === accounts.length && accounts.length > 0) {
+    if (
+      selectedIds.length === filteredAccounts.length &&
+      filteredAccounts.length > 0
+    ) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(accounts.map((a) => a.id));
+      setSelectedIds(filteredAccounts.map((a) => a.id));
     }
   };
 
@@ -152,8 +190,6 @@ export default function HomePage() {
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id],
     );
   };
-
-  const filteredAccounts = accounts;
 
   const getPageTitle = (page: AppPage) => {
     switch (page) {
@@ -208,7 +244,7 @@ export default function HomePage() {
                 >
                   <span>Tất cả</span>
                   <span className="text-muted-foreground font-normal">
-                    {accounts.length}
+                    {filteredAccounts.length}
                   </span>
                 </button>
                 <button
@@ -227,8 +263,8 @@ export default function HomePage() {
                     <input
                       type="checkbox"
                       checked={
-                        selectedIds.length === accounts.length &&
-                        accounts.length > 0
+                        selectedIds.length === filteredAccounts.length &&
+                        filteredAccounts.length > 0
                       }
                       onChange={toggleSelectAll}
                       className="size-3.5 rounded border-border cursor-pointer accent-primary"
@@ -248,7 +284,7 @@ export default function HomePage() {
                 </div>
 
                 {/* Table Rows or Empty State */}
-                {accounts.length === 0 ? (
+                {filteredAccounts.length === 0 ? (
                   <div className="flex flex-1 flex-col items-center justify-center py-28 text-center select-none">
                     {!xsmmAccount.isLoggedIn ? (
                       <div className="flex flex-col items-center gap-2.5">
@@ -260,7 +296,7 @@ export default function HomePage() {
                         </p>
                         <p className="text-[11px] text-muted-foreground max-w-xs leading-relaxed">
                           Vui lòng đăng nhập tài khoản XSMM để quản lý và tự
-                          động hóa tài khoản Facebook.
+                          động hóa tài khoản.
                         </p>
                         <Button
                           size="sm"
@@ -273,15 +309,31 @@ export default function HomePage() {
                       </div>
                     ) : (
                       <div className="flex flex-col items-center gap-2">
-                        <div className="flex size-12 items-center justify-center rounded-xl bg-[#1877F2]/10 text-[#1877F2]">
-                          <FaFacebook className="size-6" />
+                        <div
+                          className={cn(
+                            "flex size-12 items-center justify-center rounded-xl",
+                            currentPlatform === "instagram"
+                              ? "bg-[#E1306C]/10 text-[#E1306C]"
+                              : "bg-[#1877F2]/10 text-[#1877F2]",
+                          )}
+                        >
+                          {currentPlatform === "instagram" ? (
+                            <FaInstagram className="size-6" />
+                          ) : (
+                            <FaFacebook className="size-6" />
+                          )}
                         </div>
                         <p className="text-xs font-semibold text-foreground">
-                          Chưa có tài khoản nào
+                          {currentPlatform === "instagram"
+                            ? "Chưa có tài khoản Instagram nào"
+                            : "Chưa có tài khoản Facebook nào"}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
-                          Bấm nút "+ Mới" ở góc trên bên phải để thêm tài khoản
-                          Facebook.
+                          Bấm nút "+ Mới" ở góc trên bên phải để thêm tài khoản{" "}
+                          {currentPlatform === "instagram"
+                            ? "Instagram"
+                            : "Facebook"}
+                          .
                         </p>
                         <Button
                           size="sm"
@@ -289,7 +341,11 @@ export default function HomePage() {
                           className="mt-2 h-7.5 text-xs cursor-pointer gap-1.5"
                         >
                           <LuPlus className="size-3.5" />
-                          <span>Thêm tài khoản Facebook</span>
+                          <span>
+                            {currentPlatform === "instagram"
+                              ? "Thêm tài khoản Instagram"
+                              : "Thêm tài khoản Facebook"}
+                          </span>
                         </Button>
                       </div>
                     )}
@@ -310,7 +366,11 @@ export default function HomePage() {
                           />
                         </div>
                         <div className="flex items-center gap-2 font-mono font-medium truncate pr-2">
-                          <FaFacebook className="size-3.5 text-[#1877F2] shrink-0" />
+                          {acc.platform === "instagram" ? (
+                            <FaInstagram className="size-3.5 text-[#E1306C] shrink-0" />
+                          ) : (
+                            <FaFacebook className="size-3.5 text-[#1877F2] shrink-0" />
+                          )}
                           <span className="truncate">{acc.uid}</span>
                         </div>
                         <div className="text-muted-foreground truncate pr-2">
@@ -480,12 +540,14 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Dialog Thêm tài khoản Facebook */}
+      {/* Dialog Thêm tài khoản */}
       <AddFacebookAccountDialog
         isOpen={isAddFacebookOpen}
         onClose={() => setIsAddFacebookOpen(false)}
         onAddAccounts={handleAddAccounts}
         isXsmmLoggedIn={xsmmAccount.isLoggedIn}
+        platform={currentPlatform}
+        onXsmmLoginSuccess={handleXsmmLoginSuccess}
       />
 
       {/* Dialog Đăng nhập XSMM */}
