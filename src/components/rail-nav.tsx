@@ -224,9 +224,19 @@ export function RailNav({
   }, [moreOpen]);
 
   return (
-    <div className="flex h-16 w-full shrink-0 items-center justify-center border-t border-border bg-background px-4">
+    <div
+      className={cn(
+        "relative flex w-full shrink-0 items-center justify-center",
+        "bg-transparent px-4 pb-3.5 pt-1 select-none",
+      )}
+    >
       {/* Pill container — Apple dock style */}
-      <div className="flex items-center gap-1 rounded-2xl border border-border bg-muted/40 px-2 py-1.5 shadow-sm backdrop-blur-sm">
+      <div
+        className={cn(
+          "flex items-center gap-1 rounded-2xl border border-border/50",
+          "bg-card/60 px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.25)] backdrop-blur-xl",
+        )}
+      >
         {/* Logo */}
         <div className="flex items-center justify-center px-1">
           {!isHidden ? (
@@ -416,7 +426,7 @@ export function RailNav({
           <div
             role="menu"
             aria-label={t("rail.more.label")}
-            className="surface-material-card absolute bottom-20 left-1/2 z-40 w-52 -translate-x-1/2 animate-in rounded-xl border border-border p-1 shadow-2xl duration-100 fade-in-0 slide-in-from-bottom-2"
+            className="surface-material-card absolute bottom-16 left-1/2 z-40 w-52 -translate-x-1/2 animate-in rounded-xl border border-border p-1 shadow-2xl duration-100 fade-in-0 slide-in-from-bottom-2"
           >
             {MORE_ITEMS.map(({ page, Icon, labelKey, hintKey }) => (
               <button
