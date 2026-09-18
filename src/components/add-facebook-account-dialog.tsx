@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { LuCheck, LuKey, LuRotateCcw } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getXsmmUser } from "@/lib/xsmm-api";
 import { cn } from "@/lib/utils";
+import { getXsmmUser } from "@/lib/xsmm-api";
 
 interface AddFacebookAccountDialogProps {
   isOpen: boolean;
@@ -69,14 +69,14 @@ export function AddFacebookAccountDialog({
   const [tokenError, setTokenError] = useState("");
   const [tokenLoading, setTokenLoading] = useState(false);
 
-  // Reset selected formats when platform changes or dialog opens
-  useEffect(() => {
+  const isAuthedXsmm = isXsmmLoggedIn || localLoggedInXsmm;
+
+  const handleDialogClose = () => {
     setSelectedFormat([]);
     setAccountText("");
     setTokenError("");
-  }, [platform, isOpen]);
-
-  const isAuthedXsmm = isXsmmLoggedIn || localLoggedInXsmm;
+    onClose();
+  };
 
   // Xử lý chọn/bỏ chọn định dạng
   const toggleFormat = (id: string) => {
@@ -135,11 +135,11 @@ export function AddFacebookAccountDialog({
     if (lines.length > 0 && onAddAccounts) {
       onAddAccounts(lines, formatString);
     }
-    onClose();
+    handleDialogClose();
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleDialogClose()}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
@@ -321,7 +321,7 @@ export function AddFacebookAccountDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={onClose}
+            onClick={handleDialogClose}
             className="cursor-pointer"
           >
             Hủy
