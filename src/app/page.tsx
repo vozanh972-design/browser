@@ -4,7 +4,6 @@ import { motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaDownload, FaFacebook, FaInstagram } from "react-icons/fa";
-import { FiWifi } from "react-icons/fi";
 import {
   LuCloud,
   LuCopy,
@@ -12,7 +11,6 @@ import {
   LuPlus,
   LuShieldCheck,
   LuTrash2,
-  LuUsers,
 } from "react-icons/lu";
 import { AboutDialog } from "@/components/about-dialog";
 import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dialog";
@@ -195,10 +193,12 @@ export default function HomePage() {
     switch (page) {
       case "profiles":
         return "";
-      case "proxies":
-        return t("rail.network", "Network");
-      case "groups":
-        return t("rail.groups", "Groups");
+      case "ttc":
+        return "TTC";
+      case "nvc":
+        return "NVC";
+      case "gl":
+        return "GL";
       case "account":
         return t("rail.account", "Account");
       case "import":
@@ -234,27 +234,8 @@ export default function HomePage() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
-              className="flex w-full flex-1 flex-col gap-3"
+              className="flex w-full flex-1 flex-col"
             >
-              {/* Group tabs like Image 2 */}
-              <div className="flex items-center gap-6 border-b border-border/40 pb-2.5 text-xs select-none">
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 font-semibold text-foreground border-b-2 border-primary pb-2.5 -mb-3"
-                >
-                  <span>Tất cả</span>
-                  <span className="text-muted-foreground font-normal">
-                    {filteredAccounts.length}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                >
-                  <span>Nhóm mặc định</span>
-                </button>
-              </div>
-
               {/* Table View matching Image 2 */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-card/40 overflow-hidden shadow-xs">
                 {/* Table Header */}
@@ -413,52 +394,52 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          {currentPage === "proxies" && (
+          {(currentPage === "ttc" ||
+            currentPage === "nvc" ||
+            currentPage === "gl") && (
             <motion.div
-              key="proxies"
+              key={currentPage}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
-              className="mx-auto flex w-full max-w-4xl flex-col gap-4"
+              className="flex w-full flex-1 flex-col"
             >
-              <div className="flex items-center justify-between border-b border-border/40 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <FiWifi className="size-5 text-primary" />
-                  <div>
-                    <h2 className="text-lg font-semibold">Mạng & Kết nối</h2>
-                    <p className="text-xs text-muted-foreground">
-                      Khu vực quản lý proxy, mạng và cấu hình kết nối.
-                    </p>
+              {/* Table View matching XSMM */}
+              <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-card/40 overflow-hidden shadow-xs">
+                {/* Table Header */}
+                <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/20 select-none">
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      disabled
+                      className="size-3.5 rounded border-border opacity-40 cursor-not-allowed"
+                    />
                   </div>
+                  <div className="flex items-center gap-1">
+                    <span>Tên</span>
+                    <span className="text-[10px]">▲</span>
+                  </div>
+                  <div>Thẻ</div>
+                  <div>Ghi chú</div>
+                  <div>Proxy / VPN</div>
+                  <div>TIỆN ÍCH</div>
+                  <div>TRẠNG THÁI TÀI KHOẢN</div>
+                  <div>HÀNH ĐỘNG</div>
+                  <div className="text-right">#</div>
                 </div>
-              </div>
-              <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground">
-                Khung trang kết nối / network trống
-              </div>
-            </motion.div>
-          )}
 
-          {currentPage === "groups" && (
-            <motion.div
-              key="groups"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
-              className="mx-auto flex w-full max-w-4xl flex-col gap-4"
-            >
-              <div className="flex items-center justify-between border-b border-border/40 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <LuUsers className="size-5 text-primary" />
-                  <div>
-                    <h2 className="text-lg font-semibold">Nhóm & Phân loại</h2>
-                    <p className="text-xs text-muted-foreground">
-                      Khu vực quản lý danh sách các nhóm hoặc thư mục.
-                    </p>
+                {/* Empty State */}
+                <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
+                  <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm mb-3">
+                    {currentPage.toUpperCase()}
                   </div>
+                  <p className="text-sm font-medium text-foreground">
+                    Chưa có tài khoản {currentPage.toUpperCase()} nào
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                    Giao diện {currentPage.toUpperCase()} đã sẵn sàng. Logic kết nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.
+                  </p>
                 </div>
-              </div>
-              <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground">
-                Khung trang quản lý nhóm trống
               </div>
             </motion.div>
           )}

@@ -1,11 +1,11 @@
 "use client";
 
+import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaDownload } from "react-icons/fa";
-import { FiWifi } from "react-icons/fi";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
-import { LuCloud, LuInfo, LuKeyboard, LuUser, LuUsers } from "react-icons/lu";
+import { LuCloud, LuInfo, LuKeyboard, LuUser } from "react-icons/lu";
 import { launchDonutClone } from "@/lib/donut-physics";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
@@ -13,6 +13,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 export type AppPage =
   | "profiles"
+  | "ttc"
+  | "nvc"
+  | "gl"
   | "proxies"
   | "groups"
   | "vpns"
@@ -151,15 +154,16 @@ interface RailNavProps {
 
 interface RailItem {
   page: AppPage;
-  Icon: React.ComponentType<{ className?: string }>;
+  Icon?: React.ComponentType<{ className?: string }>;
+  textLabel?: string;
   labelKey: string;
 }
 
 const TOP_ITEMS: RailItem[] = [
-  { page: "profiles", Icon: LuUser, labelKey: "rail.profiles" },
-  { page: "proxies", Icon: FiWifi, labelKey: "rail.network" },
-  { page: "groups", Icon: LuUsers, labelKey: "rail.groups" },
-  { page: "account", Icon: LuCloud, labelKey: "rail.account" },
+  { page: "profiles", Icon: LuUser, labelKey: "XSMM" },
+  { page: "ttc", textLabel: "TTC", labelKey: "TTC" },
+  { page: "nvc", textLabel: "NVC", labelKey: "NVC" },
+  { page: "gl", textLabel: "GL", labelKey: "GL" },
 ];
 
 interface MoreMenuItem {
@@ -170,6 +174,12 @@ interface MoreMenuItem {
 }
 
 const MORE_ITEMS: MoreMenuItem[] = [
+  {
+    page: "account",
+    Icon: LuCloud,
+    labelKey: "rail.account",
+    hintKey: "rail.accountHint",
+  },
   {
     page: "import",
     Icon: FaDownload,
@@ -261,7 +271,7 @@ export function RailNav({
         <div className="mx-1 h-5 w-px shrink-0 rounded-full bg-border" />
 
         {/* Main nav items */}
-        {visibleTopItems.map(({ page, Icon, labelKey }) => {
+        {visibleTopItems.map(({ page, Icon, textLabel, labelKey }) => {
           const active = currentPage === page;
           return (
             <Tooltip key={page} delayDuration={400}>
@@ -269,23 +279,52 @@ export function RailNav({
                 <button
                   type="button"
                   onClick={() => onNavigate(page)}
-                  aria-label={t(labelKey)}
+                  aria-label={t(labelKey, labelKey)}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-all duration-150",
+                    "relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-colors duration-150",
                     active
-                      ? "bg-foreground/10 text-foreground"
+                      ? "text-foreground font-semibold"
                       : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                   )}
                 >
-                  <Icon className="size-[18px]" />
                   {active && (
-                    <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground" />
+                    <motion.div
+                      layoutId="dockActivePill"
+                      className="absolute inset-0 rounded-xl bg-foreground/10"
+                      transition={{
+                        type: "spring",
+                        stiffness: 450,
+                        damping: 32,
+                        mass: 0.6,
+                      }}
+                    />
+                  )}
+                  <span className="relative z-10 flex items-center justify-center">
+                    {Icon ? (
+                      <Icon className="size-[18px]" />
+                    ) : (
+                      <span className="text-[11px] font-bold tracking-tight">
+                        {textLabel}
+                      </span>
+                    )}
+                  </span>
+                  {active && (
+                    <motion.span
+                      layoutId="dockActiveDot"
+                      className="absolute bottom-1 left-1/2 z-10 size-1 -translate-x-1/2 rounded-full bg-foreground"
+                      transition={{
+                        type: "spring",
+                        stiffness: 450,
+                        damping: 32,
+                        mass: 0.6,
+                      }}
+                    />
                   )}
                 </button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={8}>
-                {t(labelKey)}
+                {t(labelKey, labelKey)}
               </TooltipContent>
             </Tooltip>
           );
@@ -303,15 +342,36 @@ export function RailNav({
               aria-label={t("rail.settings")}
               aria-current={currentPage === "settings" ? "page" : undefined}
               className={cn(
-                "relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-all duration-150",
+                "relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-colors duration-150",
                 currentPage === "settings"
-                  ? "bg-foreground/10 text-foreground"
+                  ? "text-foreground"
                   : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
               )}
             >
-              <GoGear className="size-[18px]" />
               {currentPage === "settings" && (
-                <span className="absolute bottom-1 left-1/2 size-1 -translate-x-1/2 rounded-full bg-foreground" />
+                <motion.div
+                  layoutId="dockActivePill"
+                  className="absolute inset-0 rounded-xl bg-foreground/10"
+                  transition={{
+                    type: "spring",
+                    stiffness: 450,
+                    damping: 32,
+                    mass: 0.6,
+                  }}
+                />
+              )}
+              <GoGear className="relative z-10 size-[18px]" />
+              {currentPage === "settings" && (
+                <motion.span
+                  layoutId="dockActiveDot"
+                  className="absolute bottom-1 left-1/2 z-10 size-1 -translate-x-1/2 rounded-full bg-foreground"
+                  transition={{
+                    type: "spring",
+                    stiffness: 450,
+                    damping: 32,
+                    mass: 0.6,
+                  }}
+                />
               )}
             </button>
           </TooltipTrigger>
