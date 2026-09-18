@@ -1,4 +1,6 @@
-﻿export interface XsmmUser {
+﻿import { invoke } from "@tauri-apps/api/core";
+
+export interface XsmmUser {
   username: string;
   points: number;
 }
@@ -42,28 +44,56 @@ export interface XsmmCompleteResponse {
 
 const XSMM_BASE_URL = "https://xsmm.net/api/taskapi";
 
+async function xsmmFetch<T>(
+  url: string,
+  method: string,
+  token: string,
+  body?: unknown,
+): Promise<T> {
+  const jsonBody = body !== undefined ? JSON.stringify(body) : null;
+
+  try {
+    const raw = await invoke<string>("xsmm_request", {
+      url,
+      method,
+      token,
+      body: jsonBody,
+    });
+    return JSON.parse(raw) as T;
+  } catch {
+    // Fallback to standard fetch if running outside of Tauri desktop runtime
+    const res = await fetch(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${token.trim()}`,
+        "Content-Type": "application/json",
+      },
+      body: jsonBody ?? undefined,
+    });
+    return (await res.json()) as T;
+  }
+}
+
 export async function getXsmmUser(token: string): Promise<{
   success: boolean;
   user?: XsmmUser;
   error?: string;
 }> {
   try {
-    const res = await fetch(`${XSMM_BASE_URL}/user`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token.trim()}`,
-      },
-    });
+    const data = await xsmmFetch<XsmmUserResponse>(
+      `${XSMM_BASE_URL}/user`,
+      "GET",
+      token,
+    );
 
-    const data = (await res.json()) as XsmmUserResponse;
-    if (!res.ok || data.error) {
+    if (data?.error) {
       return {
         success: false,
-        error: data.error || "Token không hợp lệ hoặc đã hết hạn",
+        error: data.error,
       };
     }
 
-    if (data.user) {
+    if (data?.user) {
       return {
         success: true,
         user: data.user,
@@ -102,18 +132,16 @@ export async function getXsmmAccounts(
       ? `${XSMM_BASE_URL}/accounts2?${qs}`
       : `${XSMM_BASE_URL}/accounts2`;
 
-    const res = await fetch(url, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token.trim()}`,
-      },
-    });
+    const data = await xsmmFetch<XsmmAccountItem[] | { error?: string }>(
+      url,
+      "GET",
+      token,
+    );
 
-    const data = await res.json();
-    if (!res.ok || data.error) {
+    if (data && "error" in data && data.error) {
       return {
         success: false,
-        error: data.error || "Không thể lấy danh sách tài khoản",
+        error: data.error,
       };
     }
 
@@ -140,26 +168,23 @@ export async function addXsmmAccount(
   error?: string;
 }> {
   try {
-    const res = await fetch(`${XSMM_BASE_URL}/accounts2`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token.trim()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(data),
-    });
+    const result = await xsmmFetch<XsmmAccountItem | { error?: string }>(
+      `${XSMM_BASE_URL}/accounts2`,
+      "POST",
+      token,
+      data,
+    );
 
-    const result = await res.json();
-    if (!res.ok || result.error) {
+    if (result && "error" in result && result.error) {
       return {
         success: false,
-        error: result.error || "Không thể thêm tài khoản lên XSMM",
+        error: result.error,
       };
     }
 
     return {
       success: true,
-      account: result,
+      account: result as XsmmAccountItem,
     };
   } catch (err: unknown) {
     const message =
@@ -186,18 +211,16 @@ export async function getXsmmTasks(
     });
     if (params.typejob) query.append("typejob", params.typejob);
 
-    const res = await fetch(`${XSMM_BASE_URL}/tasks2?${query.toString()}`, {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token.trim()}`,
-      },
-    });
+    const data = await xsmmFetch<XsmmTaskItem[] | { error?: string }>(
+      `${XSMM_BASE_URL}/tasks2?${query.toString()}`,
+      "GET",
+      token,
+    );
 
-    const data = await res.json();
-    if (!res.ok || data.error) {
+    if (data && "error" in data && data.error) {
       return {
         success: false,
-        error: data.error || "Không thể lấy danh sách nhiệm vụ",
+        error: data.error,
       };
     }
 
@@ -224,20 +247,17 @@ export async function completeXsmmTask(
   error?: string;
 }> {
   try {
-    const res = await fetch(`${XSMM_BASE_URL}/tasks2/complete`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token.trim()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-    });
+    const data = await xsmmFetch<XsmmCompleteResponse>(
+      `${XSMM_BASE_URL}/tasks2/complete`,
+      "POST",
+      token,
+      payload,
+    );
 
-    const data = await res.json();
-    if (!res.ok || data.error) {
+    if (data?.error) {
       return {
         success: false,
-        error: data.error || "Hoàn thành nhiệm vụ thất bại",
+        error: data.error,
       };
     }
 
