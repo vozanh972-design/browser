@@ -72,7 +72,7 @@
   /* Apple System Light Mode (macOS & iOS HIG) */
   --background: #f2f2f7;
   --foreground: #1c1c1e;
-  --card: #ffffff;
+  --card: #f2f2f7;
   --card-foreground: #1c1c1e;
   --popover: #ffffff;
   --popover-foreground: #1c1c1e;
@@ -116,7 +116,7 @@
   /* Apple System Dark Mode (macOS & iOS HIG) */
   --background: #1c1c1e;
   --foreground: #f5f5f7;
-  --card: #2c2c2e;
+  --card: #1c1c1e;
   --card-foreground: #f5f5f7;
   --popover: #2c2c2e;
   --popover-foreground: #f5f5f7;

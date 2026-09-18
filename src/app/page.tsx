@@ -237,9 +237,9 @@ export default function HomePage() {
               className="flex w-full flex-1 flex-col"
             >
               {/* Table View matching Image 2 */}
-              <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-card/40 overflow-hidden shadow-xs">
+              <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/20 select-none">
+                <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
                   <div className="flex items-center justify-center">
                     <input
                       type="checkbox"
@@ -405,9 +405,9 @@ export default function HomePage() {
               className="flex w-full flex-1 flex-col"
             >
               {/* Table View matching XSMM */}
-              <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-card/40 overflow-hidden shadow-xs">
+              <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/20 select-none">
+                <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
                   <div className="flex items-center justify-center">
                     <input
                       type="checkbox"
