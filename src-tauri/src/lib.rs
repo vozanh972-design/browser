@@ -59,12 +59,12 @@ fn xsmm_request(
     cmd.creation_flags(0x0800_0000);
   }
 
-  let output = cmd.output().map_err(|e| format!("Lỗi thực thi curl: {}", e))?;
+  let output = cmd.output().map_err(|e| format!("Failed to execute curl: {}", e))?;
 
   let stdout = String::from_utf8_lossy(&output.stdout);
   if !output.status.success() && stdout.trim().is_empty() {
     let err = String::from_utf8_lossy(&output.stderr);
-    return Err(format!("Lỗi kết nối máy chủ XSMM: {}", err));
+    return Err(format!("XSMM server connection error: {}", err));
   }
 
   Ok(stdout.into_owned())
