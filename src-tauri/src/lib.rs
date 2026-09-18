@@ -59,7 +59,9 @@ fn xsmm_request(
     cmd.creation_flags(0x0800_0000);
   }
 
-  let output = cmd.output().map_err(|e| format!("Failed to execute curl: {}", e))?;
+  let output = cmd
+    .output()
+    .map_err(|e| format!("Failed to execute curl: {}", e))?;
 
   let stdout = String::from_utf8_lossy(&output.stdout);
   if !output.status.success() && stdout.trim().is_empty() {
