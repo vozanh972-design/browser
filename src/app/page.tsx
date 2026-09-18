@@ -437,7 +437,8 @@ export default function HomePage() {
                     Chưa có tài khoản {currentPage.toUpperCase()} nào
                   </p>
                   <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                    Giao diện {currentPage.toUpperCase()} đã sẵn sàng. Logic kết nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.
+                    Giao diện {currentPage.toUpperCase()} đã sẵn sàng. Logic kết
+                    nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.
                   </p>
                 </div>
               </div>
