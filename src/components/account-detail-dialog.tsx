@@ -50,6 +50,40 @@ interface AccountDetailDialogProps {
   isChecking?: boolean;
 }
 
+function DialogAvatar({
+  url,
+  name,
+  isInstagram,
+}: {
+  url?: string;
+  name?: string;
+  isInstagram?: boolean;
+}) {
+  const [error, setError] = useState(false);
+
+  if (!url || error) {
+    return isInstagram ? (
+      <div className="size-full flex items-center justify-center bg-[#E1306C]/10 text-[#E1306C]">
+        <FaInstagram className="size-9" />
+      </div>
+    ) : (
+      <div className="size-full flex items-center justify-center bg-[#1877F2]/10 text-[#1877F2]">
+        <FaFacebook className="size-9" />
+      </div>
+    );
+  }
+
+  return (
+    // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
+    <img
+      src={url}
+      alt={name || ""}
+      className="size-full object-cover"
+      onError={() => setError(true)}
+    />
+  );
+}
+
 export function AccountDetailDialog({
   account,
   isOpen,
@@ -94,8 +128,11 @@ export function AccountDetailDialog({
             // biome-ignore lint/performance/noImgElement: dynamic external cover URL
             <img
               src={account.cover}
-              alt="Cover"
+              alt=""
               className="h-full w-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = "none";
+              }}
             />
           )}
           <div className="absolute inset-0 bg-black/20" />
@@ -107,25 +144,11 @@ export function AccountDetailDialog({
             <div className="flex items-end gap-3.5">
               {/* Avatar Thật */}
               <div className="relative size-20 sm:size-22 rounded-full border-4 border-background bg-muted overflow-hidden shrink-0 shadow-md">
-                {avatarUrl ? (
-                  // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
-                  <img
-                    src={avatarUrl}
-                    alt={account.name || account.uid}
-                    className="size-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = "none";
-                    }}
-                  />
-                ) : isInstagram ? (
-                  <div className="size-full flex items-center justify-center bg-[#E1306C]/10 text-[#E1306C]">
-                    <FaInstagram className="size-9" />
-                  </div>
-                ) : (
-                  <div className="size-full flex items-center justify-center bg-[#1877F2]/10 text-[#1877F2]">
-                    <FaFacebook className="size-9" />
-                  </div>
-                )}
+                <DialogAvatar
+                  url={avatarUrl}
+                  name={account.name || account.uid}
+                  isInstagram={isInstagram}
+                />
               </div>
 
               {/* Tên & Trạng thái */}

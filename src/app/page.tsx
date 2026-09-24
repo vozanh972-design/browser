@@ -22,6 +22,7 @@ import { AppSettingsDialog } from "@/components/app-settings-dialog";
 import { type AppPage, RailNav } from "@/components/rail-nav";
 import { ShortcutsPage } from "@/components/shortcuts-page";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import {
   fetchAccountDetailsWithToken,
@@ -49,6 +50,34 @@ interface FacebookAccount {
   platform?: "facebook" | "instagram";
   status: "live" | "checkpoint" | "unverified";
   rawText: string;
+}
+
+function AccountAvatar({
+  url,
+  isInstagram,
+}: {
+  url?: string;
+  isInstagram?: boolean;
+}) {
+  const [error, setError] = useState(false);
+
+  return (
+    <div className="relative size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
+      {!error && url ? (
+        // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
+        <img
+          src={url}
+          alt=""
+          className="size-full object-cover"
+          onError={() => setError(true)}
+        />
+      ) : isInstagram ? (
+        <FaInstagram className="size-4 text-[#E1306C]" />
+      ) : (
+        <FaFacebook className="size-4 text-[#1877F2]" />
+      )}
+    </div>
+  );
 }
 
 export default function HomePage() {
@@ -383,26 +412,24 @@ export default function HomePage() {
               {/* Table View matching Image 2 */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.8fr_1.8fr_1.5fr_1.2fr_1.2fr_110px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
+                <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
                   <div className="flex items-center justify-center">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={
-                        selectedIds.length === filteredAccounts.length &&
-                        filteredAccounts.length > 0
+                        filteredAccounts.length > 0 &&
+                        selectedIds.length === filteredAccounts.length
                       }
-                      onChange={toggleSelectAll}
-                      className="size-3.5 rounded border-border cursor-pointer accent-primary"
+                      onCheckedChange={toggleSelectAll}
                     />
                   </div>
                   <div className="flex items-center gap-1 hover:text-foreground cursor-pointer">
                     <span>Tên & UID</span>
                     <span className="text-[10px]">▲</span>
                   </div>
-                  <div>Ghi chú</div>
-                  <div>Proxy / VPN</div>
                   <div>TIỆN ÍCH</div>
+                  <div>Proxy / VPN</div>
                   <div>TRẠNG THÁI</div>
+                  <div>HÀNH ĐỘNG</div>
                   <div className="text-right pr-2">Thao tác</div>
                 </div>
 
@@ -477,6 +504,7 @@ export default function HomePage() {
                   <div className="divide-y divide-border/30 overflow-y-auto max-h-[calc(100vh-180px)]">
                     {filteredAccounts.map((acc) => {
                       const isChecking = checkingIds.includes(acc.id);
+                      const isSelected = selectedIds.includes(acc.id);
                       const avatarSrc =
                         acc.avatar ||
                         (acc.uid && !acc.uid.startsWith("acc_")
@@ -486,48 +514,31 @@ export default function HomePage() {
                       return (
                         <div
                           key={acc.id}
-                          className="grid grid-cols-[40px_2.8fr_1.8fr_1.5fr_1.2fr_1.2fr_110px] items-center px-3 py-2 text-xs text-foreground hover:bg-muted/30 transition-colors"
+                          onClick={() => toggleSelectOne(acc.id)}
+                          className={cn(
+                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-2 text-xs text-foreground cursor-pointer transition-colors select-none",
+                            isSelected
+                              ? "bg-primary/10 border-l-2 border-primary"
+                              : "hover:bg-muted/30",
+                          )}
                         >
-                          <div className="flex items-center justify-center">
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(acc.id)}
-                              onChange={() => toggleSelectOne(acc.id)}
-                              className="size-3.5 rounded border-border cursor-pointer accent-primary"
+                          {/* Checkbox với stopPropagation */}
+                          <div
+                            className="flex items-center justify-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleSelectOne(acc.id)}
                             />
                           </div>
+
                           {/* Tên & UID với Avatar Thật */}
                           <div className="flex items-center gap-2.5 truncate pr-2">
-                            <div className="relative size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
-                              {avatarSrc ? (
-                                // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
-                                <img
-                                  src={avatarSrc}
-                                  alt=""
-                                  className="size-full object-cover"
-                                  onError={(e) => {
-                                    (
-                                      e.currentTarget as HTMLElement
-                                    ).style.display = "none";
-                                    const next = e.currentTarget
-                                      .nextElementSibling as HTMLElement | null;
-                                    if (next) next.style.display = "flex";
-                                  }}
-                                />
-                              ) : null}
-                              <div
-                                style={{
-                                  display: avatarSrc ? "none" : "flex",
-                                }}
-                                className="size-full items-center justify-center"
-                              >
-                                {acc.platform === "instagram" ? (
-                                  <FaInstagram className="size-4 text-[#E1306C]" />
-                                ) : (
-                                  <FaFacebook className="size-4 text-[#1877F2]" />
-                                )}
-                              </div>
-                            </div>
+                            <AccountAvatar
+                              url={avatarSrc}
+                              isInstagram={acc.platform === "instagram"}
+                            />
                             <div className="flex flex-col min-w-0">
                               <span className="font-semibold text-foreground truncate">
                                 {acc.name || acc.uid}
@@ -539,17 +550,14 @@ export default function HomePage() {
                               )}
                             </div>
                           </div>
-                          <div className="text-muted-foreground truncate pr-2">
-                            {acc.note || "Không có ghi chú"}
-                          </div>
-                          <div className="text-muted-foreground truncate pr-2 font-mono text-[11px]">
-                            {acc.proxy || "Chưa chọn"}
-                          </div>
+
+                          {/* TIỆN ÍCH */}
                           <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
                             {acc.token ? (
                               <button
                                 type="button"
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.stopPropagation();
                                   if (acc.token) handleCopy(acc.token);
                                 }}
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 cursor-pointer"
@@ -565,6 +573,13 @@ export default function HomePage() {
                               <span>Mặc định</span>
                             )}
                           </div>
+
+                          {/* Proxy / VPN */}
+                          <div className="text-muted-foreground truncate pr-2 font-mono text-[11px]">
+                            {acc.proxy || "Chưa chọn"}
+                          </div>
+
+                          {/* TRẠNG THÁI */}
                           <div>
                             {isChecking ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground">
@@ -585,11 +600,24 @@ export default function HomePage() {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center justify-end gap-1 pr-1">
+
+                          {/* HÀNH ĐỘNG */}
+                          <div className="text-muted-foreground truncate pr-2 font-medium">
+                            {acc.note && acc.note !== "Không có ghi chú"
+                              ? acc.note
+                              : "Sẵn sàng"}
+                          </div>
+
+                          {/* Thao tác */}
+                          <div
+                            className="flex items-center justify-end gap-1 pr-1"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {/* Nút chấm than: Xem toàn bộ thông tin tài khoản */}
                             <button
                               type="button"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setDetailAccount(acc);
                                 setIsDetailOpen(true);
                               }}
@@ -600,7 +628,10 @@ export default function HomePage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => void handleCheckAccount(acc)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleCheckAccount(acc);
+                              }}
                               disabled={isChecking}
                               title="Kiểm tra trạng thái & lấy thông tin"
                               className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
@@ -614,7 +645,10 @@ export default function HomePage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleCopy(acc.rawText)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopy(acc.rawText);
+                              }}
                               title="Sao chép toàn bộ"
                               className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
                             >
@@ -622,7 +656,10 @@ export default function HomePage() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => handleDeleteAccount(acc.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteAccount(acc.id);
+                              }}
                               title="Xóa tài khoản"
                               className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
                             >
