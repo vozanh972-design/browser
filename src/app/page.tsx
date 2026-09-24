@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaDownload, FaFacebook, FaInstagram } from "react-icons/fa";
 import {
+  LuCircleAlert,
   LuCloud,
   LuCopy,
   LuKey,
@@ -14,6 +15,7 @@ import {
   LuTrash2,
 } from "react-icons/lu";
 import { AboutDialog } from "@/components/about-dialog";
+import { AccountDetailDialog } from "@/components/account-detail-dialog";
 import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dialog";
 import { AppHeader } from "@/components/app-header";
 import { AppSettingsDialog } from "@/components/app-settings-dialog";
@@ -39,6 +41,7 @@ interface FacebookAccount {
   cookie?: string;
   token?: string;
   avatar?: string;
+  cover?: string;
   mail?: string;
   tag?: string;
   note?: string;
@@ -129,6 +132,10 @@ export default function HomePage() {
     setCurrentPage(page);
   }, []);
 
+  const [detailAccount, setDetailAccount] = useState<FacebookAccount | null>(
+    null,
+  );
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [checkingIds, setCheckingIds] = useState<string[]>([]);
 
   const handleCheckAccount = async (targetAccount: FacebookAccount) => {
@@ -149,17 +156,23 @@ export default function HomePage() {
           proxyParam,
         );
         if (info.isLive) {
+          const updated = {
+            uid: info.uid || targetAccount.uid,
+            name: info.name,
+            avatar: info.avatar,
+            cover: info.cover,
+            mail: info.email || targetAccount.mail,
+            status: "live" as const,
+          };
           setAccounts((prev) =>
             prev.map((item) =>
-              item.id === targetAccount.id
-                ? {
-                    ...item,
-                    uid: info.uid || item.uid,
-                    name: info.name,
-                    status: "live",
-                  }
-                : item,
+              item.id === targetAccount.id ? { ...item, ...updated } : item,
             ),
+          );
+          setDetailAccount((prev) =>
+            prev && prev.id === targetAccount.id
+              ? { ...prev, ...updated }
+              : prev,
           );
         } else {
           setAccounts((prev) =>
@@ -168,6 +181,11 @@ export default function HomePage() {
                 ? { ...item, status: "checkpoint" }
                 : item,
             ),
+          );
+          setDetailAccount((prev) =>
+            prev && prev.id === targetAccount.id
+              ? { ...prev, status: "checkpoint" }
+              : prev,
           );
         }
       } else if (targetAccount.cookie) {
@@ -176,19 +194,25 @@ export default function HomePage() {
           proxyParam,
         );
         if (info.isLive) {
+          const updated = {
+            uid: info.uid && info.uid !== "N/A" ? info.uid : targetAccount.uid,
+            name: info.name,
+            token: info.token || targetAccount.token,
+            cookie: info.cookie || targetAccount.cookie,
+            avatar: info.avatar,
+            cover: info.cover,
+            mail: info.email || targetAccount.mail,
+            status: "live" as const,
+          };
           setAccounts((prev) =>
             prev.map((item) =>
-              item.id === targetAccount.id
-                ? {
-                    ...item,
-                    uid: info.uid && info.uid !== "N/A" ? info.uid : item.uid,
-                    name: info.name,
-                    token: info.token || item.token,
-                    cookie: info.cookie || item.cookie,
-                    status: "live",
-                  }
-                : item,
+              item.id === targetAccount.id ? { ...item, ...updated } : item,
             ),
+          );
+          setDetailAccount((prev) =>
+            prev && prev.id === targetAccount.id
+              ? { ...prev, ...updated }
+              : prev,
           );
         } else {
           setAccounts((prev) =>
@@ -197,6 +221,11 @@ export default function HomePage() {
                 ? { ...item, status: "checkpoint" }
                 : item,
             ),
+          );
+          setDetailAccount((prev) =>
+            prev && prev.id === targetAccount.id
+              ? { ...prev, status: "checkpoint" }
+              : prev,
           );
         }
       }
@@ -354,7 +383,7 @@ export default function HomePage() {
               {/* Table View matching Image 2 */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.5fr_1.2fr_1.5fr_1.5fr_1.2fr_1fr_1fr_80px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
+                <div className="grid grid-cols-[40px_2.8fr_1.8fr_1.5fr_1.2fr_1.2fr_110px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
                   <div className="flex items-center justify-center">
                     <input
                       type="checkbox"
@@ -370,12 +399,10 @@ export default function HomePage() {
                     <span>Tên & UID</span>
                     <span className="text-[10px]">▲</span>
                   </div>
-                  <div>Thẻ</div>
                   <div>Ghi chú</div>
                   <div>Proxy / VPN</div>
                   <div>TIỆN ÍCH</div>
                   <div>TRẠNG THÁI</div>
-                  <div>Bot</div>
                   <div className="text-right pr-2">Thao tác</div>
                 </div>
 
@@ -450,10 +477,16 @@ export default function HomePage() {
                   <div className="divide-y divide-border/30 overflow-y-auto max-h-[calc(100vh-180px)]">
                     {filteredAccounts.map((acc) => {
                       const isChecking = checkingIds.includes(acc.id);
+                      const avatarSrc =
+                        acc.avatar ||
+                        (acc.uid && !acc.uid.startsWith("acc_")
+                          ? `https://graph.facebook.com/${acc.uid}/picture?type=large`
+                          : undefined);
+
                       return (
                         <div
                           key={acc.id}
-                          className="grid grid-cols-[40px_2.5fr_1.2fr_1.5fr_1.5fr_1.2fr_1fr_1fr_80px] items-center px-3 py-2 text-xs text-foreground hover:bg-muted/30 transition-colors"
+                          className="grid grid-cols-[40px_2.8fr_1.8fr_1.5fr_1.2fr_1.2fr_110px] items-center px-3 py-2 text-xs text-foreground hover:bg-muted/30 transition-colors"
                         >
                           <div className="flex items-center justify-center">
                             <input
@@ -463,12 +496,38 @@ export default function HomePage() {
                               className="size-3.5 rounded border-border cursor-pointer accent-primary"
                             />
                           </div>
-                          <div className="flex items-center gap-2 truncate pr-2">
-                            {acc.platform === "instagram" ? (
-                              <FaInstagram className="size-3.5 text-[#E1306C] shrink-0" />
-                            ) : (
-                              <FaFacebook className="size-3.5 text-[#1877F2] shrink-0" />
-                            )}
+                          {/* Tên & UID với Avatar Thật */}
+                          <div className="flex items-center gap-2.5 truncate pr-2">
+                            <div className="relative size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
+                              {avatarSrc ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={avatarSrc}
+                                  alt=""
+                                  className="size-full object-cover"
+                                  onError={(e) => {
+                                    (
+                                      e.currentTarget as HTMLElement
+                                    ).style.display = "none";
+                                    const next = e.currentTarget
+                                      .nextElementSibling as HTMLElement | null;
+                                    if (next) next.style.display = "flex";
+                                  }}
+                                />
+                              ) : null}
+                              <div
+                                style={{
+                                  display: avatarSrc ? "none" : "flex",
+                                }}
+                                className="size-full items-center justify-center"
+                              >
+                                {acc.platform === "instagram" ? (
+                                  <FaInstagram className="size-4 text-[#E1306C]" />
+                                ) : (
+                                  <FaFacebook className="size-4 text-[#1877F2]" />
+                                )}
+                              </div>
+                            </div>
                             <div className="flex flex-col min-w-0">
                               <span className="font-semibold text-foreground truncate">
                                 {acc.name || acc.uid}
@@ -479,9 +538,6 @@ export default function HomePage() {
                                 </span>
                               )}
                             </div>
-                          </div>
-                          <div className="text-muted-foreground truncate pr-2">
-                            {acc.tag || "Không có thẻ"}
                           </div>
                           <div className="text-muted-foreground truncate pr-2">
                             {acc.note || "Không có ghi chú"}
@@ -527,8 +583,19 @@ export default function HomePage() {
                               </span>
                             )}
                           </div>
-                          <div className="text-muted-foreground">—</div>
                           <div className="flex items-center justify-end gap-1 pr-1">
+                            {/* Nút chấm than: Xem toàn bộ thông tin tài khoản */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setDetailAccount(acc);
+                                setIsDetailOpen(true);
+                              }}
+                              title="Xem toàn bộ thông tin tài khoản"
+                              className="p-1 text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                            >
+                              <LuCircleAlert className="size-3.5" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => void handleCheckAccount(acc)}
@@ -729,6 +796,20 @@ export default function HomePage() {
         onClose={() => {
           setAboutDialogOpen(false);
         }}
+      />
+
+      {/* Account Detail Dialog */}
+      <AccountDetailDialog
+        account={detailAccount}
+        isOpen={isDetailOpen}
+        onClose={() => {
+          setIsDetailOpen(false);
+          setDetailAccount(null);
+        }}
+        onRecheck={(acc) => void handleCheckAccount(acc as FacebookAccount)}
+        isChecking={
+          detailAccount ? checkingIds.includes(detailAccount.id) : false
+        }
       />
     </div>
   );

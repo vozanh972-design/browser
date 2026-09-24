@@ -6,6 +6,8 @@ export interface FacebookAccountInfo {
   token?: string;
   cookie?: string;
   avatar?: string;
+  cover?: string;
+  email?: string;
   proxy?: string;
   isLive: boolean;
   error?: string;
@@ -82,8 +84,16 @@ export async function convertTokenToEAAAA(
 export async function fetchAccountDetailsWithToken(
   token: string,
   proxy?: string,
-): Promise<{ uid: string; name: string; isLive: boolean; error?: string }> {
-  const url = `https://graph.facebook.com/me?access_token=${token.trim()}`;
+): Promise<{
+  uid: string;
+  name: string;
+  avatar?: string;
+  cover?: string;
+  email?: string;
+  isLive: boolean;
+  error?: string;
+}> {
+  const url = `https://graph.facebook.com/me?fields=id,name,email,picture.type(large),cover&access_token=${token.trim()}`;
   try {
     const raw = await executeCurlRequest({
       url,
@@ -92,9 +102,18 @@ export async function fetchAccountDetailsWithToken(
     });
     const json = JSON.parse(raw);
     if (json.id) {
+      const uidStr = String(json.id);
+      const avatarUrl =
+        json.picture?.data?.url ||
+        `https://graph.facebook.com/${uidStr}/picture?type=large`;
+      const coverUrl = json.cover?.source || undefined;
+
       return {
-        uid: String(json.id),
-        name: json.name || String(json.id),
+        uid: uidStr,
+        name: json.name || uidStr,
+        email: json.email || undefined,
+        avatar: avatarUrl,
+        cover: coverUrl,
         isLive: true,
       };
     }
@@ -165,21 +184,22 @@ export async function getTokenAndInfoFromCookie(
         }
       }
 
-      // Lấy tên thật bằng Graph API với token EAAAA
+      // Lấy tên thật và avatar bằng Graph API với token EAAAA
       let name = realUid || "Facebook User";
+      let avatar = realUid
+        ? `https://graph.facebook.com/${realUid}/picture?type=large`
+        : undefined;
+      let cover: string | undefined = undefined;
+      let email: string | undefined = undefined;
+
       try {
         const info = await fetchAccountDetailsWithToken(eaaaa, proxy);
         if (info.name) name = info.name;
+        if (info.avatar) avatar = info.avatar;
+        if (info.cover) cover = info.cover;
+        if (info.email) email = info.email;
         if (info.uid && !realUid) {
-          // Gán UID nếu ban đầu cookie chưa có
-          return {
-            uid: info.uid,
-            name,
-            token: eaaaa,
-            cookie: finalCookie,
-            avatar: `https://graph.facebook.com/${info.uid}/picture?type=large`,
-            isLive: true,
-          };
+          realUid = info.uid;
         }
       } catch {
         // bỏ qua nếu lỗi gọi Graph API
@@ -190,9 +210,13 @@ export async function getTokenAndInfoFromCookie(
         name,
         token: eaaaa,
         cookie: finalCookie,
-        avatar: realUid
-          ? `https://graph.facebook.com/${realUid}/picture?type=large`
-          : undefined,
+        avatar:
+          avatar ||
+          (realUid
+            ? `https://graph.facebook.com/${realUid}/picture?type=large`
+            : undefined),
+        cover,
+        email,
         isLive: true,
       };
     }
