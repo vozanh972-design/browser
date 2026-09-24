@@ -6,12 +6,14 @@ import { useTranslation } from "react-i18next";
 import { FaDownload, FaFacebook, FaInstagram } from "react-icons/fa";
 import {
   LuCircleAlert,
+  LuFlag,
   LuKey,
   LuPlay,
   LuPlus,
   LuRefreshCw,
   LuShieldCheck,
   LuTrash2,
+  LuUsers,
 } from "react-icons/lu";
 import { AboutDialog } from "@/components/about-dialog";
 import { AccountDetailDialog } from "@/components/account-detail-dialog";
@@ -19,9 +21,11 @@ import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dial
 import { AppHeader } from "@/components/app-header";
 import { AppSettingsDialog } from "@/components/app-settings-dialog";
 import { type AppPage, RailNav } from "@/components/rail-nav";
+import { RegPageView } from "@/components/reg-page-view";
 import { ShortcutsPage } from "@/components/shortcuts-page";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import {
   checkCookieLive,
@@ -88,6 +92,7 @@ export default function HomePage() {
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [isAddFacebookOpen, setIsAddFacebookOpen] = useState(false);
   const [isXsmmLoginOpen, setIsXsmmLoginOpen] = useState(false);
+  const [isUtilitiesChoiceOpen, setIsUtilitiesChoiceOpen] = useState(false);
   const [xsmmAccount, setXsmmAccount] = useState<{
     username: string;
     balance: string;
@@ -540,7 +545,9 @@ export default function HomePage() {
       case "gl":
         return "GL";
       case "account":
-        return t("rail.more.utilities", "Tiện ích");
+        return "Tiện ích / Nuôi Acc";
+      case "reg-page":
+        return "Tiện ích / Reg Page";
       case "import":
         return t("rail.more.importProfile", "Import");
       case "shortcuts":
@@ -559,7 +566,7 @@ export default function HomePage() {
         activePlatform={currentPlatform}
         onPlatformChange={setCurrentPlatform}
         pageTitle={getPageTitle(currentPage)}
-        showXsmm={currentPage !== "account"}
+        showXsmm={currentPage !== "account" && currentPage !== "reg-page"}
         xsmmAccount={xsmmAccount}
         onXsmmLoginClick={() => setIsXsmmLoginOpen(true)}
         onXsmmLogoutClick={handleXsmmLogout}
@@ -571,6 +578,34 @@ export default function HomePage() {
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-5">
           {(currentPage === "profiles" || currentPage === "account") && (
             <div className="flex w-full flex-1 flex-col">
+              {/* Sub-navigation switcher for Tiện ích */}
+              {currentPage === "account" && (
+                <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-border/40">
+                  <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/30 border border-border/60">
+                    <button
+                      type="button"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-background text-foreground shadow-2xs border border-border/80 cursor-pointer"
+                    >
+                      <LuUsers className="size-3.5 text-emerald-400" />
+                      <span>Nuôi Acc</span>
+                      <span className="ml-1 size-1.5 rounded-full bg-emerald-500" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage("reg-page")}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
+                    >
+                      <LuFlag className="size-3.5 text-indigo-400" />
+                      <span>Reg Page</span>
+                    </button>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground">
+                    Tiện ích nuôi & quản lý tài khoản
+                  </div>
+                </div>
+              )}
+
               {/* Toolbar thao tác hàng loạt khi có tài khoản được chọn */}
               {selectedIds.length > 0 && (
                 <div className="mb-2.5 flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs">
@@ -976,6 +1011,16 @@ export default function HomePage() {
             </motion.div>
           )}
 
+          {currentPage === "reg-page" && (
+            <RegPageView
+              onNavigateToNuoiAcc={() => setCurrentPage("account")}
+              availableAccountsCount={
+                filteredAccounts.filter((a) => a.status === "live").length ||
+                filteredAccounts.length
+              }
+            />
+          )}
+
           {currentPage === "import" && (
             <motion.div
               key="import"
@@ -1023,8 +1068,22 @@ export default function HomePage() {
           onOpenAbout={() => {
             setAboutDialogOpen(true);
           }}
+          onOpenUtilities={() => setIsUtilitiesChoiceOpen(true)}
         />
       </div>
+
+      {/* Utilities Choice Dialog (1. Reg Page, 2. Nuôi Acc) */}
+      <UtilitiesDialog
+        open={isUtilitiesChoiceOpen}
+        onOpenChange={setIsUtilitiesChoiceOpen}
+        onSelectOption={(option) => {
+          if (option === "reg-page") {
+            setCurrentPage("reg-page");
+          } else {
+            setCurrentPage("account");
+          }
+        }}
+      />
 
       {/* Dialog Thêm tài khoản */}
       <AddFacebookAccountDialog

@@ -21,6 +21,7 @@ export type AppPage =
   | "vpns"
   | "settings"
   | "account"
+  | "reg-page"
   | "import"
   | "shortcuts";
 
@@ -150,6 +151,7 @@ interface RailNavProps {
   currentPage: AppPage;
   onNavigate: (page: AppPage) => void;
   onOpenAbout: () => void;
+  onOpenUtilities?: () => void;
 }
 
 interface RailItem {
@@ -206,6 +208,7 @@ export function RailNav({
   currentPage,
   onNavigate,
   onOpenAbout,
+  onOpenUtilities,
 }: RailNavProps) {
   const { t } = useTranslation();
   const [moreOpen, setMoreOpen] = useState(false);
@@ -451,7 +454,11 @@ export function RailNav({
                   role="menuitem"
                   onClick={() => {
                     setMoreOpen(false);
-                    onNavigate(page);
+                    if (page === "account" && onOpenUtilities) {
+                      onOpenUtilities();
+                    } else {
+                      onNavigate(page);
+                    }
                   }}
                   className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
                 >
