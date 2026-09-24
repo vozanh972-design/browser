@@ -32,7 +32,9 @@
       "nursery": "off",
       "suspicious": "off",
       "a11y": {
-        "useSemanticElements": "off"
+        "useSemanticElements": "off",
+        "noStaticElementInteractions": "off",
+        "useKeyWithClickEvents": "off"
       },
       "style": {
         "useImportType": "off"

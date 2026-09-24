@@ -514,19 +514,33 @@ export default function HomePage() {
                       return (
                         <div
                           key={acc.id}
-                          onClick={() => toggleSelectOne(acc.id)}
+                          role="row"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              toggleSelectOne(acc.id);
+                            }
+                          }}
+                          onClick={(e) => {
+                            const target = e.target as HTMLElement;
+                            if (
+                              target.closest("button") ||
+                              target.closest("[role='checkbox']")
+                            ) {
+                              return;
+                            }
+                            toggleSelectOne(acc.id);
+                          }}
                           className={cn(
-                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-2 text-xs text-foreground cursor-pointer transition-colors select-none",
+                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-2 text-xs text-foreground cursor-pointer transition-colors select-none outline-none focus-visible:bg-muted/50",
                             isSelected
                               ? "bg-primary/10 border-l-2 border-primary"
                               : "hover:bg-muted/30",
                           )}
                         >
-                          {/* Checkbox với stopPropagation */}
-                          <div
-                            className="flex items-center justify-center"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          {/* Checkbox */}
+                          <div className="flex items-center justify-center">
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={() => toggleSelectOne(acc.id)}
@@ -609,10 +623,7 @@ export default function HomePage() {
                           </div>
 
                           {/* Thao tác */}
-                          <div
-                            className="flex items-center justify-end gap-1 pr-1"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <div className="flex items-center justify-end gap-1 pr-1">
                             {/* Nút chấm than: Xem toàn bộ thông tin tài khoản */}
                             <button
                               type="button"
