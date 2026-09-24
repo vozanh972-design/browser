@@ -72,6 +72,60 @@ fn xsmm_request(
   Ok(stdout.into_owned())
 }
 
+#[tauri::command]
+fn curl_request(
+  url: String,
+  method: Option<String>,
+  headers: Option<Vec<String>>,
+  body: Option<String>,
+  cookie: Option<String>,
+  proxy: Option<String>,
+) -> Result<String, String> {
+  #[cfg(windows)]
+  let mut cmd = std::process::Command::new("curl.exe");
+
+  #[cfg(not(windows))]
+  let mut cmd = std::process::Command::new("curl");
+
+  let m = method.unwrap_or_else(|| "GET".to_string());
+  cmd.arg("-s").arg("-X").arg(&m);
+
+  if let Some(hdrs) = headers {
+    for h in hdrs {
+      cmd.arg("-H").arg(h);
+    }
+  }
+
+  if let Some(c) = cookie {
+    cmd.arg("-b").arg(c);
+  }
+
+  if let Some(p) = proxy {
+    if !p.trim().is_empty() {
+      cmd.arg("-x").arg(p.trim());
+    }
+  }
+
+  if let Some(ref b) = body {
+    cmd.arg("-d").arg(b);
+  }
+
+  cmd.arg(&url);
+
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x0800_0000);
+  }
+
+  let output = cmd
+    .output()
+    .map_err(|e| format!("Failed to execute curl: {}", e))?;
+
+  let stdout = String::from_utf8_lossy(&output.stdout);
+  Ok(stdout.into_owned())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   tauri::Builder::default()
@@ -85,6 +139,7 @@ pub fn run() {
       get_system_info,
       confirm_quit,
       xsmm_request,
+      curl_request,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

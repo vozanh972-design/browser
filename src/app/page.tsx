@@ -9,6 +9,7 @@ import {
   LuCopy,
   LuKey,
   LuPlus,
+  LuRefreshCw,
   LuShieldCheck,
   LuTrash2,
 } from "react-icons/lu";
@@ -20,6 +21,10 @@ import { type AppPage, RailNav } from "@/components/rail-nav";
 import { ShortcutsPage } from "@/components/shortcuts-page";
 import { Button } from "@/components/ui/button";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
+import {
+  fetchAccountDetailsWithToken,
+  getTokenAndInfoFromCookie,
+} from "@/lib/facebook-api";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
@@ -32,6 +37,8 @@ interface FacebookAccount {
   pass?: string;
   twoFactor?: string;
   cookie?: string;
+  token?: string;
+  avatar?: string;
   mail?: string;
   tag?: string;
   note?: string;
@@ -122,12 +129,90 @@ export default function HomePage() {
     setCurrentPage(page);
   }, []);
 
+  const [checkingIds, setCheckingIds] = useState<string[]>([]);
+
+  const handleCheckAccount = async (targetAccount: FacebookAccount) => {
+    if (targetAccount.platform === "instagram") {
+      return;
+    }
+
+    setCheckingIds((prev) => [...prev, targetAccount.id]);
+    try {
+      const proxyParam =
+        targetAccount.proxy && targetAccount.proxy !== "Chưa chọn"
+          ? targetAccount.proxy
+          : undefined;
+
+      if (targetAccount.token) {
+        const info = await fetchAccountDetailsWithToken(
+          targetAccount.token,
+          proxyParam,
+        );
+        if (info.isLive) {
+          setAccounts((prev) =>
+            prev.map((item) =>
+              item.id === targetAccount.id
+                ? {
+                    ...item,
+                    uid: info.uid || item.uid,
+                    name: info.name,
+                    status: "live",
+                  }
+                : item,
+            ),
+          );
+        } else {
+          setAccounts((prev) =>
+            prev.map((item) =>
+              item.id === targetAccount.id
+                ? { ...item, status: "checkpoint" }
+                : item,
+            ),
+          );
+        }
+      } else if (targetAccount.cookie) {
+        const info = await getTokenAndInfoFromCookie(
+          targetAccount.cookie,
+          proxyParam,
+        );
+        if (info.isLive) {
+          setAccounts((prev) =>
+            prev.map((item) =>
+              item.id === targetAccount.id
+                ? {
+                    ...item,
+                    uid: info.uid && info.uid !== "N/A" ? info.uid : item.uid,
+                    name: info.name,
+                    token: info.token || item.token,
+                    cookie: info.cookie || item.cookie,
+                    status: "live",
+                  }
+                : item,
+            ),
+          );
+        } else {
+          setAccounts((prev) =>
+            prev.map((item) =>
+              item.id === targetAccount.id
+                ? { ...item, status: "checkpoint" }
+                : item,
+            ),
+          );
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setCheckingIds((prev) => prev.filter((id) => id !== targetAccount.id));
+    }
+  };
+
   const handleAddAccounts = (lines: string[], format: string) => {
     const formatKeys = format.split("|").map((f) => f.trim().toLowerCase());
     const newAccounts: FacebookAccount[] = lines.map((line, idx) => {
       const parts = line.split("|").map((p) => p.trim());
       const account: FacebookAccount = {
-        id: `${Date.now()}-${idx}`,
+        id: `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
         uid: parts[0] || `acc_${idx + 1}`,
         tag: "Không có thẻ",
         note: "Không có ghi chú",
@@ -137,25 +222,55 @@ export default function HomePage() {
         rawText: line,
       };
 
-      formatKeys.forEach((key, kIdx) => {
-        const val = parts[kIdx];
-        if (!val) return;
-        if (key.includes("uid")) account.uid = val;
-        else if (key.includes("mật khẩu") || key.includes("pass"))
-          account.pass = val;
-        else if (key.includes("2fa")) account.twoFactor = val;
-        else if (key.includes("cookie")) account.cookie = val;
-        else if (key.includes("proxy")) account.proxy = val;
-        else if (key.includes("mail")) account.mail = val;
-      });
+      if (formatKeys.length > 0 && format) {
+        formatKeys.forEach((key, kIdx) => {
+          const val = parts[kIdx];
+          if (!val) return;
+          if (key.includes("uid")) account.uid = val;
+          else if (key.includes("mật khẩu") || key.includes("pass"))
+            account.pass = val;
+          else if (key.includes("2fa")) account.twoFactor = val;
+          else if (key.includes("cookie")) account.cookie = val;
+          else if (key.includes("token")) account.token = val;
+          else if (key.includes("proxy")) account.proxy = val;
+        });
+      } else {
+        if (line.includes("c_user=") || line.includes("xs=")) {
+          account.cookie = line;
+          const match = line.match(/c_user=([^;]+)/);
+          if (match) account.uid = match[1];
+        } else if (line.startsWith("EAA")) {
+          account.token = line;
+        } else if (parts.length >= 2) {
+          account.uid = parts[0];
+          account.pass = parts[1];
+          if (parts[2]) account.twoFactor = parts[2];
+          if (parts[3]) account.cookie = parts[3];
+          if (parts[4]) account.token = parts[4];
+          if (parts[5]) account.proxy = parts[5];
+        }
+      }
+
+      if (account.cookie?.includes("c_user=")) {
+        const match = account.cookie.match(/c_user=([^;]+)/);
+        if (match && (!account.uid || account.uid.startsWith("acc_"))) {
+          account.uid = match[1];
+        }
+      }
 
       return account;
     });
 
     setAccounts((prev) => [...newAccounts, ...prev]);
     showSuccessToast(
-      `Đã thêm ${newAccounts.length} tài khoản ${currentPlatform === "instagram" ? "Instagram" : "Facebook"} thành công!`,
+      `Đã thêm ${newAccounts.length} tài khoản ${currentPlatform === "instagram" ? "Instagram" : "Facebook"}! Đang kiểm tra thông tin...`,
     );
+
+    if (currentPlatform === "facebook") {
+      newAccounts.forEach((acc) => {
+        void handleCheckAccount(acc);
+      });
+    }
   };
 
   const handleDeleteAccount = (id: string) => {
@@ -239,7 +354,7 @@ export default function HomePage() {
               {/* Table View matching Image 2 */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
+                <div className="grid grid-cols-[40px_2.5fr_1.2fr_1.5fr_1.5fr_1.2fr_1fr_1fr_80px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
                   <div className="flex items-center justify-center">
                     <input
                       type="checkbox"
@@ -252,14 +367,14 @@ export default function HomePage() {
                     />
                   </div>
                   <div className="flex items-center gap-1 hover:text-foreground cursor-pointer">
-                    <span>Tên</span>
+                    <span>Tên & UID</span>
                     <span className="text-[10px]">▲</span>
                   </div>
                   <div>Thẻ</div>
                   <div>Ghi chú</div>
                   <div>Proxy / VPN</div>
                   <div>TIỆN ÍCH</div>
-                  <div>DNS</div>
+                  <div>TRẠNG THÁI</div>
                   <div>Bot</div>
                   <div className="text-right pr-2">Thao tác</div>
                 </div>
@@ -333,61 +448,121 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="divide-y divide-border/30 overflow-y-auto max-h-[calc(100vh-180px)]">
-                    {filteredAccounts.map((acc) => (
-                      <div
-                        key={acc.id}
-                        className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2 text-xs text-foreground hover:bg-muted/30 transition-colors"
-                      >
-                        <div className="flex items-center justify-center">
-                          <input
-                            type="checkbox"
-                            checked={selectedIds.includes(acc.id)}
-                            onChange={() => toggleSelectOne(acc.id)}
-                            className="size-3.5 rounded border-border cursor-pointer accent-primary"
-                          />
+                    {filteredAccounts.map((acc) => {
+                      const isChecking = checkingIds.includes(acc.id);
+                      return (
+                        <div
+                          key={acc.id}
+                          className="grid grid-cols-[40px_2.5fr_1.2fr_1.5fr_1.5fr_1.2fr_1fr_1fr_80px] items-center px-3 py-2 text-xs text-foreground hover:bg-muted/30 transition-colors"
+                        >
+                          <div className="flex items-center justify-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(acc.id)}
+                              onChange={() => toggleSelectOne(acc.id)}
+                              className="size-3.5 rounded border-border cursor-pointer accent-primary"
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 truncate pr-2">
+                            {acc.platform === "instagram" ? (
+                              <FaInstagram className="size-3.5 text-[#E1306C] shrink-0" />
+                            ) : (
+                              <FaFacebook className="size-3.5 text-[#1877F2] shrink-0" />
+                            )}
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-foreground truncate">
+                                {acc.name || acc.uid}
+                              </span>
+                              {acc.name && acc.name !== acc.uid && (
+                                <span className="text-[10.5px] font-mono text-muted-foreground truncate">
+                                  {acc.uid}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="text-muted-foreground truncate pr-2">
+                            {acc.tag || "Không có thẻ"}
+                          </div>
+                          <div className="text-muted-foreground truncate pr-2">
+                            {acc.note || "Không có ghi chú"}
+                          </div>
+                          <div className="text-muted-foreground truncate pr-2 font-mono text-[11px]">
+                            {acc.proxy || "Chưa chọn"}
+                          </div>
+                          <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
+                            {acc.token ? (
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(acc.token!)}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 cursor-pointer"
+                                title="Click để copy Token"
+                              >
+                                Token
+                              </button>
+                            ) : null}
+                            {acc.twoFactor ? (
+                              <span className="text-[11px] font-mono">2FA</span>
+                            ) : null}
+                            {!acc.token && !acc.twoFactor && (
+                              <span>Mặc định</span>
+                            )}
+                          </div>
+                          <div>
+                            {isChecking ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground">
+                                <LuRefreshCw className="size-2.5 animate-spin" />
+                                Đang kiểm tra
+                              </span>
+                            ) : acc.status === "live" ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                Live
+                              </span>
+                            ) : acc.status === "checkpoint" ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                Checkpoint
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                                Chưa kiểm tra
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-muted-foreground">—</div>
+                          <div className="flex items-center justify-end gap-1 pr-1">
+                            <button
+                              type="button"
+                              onClick={() => void handleCheckAccount(acc)}
+                              disabled={isChecking}
+                              title="Kiểm tra trạng thái & lấy thông tin"
+                              className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
+                            >
+                              <LuRefreshCw
+                                className={cn(
+                                  "size-3.5",
+                                  isChecking && "animate-spin text-primary",
+                                )}
+                              />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(acc.rawText)}
+                              title="Sao chép toàn bộ"
+                              className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
+                            >
+                              <LuCopy className="size-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAccount(acc.id)}
+                              title="Xóa tài khoản"
+                              className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
+                            >
+                              <LuTrash2 className="size-3.5" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 font-mono font-medium truncate pr-2">
-                          {acc.platform === "instagram" ? (
-                            <FaInstagram className="size-3.5 text-[#E1306C] shrink-0" />
-                          ) : (
-                            <FaFacebook className="size-3.5 text-[#1877F2] shrink-0" />
-                          )}
-                          <span className="truncate">{acc.uid}</span>
-                        </div>
-                        <div className="text-muted-foreground truncate pr-2">
-                          {acc.tag || "Không có thẻ"}
-                        </div>
-                        <div className="text-muted-foreground truncate pr-2">
-                          {acc.note || "Không có ghi chú"}
-                        </div>
-                        <div className="text-muted-foreground truncate pr-2">
-                          {acc.proxy || "Chưa chọn"}
-                        </div>
-                        <div className="text-muted-foreground truncate pr-2">
-                          {acc.twoFactor ? `2FA: ${acc.twoFactor}` : "Mặc định"}
-                        </div>
-                        <div className="text-muted-foreground">—</div>
-                        <div className="text-muted-foreground">—</div>
-                        <div className="flex items-center justify-end gap-1 pr-1">
-                          <button
-                            type="button"
-                            onClick={() => handleCopy(acc.rawText)}
-                            title="Sao chép toàn bộ"
-                            className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                          >
-                            <LuCopy className="size-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteAccount(acc.id)}
-                            title="Xóa tài khoản"
-                            className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
-                          >
-                            <LuTrash2 className="size-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

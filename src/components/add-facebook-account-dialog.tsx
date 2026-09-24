@@ -36,8 +36,8 @@ const FACEBOOK_FORMAT_OPTIONS = [
   { id: "pass", label: "Mật khẩu" },
   { id: "2fa", label: "2FA" },
   { id: "cookie", label: "Cookie" },
-  { id: "mail", label: "Mail" },
-  { id: "passmail", label: "Pass Mail" },
+  { id: "token", label: "Token" },
+  { id: "proxy", label: "Proxy" },
 ];
 
 const INSTAGRAM_FORMAT_OPTIONS = [
