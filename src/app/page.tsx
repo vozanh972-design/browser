@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { FaDownload, FaFacebook, FaInstagram } from "react-icons/fa";
 import {
   LuCircleAlert,
-  LuCloud,
   LuKey,
   LuPlay,
   LuPlus,
@@ -541,7 +540,7 @@ export default function HomePage() {
       case "gl":
         return "GL";
       case "account":
-        return t("rail.account", "Account");
+        return t("rail.more.utilities", "Tiện ích");
       case "import":
         return t("rail.more.importProfile", "Import");
       case "shortcuts":
@@ -560,6 +559,7 @@ export default function HomePage() {
         activePlatform={currentPlatform}
         onPlatformChange={setCurrentPlatform}
         pageTitle={getPageTitle(currentPage)}
+        showXsmm={currentPage !== "account"}
         xsmmAccount={xsmmAccount}
         onXsmmLoginClick={() => setIsXsmmLoginOpen(true)}
         onXsmmLogoutClick={handleXsmmLogout}
@@ -569,7 +569,7 @@ export default function HomePage() {
       {/* Main content area */}
       <div className="flex min-h-0 flex-1 flex-col">
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-5">
-          {currentPage === "profiles" && (
+          {(currentPage === "profiles" || currentPage === "account") && (
             <div className="flex w-full flex-1 flex-col">
               {/* Toolbar thao tác hàng loạt khi có tài khoản được chọn */}
               {selectedIds.length > 0 && (
@@ -668,7 +668,7 @@ export default function HomePage() {
                 {/* Table Rows or Empty State */}
                 {filteredAccounts.length === 0 ? (
                   <div className="flex flex-1 flex-col items-center justify-center py-28 text-center select-none">
-                    {!xsmmAccount.isLoggedIn ? (
+                    {currentPage === "profiles" && !xsmmAccount.isLoggedIn ? (
                       <div className="flex flex-col items-center gap-2.5">
                         <div className="flex size-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
                           <LuShieldCheck className="size-6" />
@@ -976,32 +976,6 @@ export default function HomePage() {
             </motion.div>
           )}
 
-          {currentPage === "account" && (
-            <motion.div
-              key="account"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
-              className="mx-auto flex w-full max-w-4xl flex-col gap-4"
-            >
-              <div className="flex items-center justify-between border-b border-border/40 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <LuCloud className="size-5 text-primary" />
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      Tài khoản & Đám mây
-                    </h2>
-                    <p className="text-xs text-muted-foreground">
-                      Quản lý tài khoản người dùng, đồng bộ hoặc license.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground">
-                Khung trang tài khoản trống
-              </div>
-            </motion.div>
-          )}
 
           {currentPage === "import" && (
             <motion.div

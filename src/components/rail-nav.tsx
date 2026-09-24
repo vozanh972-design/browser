@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaDownload } from "react-icons/fa";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
-import { LuCloud, LuInfo, LuKeyboard, LuUser } from "react-icons/lu";
+import { LuBoxes, LuInfo, LuKeyboard, LuUser } from "react-icons/lu";
 import { launchDonutClone } from "@/lib/donut-physics";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
@@ -171,26 +171,34 @@ interface MoreMenuItem {
   Icon: React.ComponentType<{ className?: string }>;
   labelKey: string;
   hintKey: string;
+  defaultLabel: string;
+  defaultHint: string;
 }
 
 const MORE_ITEMS: MoreMenuItem[] = [
   {
     page: "account",
-    Icon: LuCloud,
-    labelKey: "rail.account",
-    hintKey: "rail.accountHint",
+    Icon: LuBoxes,
+    labelKey: "rail.more.utilities",
+    hintKey: "rail.more.utilitiesHint",
+    defaultLabel: "Tiện ích",
+    defaultHint: "Quản lý tài khoản & công cụ",
   },
   {
     page: "import",
     Icon: FaDownload,
     labelKey: "rail.more.importProfile",
     hintKey: "rail.more.importProfileHint",
+    defaultLabel: "Nhập tài khoản",
+    defaultHint: "Nhập profiles từ file hoặc bên ngoài",
   },
   {
     page: "shortcuts",
     Icon: LuKeyboard,
     labelKey: "rail.more.keyboardShortcuts",
     hintKey: "rail.more.keyboardShortcutsHint",
+    defaultLabel: "Phím tắt",
+    defaultHint: "Xem danh sách phím tắt",
   },
 ];
 
@@ -428,28 +436,37 @@ export function RailNav({
             aria-label={t("rail.more.label")}
             className="surface-material-card absolute bottom-16 left-1/2 z-40 w-52 -translate-x-1/2 animate-in rounded-xl border border-border p-1 shadow-2xl duration-100 fade-in-0 slide-in-from-bottom-2"
           >
-            {MORE_ITEMS.map(({ page, Icon, labelKey, hintKey }) => (
-              <button
-                key={page}
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMoreOpen(false);
-                  onNavigate(page);
-                }}
-                className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
-              >
-                <Icon className="size-4 shrink-0 text-muted-foreground" />
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate text-xs font-medium text-foreground">
-                    {t(labelKey)}
+            {MORE_ITEMS.map(
+              ({
+                page,
+                Icon,
+                labelKey,
+                hintKey,
+                defaultLabel,
+                defaultHint,
+              }) => (
+                <button
+                  key={page}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setMoreOpen(false);
+                    onNavigate(page);
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
+                >
+                  <Icon className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="truncate text-xs font-medium text-foreground">
+                      {t(labelKey, defaultLabel)}
+                    </span>
+                    <span className="truncate text-[10px] text-muted-foreground">
+                      {t(hintKey, defaultHint)}
+                    </span>
                   </span>
-                  <span className="truncate text-[10px] text-muted-foreground">
-                    {t(hintKey)}
-                  </span>
-                </span>
-              </button>
-            ))}
+                </button>
+              ),
+            )}
             <button
               type="button"
               role="menuitem"

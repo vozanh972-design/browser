@@ -21,6 +21,7 @@ interface AppHeaderProps {
   onXsmmLoginClick?: () => void;
   onXsmmLogoutClick?: () => void;
   onNewClick?: () => void;
+  showXsmm?: boolean;
 }
 
 export function AppHeader({
@@ -31,6 +32,7 @@ export function AppHeader({
   onXsmmLoginClick,
   onXsmmLogoutClick,
   onNewClick,
+  showXsmm = true,
 }: AppHeaderProps) {
   const [platform, setPlatform] = useState<OperatingSystem>("macos");
 
@@ -91,48 +93,49 @@ export function AppHeader({
 
       {/* Right: XSMM User + Balance & Action */}
       <div className="flex items-center gap-2.5 pointer-events-auto">
-        {xsmmAccount?.isLoggedIn ? (
-          <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
-            {/* User */}
-            <div className="flex items-center gap-1.5 font-medium text-foreground">
-              <LuUser className="size-3.5 text-primary" />
-              <span className="max-w-[120px] truncate">
-                {xsmmAccount.username}
-              </span>
+        {showXsmm &&
+          (xsmmAccount?.isLoggedIn ? (
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
+              {/* User */}
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <LuUser className="size-3.5 text-primary" />
+                <span className="max-w-[120px] truncate">
+                  {xsmmAccount.username}
+                </span>
+              </div>
+
+              <span className="h-3 w-px bg-border" />
+
+              {/* Balance */}
+              <div className="flex items-center gap-1 font-semibold text-emerald-400">
+                <LuCoins className="size-3.5 text-amber-400" />
+                <span>{xsmmAccount.balance}</span>
+              </div>
+
+              {/* Logout button */}
+              {onXsmmLogoutClick && (
+                <button
+                  type="button"
+                  onClick={onXsmmLogoutClick}
+                  title="Đăng xuất XSMM"
+                  className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
+                >
+                  <LuLogOut className="size-3.5" />
+                </button>
+              )}
             </div>
-
-            <span className="h-3 w-px bg-border" />
-
-            {/* Balance */}
-            <div className="flex items-center gap-1 font-semibold text-emerald-400">
-              <LuCoins className="size-3.5 text-amber-400" />
-              <span>{xsmmAccount.balance}</span>
-            </div>
-
-            {/* Logout button */}
-            {onXsmmLogoutClick && (
+          ) : (
+            onXsmmLoginClick && (
               <button
                 type="button"
-                onClick={onXsmmLogoutClick}
-                title="Đăng xuất XSMM"
-                className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
+                onClick={onXsmmLoginClick}
+                className="flex h-7 items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
               >
-                <LuLogOut className="size-3.5" />
+                <LuKey className="size-3" />
+                <span>Đăng nhập XSMM</span>
               </button>
-            )}
-          </div>
-        ) : (
-          onXsmmLoginClick && (
-            <button
-              type="button"
-              onClick={onXsmmLoginClick}
-              className="flex h-7 items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
-            >
-              <LuKey className="size-3" />
-              <span>Đăng nhập XSMM</span>
-            </button>
-          )
-        )}
+            )
+          ))}
 
         {onNewClick && (
           <Button
