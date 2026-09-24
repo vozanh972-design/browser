@@ -445,10 +445,7 @@ export default function HomePage() {
         item.id === acc.id
           ? {
               ...item,
-              note:
-                item.note === "Đang chạy..."
-                  ? "Sẵn sàng"
-                  : "Đang chạy...",
+              note: item.note === "Đang chạy..." ? "Sẵn sàng" : "Đang chạy...",
             }
           : item,
       );
@@ -861,8 +858,7 @@ export default function HomePage() {
                                 </span>
                                 Đang chạy...
                               </span>
-                            ) : acc.note &&
-                              acc.note !== "Không có ghi chú" ? (
+                            ) : acc.note && acc.note !== "Không có ghi chú" ? (
                               acc.note
                             ) : (
                               "Sẵn sàng"
