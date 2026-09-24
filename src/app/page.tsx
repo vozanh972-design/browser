@@ -29,7 +29,6 @@ import {
   checkUidLive,
   facebookLogin,
   fetchAccountDetailsWithToken,
-  getTokenAndInfoFromCookie,
 } from "@/lib/facebook-api";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";

@@ -455,7 +455,10 @@ export async function facebookLogin(params: {
       access_token: appToken,
       api_key: apiKey,
       adid: deviceId,
-      machine_id: datr && datr.length >= 24 ? datr.substring(0, 24) : deviceId.substring(0, 24),
+      machine_id:
+        datr && datr.length >= 24
+          ? datr.substring(0, 24)
+          : deviceId.substring(0, 24),
       jazoest: "22864",
       fb_api_req_friendly_name: "authenticate",
       sig,
