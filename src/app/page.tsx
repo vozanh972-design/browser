@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { FaDownload, FaFacebook, FaInstagram } from "react-icons/fa";
 import {
   LuCircleAlert,
+  LuCloud,
   LuCopy,
   LuKey,
   LuPlus,

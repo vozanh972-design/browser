@@ -83,7 +83,9 @@ export function AccountDetailDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden bg-background border-border">
         <DialogHeader className="sr-only">
-          <DialogTitle>Chi tiết tài khoản {account.name || account.uid}</DialogTitle>
+          <DialogTitle>
+            Chi tiết tài khoản {account.name || account.uid}
+          </DialogTitle>
         </DialogHeader>
 
         {/* Banner Cover Photo */}
