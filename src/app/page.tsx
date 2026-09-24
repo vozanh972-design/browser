@@ -7,8 +7,8 @@ import { FaDownload, FaFacebook, FaInstagram } from "react-icons/fa";
 import {
   LuCircleAlert,
   LuCloud,
-  LuCopy,
   LuKey,
+  LuPlay,
   LuPlus,
   LuRefreshCw,
   LuShieldCheck,
@@ -300,11 +300,20 @@ export default function HomePage() {
         status: (isLive ? "live" : "checkpoint") as "live" | "checkpoint",
       };
 
-      setAccounts((prev) =>
-        prev.map((item) =>
+      setAccounts((prev) => {
+        const updatedList = prev.map((item) =>
           item.id === targetAccount.id ? { ...item, ...updated } : item,
-        ),
-      );
+        );
+        try {
+          localStorage.setItem(
+            "autolunex_facebook_accounts_v1",
+            JSON.stringify(updatedList),
+          );
+        } catch {
+          // ignore
+        }
+        return updatedList;
+      });
       setDetailAccount((prev) =>
         prev && prev.id === targetAccount.id ? { ...prev, ...updated } : prev,
       );
@@ -323,7 +332,7 @@ export default function HomePage() {
         id: `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
         uid: parts[0] || `acc_${idx + 1}`,
         tag: "Không có thẻ",
-        note: "Không có ghi chú",
+        note: "Sẵn sàng",
         proxy: "Chưa chọn",
         platform: currentPlatform,
         status: "unverified",
@@ -403,16 +412,82 @@ export default function HomePage() {
       return account;
     });
 
-    setAccounts((prev) => [...newAccounts, ...prev]);
+    setAccounts((prev) => {
+      const merged = [...newAccounts, ...prev];
+      try {
+        localStorage.setItem(
+          "autolunex_facebook_accounts_v1",
+          JSON.stringify(merged),
+        );
+      } catch {
+        // ignore
+      }
+      return merged;
+    });
     showSuccessToast(
-      `Đã thêm ${newAccounts.length} tài khoản ${currentPlatform === "instagram" ? "Instagram" : "Facebook"}! Đang kiểm tra thông tin...`,
+      `Đã thêm ${newAccounts.length} tài khoản ${currentPlatform === "instagram" ? "Instagram" : "Facebook"}!`,
     );
 
     if (currentPlatform === "facebook") {
-      newAccounts.forEach((acc) => {
-        void handleCheckAccount(acc);
-      });
+      // Chạy kiểm tra ngầm mượt mà tuần tự để tránh giật lag giao diện
+      void (async () => {
+        for (const acc of newAccounts) {
+          await handleCheckAccount(acc);
+          await new Promise((r) => setTimeout(r, 60));
+        }
+      })();
     }
+  };
+
+  const handleRunAccount = (acc: FacebookAccount) => {
+    setAccounts((prev) => {
+      const updated = prev.map((item) =>
+        item.id === acc.id
+          ? {
+              ...item,
+              note:
+                item.note === "Đang chạy..."
+                  ? "Sẵn sàng"
+                  : "Đang chạy...",
+            }
+          : item,
+      );
+      try {
+        localStorage.setItem(
+          "autolunex_facebook_accounts_v1",
+          JSON.stringify(updated),
+        );
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+    showSuccessToast(
+      acc.note === "Đang chạy..."
+        ? `Đã dừng tài khoản: ${acc.name || acc.uid}`
+        : `Bắt đầu chạy tài khoản: ${acc.name || acc.uid}`,
+    );
+  };
+
+  const handleRunSelected = () => {
+    if (selectedIds.length === 0) return;
+    setAccounts((prev) => {
+      const updated = prev.map((item) =>
+        selectedIds.includes(item.id)
+          ? { ...item, note: "Đang chạy..." }
+          : item,
+      );
+      try {
+        localStorage.setItem(
+          "autolunex_facebook_accounts_v1",
+          JSON.stringify(updated),
+        );
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+    showSuccessToast(`Bắt đầu chạy ${selectedIds.length} tài khoản đã chọn!`);
   };
 
   const handleDeleteAccount = (id: string) => {
@@ -498,13 +573,7 @@ export default function HomePage() {
       <div className="flex min-h-0 flex-1 flex-col">
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-5">
           {currentPage === "profiles" && (
-            <motion.div
-              key="profiles"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
-              className="flex w-full flex-1 flex-col"
-            >
+            <div className="flex w-full flex-1 flex-col">
               {/* Toolbar thao tác hàng loạt khi có tài khoản được chọn */}
               {selectedIds.length > 0 && (
                 <div className="mb-2.5 flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs">
@@ -523,7 +592,12 @@ export default function HomePage() {
                         const toCheck = filteredAccounts.filter((a) =>
                           selectedIds.includes(a.id),
                         );
-                        toCheck.forEach((acc) => void handleCheckAccount(acc));
+                        void (async () => {
+                          for (const acc of toCheck) {
+                            await handleCheckAccount(acc);
+                            await new Promise((r) => setTimeout(r, 60));
+                          }
+                        })();
                       }}
                       className="h-7 text-[11px] gap-1 cursor-pointer"
                     >
@@ -558,6 +632,14 @@ export default function HomePage() {
                       <LuTrash2 className="size-3" />
                       <span>Xóa vĩnh viễn</span>
                     </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleRunSelected}
+                      className="h-7 text-[11px] gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
+                    >
+                      <LuPlay className="size-3 fill-current" />
+                      <span>Chạy ({selectedIds.length})</span>
+                    </Button>
                   </div>
                 </div>
               )}
@@ -565,7 +647,7 @@ export default function HomePage() {
               {/* Table View matching Image 2 */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
+                <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
                   <div className="flex items-center justify-center">
                     <Checkbox
                       checked={
@@ -658,6 +740,7 @@ export default function HomePage() {
                     {filteredAccounts.map((acc) => {
                       const isChecking = checkingIds.includes(acc.id);
                       const isSelected = selectedIds.includes(acc.id);
+                      const isRunning = acc.note === "Đang chạy...";
                       const avatarSrc =
                         acc.avatar ||
                         (acc.uid && !acc.uid.startsWith("acc_")
@@ -686,7 +769,7 @@ export default function HomePage() {
                             toggleSelectOne(acc.id);
                           }}
                           className={cn(
-                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-2 text-xs text-foreground cursor-pointer transition-colors select-none outline-none focus-visible:bg-muted/50",
+                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-1.5 min-h-[46px] h-[46px] text-xs text-foreground cursor-pointer transition-colors select-none outline-none focus-visible:bg-muted/50",
                             isSelected
                               ? "bg-primary/10 border-l-2 border-primary"
                               : "hover:bg-muted/30",
@@ -706,15 +789,15 @@ export default function HomePage() {
                               url={avatarSrc}
                               isInstagram={acc.platform === "instagram"}
                             />
-                            <div className="flex flex-col min-w-0">
-                              <span className="font-semibold text-foreground truncate">
+                            <div className="flex flex-col min-w-0 justify-center">
+                              <span className="font-semibold text-foreground truncate leading-tight">
                                 {acc.name || acc.uid}
                               </span>
-                              {acc.name && acc.name !== acc.uid && (
-                                <span className="text-[10.5px] font-mono text-muted-foreground truncate">
-                                  {acc.uid}
-                                </span>
-                              )}
+                              <span className="text-[10px] font-mono text-muted-foreground truncate leading-tight">
+                                {acc.name && acc.name !== acc.uid
+                                  ? acc.uid
+                                  : `UID: ${acc.uid}`}
+                              </span>
                             </div>
                           </div>
 
@@ -747,22 +830,22 @@ export default function HomePage() {
                           </div>
 
                           {/* TRẠNG THÁI */}
-                          <div>
+                          <div className="flex items-center min-w-[95px]">
                             {isChecking ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground">
-                                <LuRefreshCw className="size-2.5 animate-spin" />
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground whitespace-nowrap">
+                                <LuRefreshCw className="size-2.5 animate-spin shrink-0" />
                                 Đang kiểm tra
                               </span>
                             ) : acc.status === "live" ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
                                 Live
                               </span>
                             ) : acc.status === "checkpoint" ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
                                 Checkpoint
                               </span>
                             ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 whitespace-nowrap">
                                 Chưa kiểm tra
                               </span>
                             )}
@@ -770,13 +853,24 @@ export default function HomePage() {
 
                           {/* HÀNH ĐỘNG */}
                           <div className="text-muted-foreground truncate pr-2 font-medium">
-                            {acc.note && acc.note !== "Không có ghi chú"
-                              ? acc.note
-                              : "Sẵn sàng"}
+                            {isRunning ? (
+                              <span className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold">
+                                <span className="relative flex size-2">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                  <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+                                </span>
+                                Đang chạy...
+                              </span>
+                            ) : acc.note &&
+                              acc.note !== "Không có ghi chú" ? (
+                              acc.note
+                            ) : (
+                              "Sẵn sàng"
+                            )}
                           </div>
 
                           {/* Thao tác */}
-                          <div className="flex items-center justify-end gap-1 pr-1">
+                          <div className="flex items-center justify-end gap-1.5 pr-2">
                             {/* Nút chấm than: Xem toàn bộ thông tin tài khoản */}
                             <button
                               type="button"
@@ -790,34 +884,30 @@ export default function HomePage() {
                             >
                               <LuCircleAlert className="size-3.5" />
                             </button>
+
+                            {/* Nút tam giác: Chạy tài khoản */}
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                void handleCheckAccount(acc);
+                                handleRunAccount(acc);
                               }}
-                              disabled={isChecking}
-                              title="Kiểm tra trạng thái & lấy thông tin"
-                              className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
+                              title={
+                                isRunning
+                                  ? "Dừng chạy tài khoản"
+                                  : "Chạy tài khoản"
+                              }
+                              className={cn(
+                                "p-1 rounded transition-colors cursor-pointer",
+                                isRunning
+                                  ? "text-emerald-500 bg-emerald-500/15 hover:bg-emerald-500/25"
+                                  : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10",
+                              )}
                             >
-                              <LuRefreshCw
-                                className={cn(
-                                  "size-3.5",
-                                  isChecking && "animate-spin text-primary",
-                                )}
-                              />
+                              <LuPlay className="size-3.5 fill-current" />
                             </button>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCopy(acc.rawText);
-                              }}
-                              title="Sao chép toàn bộ"
-                              className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                            >
-                              <LuCopy className="size-3.5" />
-                            </button>
+
+                            {/* Nút xóa */}
                             <button
                               type="button"
                               onClick={(e) => {
@@ -836,7 +926,7 @@ export default function HomePage() {
                   </div>
                 )}
               </div>
-            </motion.div>
+            </div>
           )}
 
           {(currentPage === "ttc" ||
