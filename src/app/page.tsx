@@ -25,6 +25,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import {
+  checkCookieLive,
+  checkUidLive,
+  facebookLogin,
   fetchAccountDetailsWithToken,
   getTokenAndInfoFromCookie,
 } from "@/lib/facebook-api";
@@ -98,11 +101,35 @@ export default function HomePage() {
     token: "",
     isLoggedIn: false,
   });
-  const [accounts, setAccounts] = useState<FacebookAccount[]>([]);
+  const [accounts, setAccounts] = useState<FacebookAccount[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const saved = localStorage.getItem("autolunex_facebook_accounts_v1");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [currentPlatform, setCurrentPlatform] = useState<
     "facebook" | "instagram"
   >("facebook");
+
+  // Tự động lưu danh sách tài khoản vào localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "autolunex_facebook_accounts_v1",
+        JSON.stringify(accounts),
+      );
+    } catch {
+      // ignore storage error
+    }
+  }, [accounts]);
 
   // Khôi phục phiên đăng nhập XSMM nếu đã lưu token
   useEffect(() => {
@@ -179,85 +206,109 @@ export default function HomePage() {
           ? targetAccount.proxy
           : undefined;
 
-      if (targetAccount.token) {
-        const info = await fetchAccountDetailsWithToken(
-          targetAccount.token,
-          proxyParam,
-        );
-        if (info.isLive) {
-          const updated = {
-            uid: info.uid || targetAccount.uid,
-            name: info.name,
-            avatar: info.avatar,
-            cover: info.cover,
-            mail: info.email || targetAccount.mail,
-            status: "live" as const,
-          };
-          setAccounts((prev) =>
-            prev.map((item) =>
-              item.id === targetAccount.id ? { ...item, ...updated } : item,
-            ),
-          );
-          setDetailAccount((prev) =>
-            prev && prev.id === targetAccount.id
-              ? { ...prev, ...updated }
-              : prev,
-          );
-        } else {
-          setAccounts((prev) =>
-            prev.map((item) =>
-              item.id === targetAccount.id
-                ? { ...item, status: "checkpoint" }
-                : item,
-            ),
-          );
-          setDetailAccount((prev) =>
-            prev && prev.id === targetAccount.id
-              ? { ...prev, status: "checkpoint" }
-              : prev,
-          );
-        }
-      } else if (targetAccount.cookie) {
-        const info = await getTokenAndInfoFromCookie(
-          targetAccount.cookie,
-          proxyParam,
-        );
-        if (info.isLive) {
-          const updated = {
-            uid: info.uid && info.uid !== "N/A" ? info.uid : targetAccount.uid,
-            name: info.name,
-            token: info.token || targetAccount.token,
-            cookie: info.cookie || targetAccount.cookie,
-            avatar: info.avatar,
-            cover: info.cover,
-            mail: info.email || targetAccount.mail,
-            status: "live" as const,
-          };
-          setAccounts((prev) =>
-            prev.map((item) =>
-              item.id === targetAccount.id ? { ...item, ...updated } : item,
-            ),
-          );
-          setDetailAccount((prev) =>
-            prev && prev.id === targetAccount.id
-              ? { ...prev, ...updated }
-              : prev,
-          );
-        } else {
-          setAccounts((prev) =>
-            prev.map((item) =>
-              item.id === targetAccount.id
-                ? { ...item, status: "checkpoint" }
-                : item,
-            ),
-          );
-          setDetailAccount((prev) =>
-            prev && prev.id === targetAccount.id
-              ? { ...prev, status: "checkpoint" }
-              : prev,
-          );
+      let isLive = false;
+      let fetchedUid = targetAccount.uid;
+      let fetchedName = targetAccount.name;
+      let fetchedAvatar = targetAccount.avatar;
+      let fetchedCover = targetAccount.cover;
+      let fetchedMail = targetAccount.mail;
+      let fetchedToken = targetAccount.token;
+      let fetchedCookie = targetAccount.cookie;
+
+      // 1. Kiểm tra UID công khai (chuẩn xác 100% như các tool check UID)
+      if (fetchedUid && /^\d+$/.test(fetchedUid.trim())) {
+        const uidStatus = await checkUidLive(fetchedUid, proxyParam);
+        if (uidStatus.isLive) {
+          isLive = true;
+          if (uidStatus.avatarUrl && !fetchedAvatar) {
+            fetchedAvatar = uidStatus.avatarUrl;
+          }
         }
       }
+
+      // 2. Nếu có Token, lấy full chi tiết (avatar HD, cover, email, name, uid)
+      if (fetchedToken) {
+        const info = await fetchAccountDetailsWithToken(
+          fetchedToken,
+          proxyParam,
+        );
+        if (info.isLive) {
+          isLive = true;
+          if (info.uid && (!fetchedUid || !/^\d+$/.test(fetchedUid))) {
+            fetchedUid = info.uid;
+          }
+          if (info.name) fetchedName = info.name;
+          if (info.avatar) fetchedAvatar = info.avatar;
+          if (info.cover) fetchedCover = info.cover;
+          if (info.email) fetchedMail = info.email;
+        }
+      }
+
+      // 3. Nếu chưa có Token nhưng có UID & Mật khẩu (và 2FA), thực hiện đăng nhập qua API b-graph
+      if (!fetchedToken && fetchedUid && targetAccount.pass) {
+        const loginRes = await facebookLogin({
+          email: fetchedUid,
+          password: targetAccount.pass,
+          auth2fa: targetAccount.twoFactor,
+          cookie: fetchedCookie,
+          proxy: proxyParam,
+        });
+        if (loginRes.success && loginRes.token) {
+          isLive = true;
+          fetchedToken = loginRes.token;
+          if (loginRes.cookie) fetchedCookie = loginRes.cookie;
+          if (loginRes.uid && (!fetchedUid || !/^\d+$/.test(fetchedUid))) {
+            fetchedUid = loginRes.uid;
+          }
+          // Lấy tiếp avatar HD & cover từ token vừa đăng nhập
+          try {
+            const tokenDetails = await fetchAccountDetailsWithToken(
+              loginRes.token,
+              proxyParam,
+            );
+            if (tokenDetails.isLive) {
+              if (tokenDetails.name) fetchedName = tokenDetails.name;
+              if (tokenDetails.avatar) fetchedAvatar = tokenDetails.avatar;
+              if (tokenDetails.cover) fetchedCover = tokenDetails.cover;
+              if (tokenDetails.email) fetchedMail = tokenDetails.email;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+
+      // 4. Nếu có Cookie, kiểm tra Cookie Live
+      if (fetchedCookie) {
+        const cookieCheck = await checkCookieLive(fetchedCookie, proxyParam);
+        if (cookieCheck.isLive) {
+          isLive = true;
+          if (cookieCheck.name && !fetchedName) fetchedName = cookieCheck.name;
+          if (cookieCheck.uid && (!fetchedUid || !/^\d+$/.test(fetchedUid))) {
+            fetchedUid = cookieCheck.uid;
+          }
+        }
+      }
+
+      const updated = {
+        uid: fetchedUid,
+        name: fetchedName,
+        avatar: fetchedAvatar,
+        cover: fetchedCover,
+        mail: fetchedMail,
+        token: fetchedToken,
+        cookie: fetchedCookie,
+        status: (isLive ? "live" : "checkpoint") as "live" | "checkpoint",
+      };
+
+      setAccounts((prev) =>
+        prev.map((item) =>
+          item.id === targetAccount.id ? { ...item, ...updated } : item,
+        ),
+      );
+      setDetailAccount((prev) =>
+        prev && prev.id === targetAccount.id ? { ...prev, ...updated } : prev,
+      );
     } catch {
       // ignore
     } finally {
@@ -284,13 +335,31 @@ export default function HomePage() {
         formatKeys.forEach((key, kIdx) => {
           const val = parts[kIdx];
           if (!val) return;
-          if (key.includes("uid")) account.uid = val;
-          else if (key.includes("mật khẩu") || key.includes("pass"))
+          if (key.includes("uid")) {
+            if (val.startsWith("EAA")) {
+              account.token = val;
+            } else {
+              account.uid = val;
+            }
+          } else if (key.includes("mật khẩu") || key.includes("pass")) {
             account.pass = val;
-          else if (key.includes("2fa")) account.twoFactor = val;
-          else if (key.includes("cookie")) account.cookie = val;
-          else if (key.includes("token")) account.token = val;
-          else if (key.includes("proxy")) account.proxy = val;
+          } else if (key.includes("2fa")) {
+            if (
+              val.includes("datr=") ||
+              val.includes("c_user=") ||
+              val.includes("xs=")
+            ) {
+              account.cookie = val;
+            } else {
+              account.twoFactor = val;
+            }
+          } else if (key.includes("cookie")) {
+            account.cookie = val;
+          } else if (key.includes("token")) {
+            account.token = val;
+          } else if (key.includes("proxy")) {
+            account.proxy = val;
+          }
         });
       } else {
         if (line.includes("c_user=") || line.includes("xs=")) {
@@ -302,7 +371,17 @@ export default function HomePage() {
         } else if (parts.length >= 2) {
           account.uid = parts[0];
           account.pass = parts[1];
-          if (parts[2]) account.twoFactor = parts[2];
+          if (parts[2]) {
+            if (
+              parts[2].includes("datr=") ||
+              parts[2].includes("c_user=") ||
+              parts[2].includes("xs=")
+            ) {
+              account.cookie = parts[2];
+            } else {
+              account.twoFactor = parts[2];
+            }
+          }
           if (parts[3]) account.cookie = parts[3];
           if (parts[4]) account.token = parts[4];
           if (parts[5]) account.proxy = parts[5];
@@ -314,6 +393,12 @@ export default function HomePage() {
         if (match && (!account.uid || account.uid.startsWith("acc_"))) {
           account.uid = match[1];
         }
+      }
+
+      // Nhận diện nếu ô UID đang chứa token EAAAA
+      if (account.uid?.startsWith("EAA")) {
+        account.token = account.uid;
+        account.uid = `acc_${idx + 1}`;
       }
 
       return account;
@@ -332,8 +417,20 @@ export default function HomePage() {
   };
 
   const handleDeleteAccount = (id: string) => {
-    setAccounts((prev) => prev.filter((a) => a.id !== id));
+    setAccounts((prev) => {
+      const updated = prev.filter((a) => a.id !== id);
+      try {
+        localStorage.setItem(
+          "autolunex_facebook_accounts_v1",
+          JSON.stringify(updated),
+        );
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
     setSelectedIds((prev) => prev.filter((i) => i !== id));
+    showSuccessToast("Đã xóa vĩnh viễn tài khoản!");
   };
 
   const handleCopy = (text: string) => {
@@ -409,6 +506,63 @@ export default function HomePage() {
               transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
               className="flex w-full flex-1 flex-col"
             >
+              {/* Toolbar thao tác hàng loạt khi có tài khoản được chọn */}
+              {selectedIds.length > 0 && (
+                <div className="mb-2.5 flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs">
+                  <div className="font-medium text-foreground">
+                    Đã chọn{" "}
+                    <span className="font-bold text-primary">
+                      {selectedIds.length}
+                    </span>{" "}
+                    tài khoản
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const toCheck = filteredAccounts.filter((a) =>
+                          selectedIds.includes(a.id),
+                        );
+                        toCheck.forEach((acc) => void handleCheckAccount(acc));
+                      }}
+                      className="h-7 text-[11px] gap-1 cursor-pointer"
+                    >
+                      <LuRefreshCw className="size-3" />
+                      <span>Kiểm tra lại ({selectedIds.length})</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        setAccounts((prev) => {
+                          const updated = prev.filter(
+                            (a) => !selectedIds.includes(a.id),
+                          );
+                          try {
+                            localStorage.setItem(
+                              "autolunex_facebook_accounts_v1",
+                              JSON.stringify(updated),
+                            );
+                          } catch {
+                            // ignore
+                          }
+                          return updated;
+                        });
+                        setSelectedIds([]);
+                        showSuccessToast(
+                          `Đã xóa vĩnh viễn ${selectedIds.length} tài khoản!`,
+                        );
+                      }}
+                      className="h-7 text-[11px] gap-1 cursor-pointer"
+                    >
+                      <LuTrash2 className="size-3" />
+                      <span>Xóa vĩnh viễn</span>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {/* Table View matching Image 2 */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}

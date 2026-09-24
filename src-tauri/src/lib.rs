@@ -80,6 +80,7 @@ fn curl_request(
   body: Option<String>,
   cookie: Option<String>,
   proxy: Option<String>,
+  include_headers: Option<bool>,
 ) -> Result<String, String> {
   #[cfg(windows)]
   let mut cmd = std::process::Command::new("curl.exe");
@@ -89,6 +90,10 @@ fn curl_request(
 
   let m = method.unwrap_or_else(|| "GET".to_string());
   cmd.arg("-s").arg("-X").arg(&m);
+
+  if include_headers.unwrap_or(false) {
+    cmd.arg("-i");
+  }
 
   if let Some(hdrs) = headers {
     for h in hdrs {
