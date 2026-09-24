@@ -171,7 +171,7 @@ export async function getTokenAndInfoFromCookie(
     if (json.access_token) {
       const rawToken = json.access_token;
       const eaaaa = (await convertTokenToEAAAA(rawToken, proxy)) || rawToken;
-      const realUid = uidFromCookie || json.uid || "";
+      let realUid = uidFromCookie || json.uid || "";
 
       // Tạo cookie hoàn chỉnh từ session_cookies nếu có
       let finalCookie = cleanCookie;
@@ -189,8 +189,8 @@ export async function getTokenAndInfoFromCookie(
       let avatar = realUid
         ? `https://graph.facebook.com/${realUid}/picture?type=large`
         : undefined;
-      let cover: string | undefined = undefined;
-      let email: string | undefined = undefined;
+      let cover: string | undefined;
+      let email: string | undefined;
 
       try {
         const info = await fetchAccountDetailsWithToken(eaaaa, proxy);

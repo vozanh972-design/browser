@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { FaDownload, FaFacebook, FaInstagram } from "react-icons/fa";
 import {
   LuCircleAlert,
-  LuCloud,
   LuCopy,
   LuKey,
   LuPlus,
@@ -500,7 +499,7 @@ export default function HomePage() {
                           <div className="flex items-center gap-2.5 truncate pr-2">
                             <div className="relative size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
                               {avatarSrc ? (
-                                // eslint-disable-next-line @next/next/no-img-element
+                                // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
                                 <img
                                   src={avatarSrc}
                                   alt=""
@@ -549,7 +548,9 @@ export default function HomePage() {
                             {acc.token ? (
                               <button
                                 type="button"
-                                onClick={() => handleCopy(acc.token!)}
+                                onClick={() => {
+                                  if (acc.token) handleCopy(acc.token);
+                                }}
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 cursor-pointer"
                                 title="Click để copy Token"
                               >

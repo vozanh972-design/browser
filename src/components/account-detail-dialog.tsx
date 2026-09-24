@@ -8,10 +8,8 @@ import {
   LuEye,
   LuEyeOff,
   LuKey,
-  LuMail,
   LuRefreshCw,
   LuShieldCheck,
-  LuUser,
 } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,7 +62,7 @@ export function AccountDetailDialog({
 
   if (!account) return null;
 
-  const handleCopy = (text: string, key: string, label: string) => {
+  const handleCopy = (text: string | undefined, key: string, label: string) => {
     if (!text) return;
     void navigator.clipboard.writeText(text);
     setCopiedKey(key);
@@ -84,10 +82,14 @@ export function AccountDetailDialog({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden bg-background border-border">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Chi tiết tài khoản {account.name || account.uid}</DialogTitle>
+        </DialogHeader>
+
         {/* Banner Cover Photo */}
         <div className="relative h-32 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 overflow-hidden">
           {account.cover && (
-            // eslint-disable-next-line @next/next/no-img-element
+            // biome-ignore lint/performance/noImgElement: dynamic external cover URL
             <img
               src={account.cover}
               alt="Cover"
@@ -104,13 +106,12 @@ export function AccountDetailDialog({
               {/* Avatar Thật */}
               <div className="relative size-20 sm:size-22 rounded-full border-4 border-background bg-muted overflow-hidden shrink-0 shadow-md">
                 {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+                  // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
                   <img
                     src={avatarUrl}
                     alt={account.name || account.uid}
                     className="size-full object-cover"
                     onError={(e) => {
-                      // Fallback nếu ảnh không load được
                       (e.target as HTMLElement).style.display = "none";
                     }}
                   />
@@ -208,7 +209,7 @@ export function AccountDetailDialog({
                       <button
                         type="button"
                         onClick={() =>
-                          handleCopy(account.pass!, "pass", "Mật khẩu")
+                          handleCopy(account.pass, "pass", "Mật khẩu")
                         }
                         className="hover:text-foreground cursor-pointer p-0.5"
                       >
@@ -238,7 +239,7 @@ export function AccountDetailDialog({
                     <button
                       type="button"
                       onClick={() =>
-                        handleCopy(account.twoFactor!, "2fa", "Mã 2FA")
+                        handleCopy(account.twoFactor, "2fa", "Mã 2FA")
                       }
                       className="hover:text-foreground cursor-pointer p-0.5"
                     >
@@ -265,7 +266,7 @@ export function AccountDetailDialog({
                   {account.mail && (
                     <button
                       type="button"
-                      onClick={() => handleCopy(account.mail!, "mail", "Email")}
+                      onClick={() => handleCopy(account.mail, "mail", "Email")}
                       className="hover:text-foreground cursor-pointer p-0.5"
                     >
                       {copiedKey === "mail" ? (
@@ -289,7 +290,7 @@ export function AccountDetailDialog({
                     <button
                       type="button"
                       onClick={() =>
-                        handleCopy(account.proxy!, "proxy", "Proxy")
+                        handleCopy(account.proxy, "proxy", "Proxy")
                       }
                       className="hover:text-foreground cursor-pointer p-0.5"
                     >
@@ -317,7 +318,7 @@ export function AccountDetailDialog({
                 {account.token && (
                   <button
                     type="button"
-                    onClick={() => handleCopy(account.token!, "token", "Token")}
+                    onClick={() => handleCopy(account.token, "token", "Token")}
                     className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
                   >
                     {copiedKey === "token" ? (
@@ -325,7 +326,9 @@ export function AccountDetailDialog({
                     ) : (
                       <LuCopy className="size-3" />
                     )}
-                    <span>{copiedKey === "token" ? "Đã chép" : "Copy Token"}</span>
+                    <span>
+                      {copiedKey === "token" ? "Đã chép" : "Copy Token"}
+                    </span>
                   </button>
                 )}
               </div>
@@ -344,7 +347,7 @@ export function AccountDetailDialog({
                   <button
                     type="button"
                     onClick={() =>
-                      handleCopy(account.cookie!, "cookie", "Cookie")
+                      handleCopy(account.cookie, "cookie", "Cookie")
                     }
                     className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
                   >
@@ -353,7 +356,9 @@ export function AccountDetailDialog({
                     ) : (
                       <LuCopy className="size-3" />
                     )}
-                    <span>{copiedKey === "cookie" ? "Đã chép" : "Copy Cookie"}</span>
+                    <span>
+                      {copiedKey === "cookie" ? "Đã chép" : "Copy Cookie"}
+                    </span>
                   </button>
                 )}
               </div>
