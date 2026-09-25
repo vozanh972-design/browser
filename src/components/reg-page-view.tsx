@@ -18,8 +18,8 @@ import {
   LuUsers,
 } from "react-icons/lu";
 import {
-  AccountDetailDialog,
   type AccountDetailData,
+  AccountDetailDialog,
 } from "@/components/account-detail-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
