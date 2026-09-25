@@ -6,8 +6,8 @@ import {
   LuChevronRight,
   LuCopy,
   LuExternalLink,
-  LuFileSpreadsheet,
   LuFlag,
+  LuInfo,
   LuPause,
   LuPlay,
   LuRotateCcw,
@@ -17,9 +17,19 @@ import {
   LuUser,
   LuUsers,
 } from "react-icons/lu";
+import {
+  AccountDetailDialog,
+  type AccountDetailData,
+} from "@/components/account-detail-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getTokenAndInfoFromCookie } from "@/lib/facebook-api";
@@ -82,7 +92,6 @@ export function RegPageView({
   );
   const [regCount, setRegCount] = useState(15);
   const [delayMs, setDelayMs] = useState(1500);
-  const [threadsCount, setThreadsCount] = useState(1);
   const [proxyMode, setProxyMode] = useState<"account" | "direct">("account");
 
   // Selection of Accounts (Mặc định chọn các nick live)
@@ -99,10 +108,8 @@ export function RegPageView({
     },
   );
 
-  // Expanded accounts to show their created pages
-  const [expandedAccountUids, setExpandedAccountUids] = useState<string[]>(() =>
-    accounts.map((a) => a.uid),
-  );
+  // Mặc định các page con sẽ ẨN ĐI, chỉ hiện khi người dùng bấm xem
+  const [expandedAccountUids, setExpandedAccountUids] = useState<string[]>([]);
 
   // Per-account real-time execution status & success count
   const [accountStatuses, setAccountStatuses] = useState<
@@ -111,6 +118,12 @@ export function RegPageView({
   const [accountSuccessCounts, setAccountSuccessCounts] = useState<
     Record<string, number>
   >({});
+
+  // Dialog states for Account and Page info modal
+  const [selectedAccountForDetail, setSelectedAccountForDetail] =
+    useState<AccountDetailData | null>(null);
+  const [selectedPageForDetail, setSelectedPageForDetail] =
+    useState<CreatedPageItem | null>(null);
 
   // Running & Global Progress States
   const [isRunning, setIsRunning] = useState(false);
@@ -144,7 +157,7 @@ export function RegPageView({
     }
   }, [createdPages]);
 
-  // Sync selected accounts and expanded accounts if accounts prop changes
+  // Sync selected accounts if accounts prop changes and initial selection was empty
   useEffect(() => {
     if (selectedAccountUids.length === 0 && accounts.length > 0) {
       const liveUids = accounts
@@ -157,7 +170,6 @@ export function RegPageView({
       setSelectedAccountUids(
         liveUids.length > 0 ? liveUids : accounts.map((a) => a.uid),
       );
-      setExpandedAccountUids(accounts.map((a) => a.uid));
     }
   }, [accounts, selectedAccountUids.length]);
 
@@ -203,28 +215,7 @@ export function RegPageView({
     }
   };
 
-  const handleExportPages = () => {
-    if (createdPages.length === 0) {
-      showSuccessToast("Chưa có trang nào để xuất file!");
-      return;
-    }
-    const lines = createdPages.map(
-      (p) =>
-        `${p.pageId}|${p.name}|${p.category}|${p.creatorUid}|${p.createdAt}`,
-    );
-    const blob = new Blob([lines.join("\r\n")], {
-      type: "text/plain;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `fanpages_autolunex_${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showSuccessToast("Đã xuất danh sách Fanpage thành file text!");
-  };
-
-  // Logic Reg Page Runner hỗ trợ chạy nhiều tài khoản
+  // Logic Reg Page Runner: Chọn bao nhiêu acc thì chạy bấy nhiêu luồng cùng lúc
   const handleToggleRun = async () => {
     if (isRunning) {
       stopRequestedRef.current = true;
@@ -248,7 +239,7 @@ export function RegPageView({
     setIsRunning(true);
     stopRequestedRef.current = false;
     showSuccessToast(
-      `Bắt đầu khởi chạy Reg Page cho ${targetAccounts.length} tài khoản...`,
+      `Bắt đầu khởi chạy ${targetAccounts.length} luồng cho ${targetAccounts.length} tài khoản...`,
     );
 
     let totalCreatedAll = 0;
@@ -288,7 +279,6 @@ export function RegPageView({
         if (stopRequestedRef.current) break;
 
         const rawName = generateRandomName(nameType);
-        // Tên Page có chữ "Page : " ở trước theo yêu cầu của user
         const formattedPageName = `Page : ${rawName}`;
         const randomCat = getRandomCategory();
 
@@ -327,10 +317,6 @@ export function RegPageView({
           };
 
           setCreatedPages((prev) => [newPage, ...prev]);
-          // Tự động mở rộng danh sách của acc này để thấy page con vừa tạo
-          setExpandedAccountUids((prev) =>
-            prev.includes(acc.uid) ? prev : [...prev, acc.uid],
-          );
           setAccountSuccessCounts((prev) => ({
             ...prev,
             [acc.uid]: (prev[acc.uid] || 0) + 1,
@@ -383,28 +369,10 @@ export function RegPageView({
     };
 
     try {
-      const concurrency = Math.max(1, Math.min(threadsCount, 5));
-
-      if (concurrency === 1) {
-        for (let i = 0; i < targetAccounts.length; i++) {
-          if (stopRequestedRef.current) break;
-          const acc = targetAccounts[i];
-          setStatusMessage(
-            `Đang xử lý tài khoản ${i + 1}/${targetAccounts.length}: ${acc.name || acc.uid}`,
-          );
-          await processSingleAccount(acc);
-        }
-      } else {
-        const queue = [...targetAccounts];
-        const workers = Array.from({ length: concurrency }).map(async () => {
-          while (queue.length > 0 && !stopRequestedRef.current) {
-            const acc = queue.shift();
-            if (!acc) break;
-            await processSingleAccount(acc);
-          }
-        });
-        await Promise.all(workers);
-      }
+      // Chạy song song đúng bằng số lượng tài khoản được chọn
+      await Promise.all(
+        targetAccounts.map((account) => processSingleAccount(account)),
+      );
 
       setStatusMessage(
         totalCreatedAll > 0
@@ -481,7 +449,7 @@ export function RegPageView({
 
       {/* Main Content Area: Split 2 Columns */}
       <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-3 flex-1 min-h-0">
-        {/* Left Column: Cấu hình Reg Page (Gọn gàng, không ô nhập tên) */}
+        {/* Left Column: Cấu hình Reg Page (Gọn gàng, không ô nhập tên, không ô luồng thừa) */}
         <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background p-3.5 shadow-2xs overflow-y-auto">
           <div className="flex items-center justify-between border-b border-border/40 pb-2">
             <div className="flex items-center gap-2">
@@ -551,31 +519,6 @@ export function RegPageView({
             </div>
           </div>
 
-          {/* Số luồng chạy đồng thời */}
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs font-medium text-foreground">
-              Số luồng chạy (Acc cùng lúc)
-            </Label>
-            <select
-              value={threadsCount}
-              onChange={(e) => setThreadsCount(Number(e.target.value) || 1)}
-              className="h-8 w-full rounded-lg border border-border/70 bg-muted/20 px-2.5 text-xs text-foreground outline-none focus:border-primary/50 cursor-pointer"
-            >
-              <option value={1} className="bg-background">
-                1 luồng (Lần lượt từng nick - An toàn nhất)
-              </option>
-              <option value={2} className="bg-background">
-                2 luồng (2 nick chạy cùng lúc)
-              </option>
-              <option value={3} className="bg-background">
-                3 luồng (3 nick chạy cùng lúc)
-              </option>
-              <option value={5} className="bg-background">
-                5 luồng (5 nick chạy cùng lúc)
-              </option>
-            </select>
-          </div>
-
           {/* Tùy chọn Proxy */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-foreground">
@@ -598,11 +541,17 @@ export function RegPageView({
           </div>
 
           {/* Tóm tắt cấu hình */}
-          <div className="p-2.5 rounded-lg bg-muted/25 border border-border/60 text-xs flex flex-col gap-1 text-muted-foreground">
+          <div className="p-2.5 rounded-lg bg-muted/25 border border-border/60 text-xs flex flex-col gap-1.5 text-muted-foreground">
             <div className="flex justify-between">
               <span>Acc chủ đã tick:</span>
               <span className="font-semibold text-foreground font-mono">
                 {selectedAccountUids.length} acc
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Số luồng chạy:</span>
+              <span className="font-semibold text-primary font-mono">
+                {selectedAccountUids.length} luồng song song
               </span>
             </div>
             <div className="flex justify-between">
@@ -647,7 +596,6 @@ export function RegPageView({
                 setNameType("vietnamese");
                 setRegCount(15);
                 setDelayMs(1500);
-                setThreadsCount(1);
                 showSuccessToast(
                   "Đã khôi phục cấu hình mặc định (15 Page, 1500ms)!",
                 );
@@ -660,9 +608,9 @@ export function RegPageView({
           </div>
         </div>
 
-        {/* Right Column: Unified Table (Acc chủ Profile & Fanpage reg ra hiển thị chung trong danh sách) */}
+        {/* Right Column: Unified Table (Acc chủ Profile & Fanpage reg ra) */}
         <div className="flex flex-col rounded-xl border border-border/60 bg-background shadow-2xs overflow-hidden min-h-0">
-          {/* Header Toolbar */}
+          {/* Header Toolbar (Đã bỏ nút Xuất file theo yêu cầu) */}
           <div className="flex items-center justify-between px-3.5 py-2 border-b border-border/60 bg-muted/10 shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold text-foreground">
@@ -710,16 +658,6 @@ export function RegPageView({
                 </span>
               </Button>
 
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleExportPages}
-                className="h-7 text-[11px] gap-1 cursor-pointer"
-              >
-                <LuFileSpreadsheet className="size-3 text-emerald-500" />
-                <span>Xuất file</span>
-              </Button>
-
               {createdPages.length > 0 && (
                 <Button
                   size="sm"
@@ -735,7 +673,7 @@ export function RegPageView({
           </div>
 
           {/* Table Header */}
-          <div className="grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_80px] items-center px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/5 shrink-0 select-none">
+          <div className="grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_60px] items-center px-3 py-2 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/5 shrink-0 select-none">
             <div className="flex items-center justify-center">
               <Checkbox
                 checked={
@@ -752,7 +690,7 @@ export function RegPageView({
             <div>UID (Profile / Page UID 615)</div>
             <div>Đối tượng</div>
             <div>Tiến độ / Trạng thái</div>
-            <div className="text-right pr-2">Thao tác</div>
+            <div className="text-center pr-2">Thao tác</div>
           </div>
 
           {/* Table Body: Unified Rows */}
@@ -786,7 +724,7 @@ export function RegPageView({
                     {/* DÒNG TÀI KHOẢN CHỦ (PROFILE) - KHÔNG CÓ CHỮ PAGE */}
                     <div
                       className={cn(
-                        "grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_80px] items-center px-3 py-2.5 text-xs transition-colors border-b border-border/20",
+                        "grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_60px] items-center px-3 py-2.5 text-xs transition-colors border-b border-border/20",
                         isSelected
                           ? "bg-primary/5 hover:bg-primary/10"
                           : "hover:bg-muted/10",
@@ -805,21 +743,21 @@ export function RegPageView({
                           <button
                             type="button"
                             onClick={() => handleToggleExpandAccount(acc.uid)}
-                            className="p-0.5 text-muted-foreground hover:text-foreground rounded cursor-pointer shrink-0"
+                            className="p-1 hover:bg-muted/50 text-muted-foreground hover:text-foreground rounded cursor-pointer shrink-0 transition-colors"
                             title={
                               isExpanded
                                 ? "Thu gọn danh sách page"
-                                : "Mở rộng danh sách page"
+                                : "Bấm để xem danh sách page"
                             }
                           >
                             {isExpanded ? (
-                              <LuChevronDown className="size-3.5" />
+                              <LuChevronDown className="size-3.5 text-primary" />
                             ) : (
                               <LuChevronRight className="size-3.5" />
                             )}
                           </button>
                         ) : (
-                          <div className="size-3.5 shrink-0" />
+                          <div className="size-5 shrink-0" />
                         )}
 
                         <div className="size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
@@ -839,9 +777,29 @@ export function RegPageView({
                           <span className="font-bold text-foreground truncate">
                             {acc.name || acc.uid}
                           </span>
-                          <span className="text-[10px] text-muted-foreground truncate">
-                            Đã reg: {successCount} Page
-                          </span>
+                          {/* Nút ẩn/hiện page con: bình thường ẩn đi, bấm vô để xem */}
+                          {accPages.length > 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleExpandAccount(acc.uid)}
+                              className="text-[10px] text-primary hover:underline text-left cursor-pointer flex items-center gap-0.5"
+                            >
+                              <span>
+                                {isExpanded
+                                  ? `Ẩn ${accPages.length} Page`
+                                  : `Xem ${accPages.length} Page`}
+                              </span>
+                              {isExpanded ? (
+                                <LuChevronDown className="size-2.5" />
+                              ) : (
+                                <LuChevronRight className="size-2.5" />
+                              )}
+                            </button>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground truncate">
+                              Đã reg: {successCount} Page
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -884,38 +842,25 @@ export function RegPageView({
                         </span>
                       </div>
 
-                      {/* Thao tác Acc chủ */}
-                      <div className="flex items-center justify-end gap-1 pr-1">
+                      {/* Thao tác: Dấu chấm than xem chi tiết Profile */}
+                      <div className="flex items-center justify-center pr-2">
                         <button
                           type="button"
-                          onClick={() => handleCopy(acc.uid)}
-                          title="Copy UID Profile chủ"
-                          className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
+                          onClick={() => setSelectedAccountForDetail(acc)}
+                          title="Xem chi tiết Profile chủ"
+                          className="size-7 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer border border-border/60 shadow-2xs"
                         >
-                          <LuCopy className="size-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            window.open(
-                              `https://facebook.com/${acc.uid}`,
-                              "_blank",
-                            )
-                          }
-                          title="Mở Profile Facebook"
-                          className="p-1 text-muted-foreground hover:text-primary rounded transition-colors cursor-pointer"
-                        >
-                          <LuExternalLink className="size-3.5" />
+                          <LuInfo className="size-3.5" />
                         </button>
                       </div>
                     </div>
 
-                    {/* CÁC DÒNG FANPAGE REG RA TỪ ACC CHỦ NÀY (CÓ CHỮ "PAGE : " Ở TRƯỚC TÊN) */}
+                    {/* CÁC DÒNG FANPAGE REG RA TỪ ACC CHỦ (MẶC ĐỊNH ẨN ĐI, BẤM VÔ MỚI HIỆN) */}
                     {isExpanded &&
                       accPages.map((page) => (
                         <div
                           key={page.id}
-                          className="grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_80px] items-center px-3 py-1.5 text-xs bg-muted/10 hover:bg-muted/20 transition-colors border-b border-border/10"
+                          className="grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_60px] items-center px-3 py-1.5 text-xs bg-muted/10 hover:bg-muted/20 transition-colors border-b border-border/10"
                         >
                           <div className="flex items-center justify-center">
                             <span className="font-mono text-muted-foreground text-[10px]">
@@ -960,28 +905,15 @@ export function RegPageView({
                             </span>
                           </div>
 
-                          {/* Thao tác Page */}
-                          <div className="flex items-center justify-end gap-1 pr-1">
+                          {/* Thao tác: Dấu chấm than xem chi tiết Page (Avatar, Bìa, UID...) */}
+                          <div className="flex items-center justify-center pr-2">
                             <button
                               type="button"
-                              onClick={() => handleCopy(page.pageId)}
-                              title="Copy ID Page 615"
-                              className="p-1 text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
+                              onClick={() => setSelectedPageForDetail(page)}
+                              title="Xem chi tiết Fanpage (Avatar, Bìa, UID)"
+                              className="size-6 flex items-center justify-center text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10 rounded-full transition-colors cursor-pointer border border-border/50 shadow-2xs"
                             >
-                              <LuCopy className="size-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() =>
-                                window.open(
-                                  `https://facebook.com/${page.pageId}`,
-                                  "_blank",
-                                )
-                              }
-                              title="Mở Fanpage trên Facebook"
-                              className="p-1 text-muted-foreground hover:text-primary rounded transition-colors cursor-pointer"
-                            >
-                              <LuExternalLink className="size-3.5" />
+                              <LuInfo className="size-3" />
                             </button>
                           </div>
                         </div>
@@ -1009,6 +941,146 @@ export function RegPageView({
           </div>
         </div>
       </div>
+
+      {/* POPUP CHI TIẾT TÀI KHOẢN CHỦ (PROFILE) - GIỐNG ẢNH 2 */}
+      <AccountDetailDialog
+        account={selectedAccountForDetail}
+        isOpen={!!selectedAccountForDetail}
+        onClose={() => setSelectedAccountForDetail(null)}
+      />
+
+      {/* POPUP CHI TIẾT FANPAGE - GỒM AVATAR, BÌA, UID, THỜI GIAN THEO YÊU CẦU */}
+      {selectedPageForDetail && (
+        <Dialog
+          open={!!selectedPageForDetail}
+          onOpenChange={(open) => !open && setSelectedPageForDetail(null)}
+        >
+          <DialogContent className="max-w-md p-0 overflow-hidden bg-background border-border shadow-xl">
+            <DialogHeader className="sr-only">
+              <DialogTitle>
+                Chi tiết Fanpage {selectedPageForDetail.name}
+              </DialogTitle>
+            </DialogHeader>
+
+            {/* Ảnh bìa Fanpage */}
+            <div className="relative h-28 w-full bg-gradient-to-r from-blue-700 via-indigo-700 to-purple-800 overflow-hidden flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/25" />
+              <span className="relative text-xs text-white/70 font-medium">
+                Ảnh bìa Fanpage
+              </span>
+            </div>
+
+            {/* Thông tin chính: Avatar, Tên & UID 615 */}
+            <div className="px-5 pb-5">
+              <div className="flex items-end justify-between -mt-10 mb-3">
+                <div className="relative size-18 rounded-full border-3 border-background bg-muted overflow-hidden shrink-0 shadow-md">
+                  {/* biome-ignore lint/performance/noImgElement: page avatar */}
+                  <img
+                    src={`https://graph.facebook.com/${selectedPageForDetail.pageId}/picture?type=large`}
+                    alt={selectedPageForDetail.name}
+                    className="size-full object-cover"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = "none";
+                    }}
+                  />
+                  <div className="size-full flex items-center justify-center bg-indigo-600 text-white font-bold text-lg">
+                    <LuFlag className="size-7" />
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() =>
+                    window.open(
+                      `https://facebook.com/${selectedPageForDetail.pageId}`,
+                      "_blank",
+                    )
+                  }
+                  className="h-8 text-xs gap-1 cursor-pointer"
+                >
+                  <LuExternalLink className="size-3.5" />
+                  <span>Mở Facebook</span>
+                </Button>
+              </div>
+
+              {/* Tên Fanpage và Badge */}
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-base font-bold text-foreground truncate">
+                  {selectedPageForDetail.name}
+                </h3>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <LuFlag className="size-3" />
+                  Profile Plus
+                </span>
+              </div>
+
+              {/* UID Page 615 */}
+              <div className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border/60 mb-3 text-xs">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-muted-foreground uppercase font-semibold">
+                    UID Fanpage (615)
+                  </span>
+                  <span className="font-mono text-primary font-bold text-xs">
+                    {selectedPageForDetail.pageId}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleCopy(selectedPageForDetail.pageId)}
+                  className="h-7 px-2 text-xs gap-1 cursor-pointer"
+                >
+                  <LuCopy className="size-3" />
+                  <span>Sao chép</span>
+                </Button>
+              </div>
+
+              {/* Chi tiết phụ: Thể loại & Tạo bởi */}
+              <div className="grid grid-cols-2 gap-2 text-xs mb-4">
+                <div className="p-2 rounded-lg bg-muted/20 border border-border/50">
+                  <span className="text-[10px] text-muted-foreground block">
+                    Thể loại
+                  </span>
+                  <span className="font-medium text-foreground truncate block">
+                    {selectedPageForDetail.category}
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-muted/20 border border-border/50">
+                  <span className="text-[10px] text-muted-foreground block">
+                    Thời gian tạo
+                  </span>
+                  <span className="font-medium text-foreground truncate block">
+                    {selectedPageForDetail.createdAt}
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-muted/20 border border-border/50 col-span-2">
+                  <span className="text-[10px] text-muted-foreground block">
+                    Tài khoản chủ sở hữu
+                  </span>
+                  <span className="font-mono text-[11px] text-foreground truncate block">
+                    {selectedPageForDetail.creatorName
+                      ? `${selectedPageForDetail.creatorName} (${selectedPageForDetail.creatorUid})`
+                      : selectedPageForDetail.creatorUid}
+                  </span>
+                </div>
+              </div>
+
+              {/* Nút Đóng */}
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setSelectedPageForDetail(null)}
+                className="w-full h-8.5 text-xs font-semibold cursor-pointer"
+              >
+                Đóng
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }
