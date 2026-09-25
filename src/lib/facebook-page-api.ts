@@ -185,8 +185,7 @@ export function generateRandomName(type: "vietnamese" | "western"): string {
 
   const m =
     VIETNAMESE_MIDDLE[Math.floor(Math.random() * VIETNAMESE_MIDDLE.length)];
-  const l =
-    VIETNAMESE_LAST[Math.floor(Math.random() * VIETNAMESE_LAST.length)];
+  const l = VIETNAMESE_LAST[Math.floor(Math.random() * VIETNAMESE_LAST.length)];
   return `${m} ${l}`;
 }
 

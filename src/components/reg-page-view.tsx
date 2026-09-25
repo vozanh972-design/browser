@@ -195,8 +195,7 @@ export function RegPageView({
     // Xác định danh sách tài khoản thực hiện
     const liveAccounts = accounts.filter(
       (a) =>
-        (a.platform ?? "facebook") === "facebook" &&
-        a.status !== "checkpoint",
+        (a.platform ?? "facebook") === "facebook" && a.status !== "checkpoint",
     );
 
     let targetAccounts: FacebookAccount[] = [];
