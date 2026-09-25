@@ -93,7 +93,8 @@ export function UtilitiesDialog({
                   </span>
                 </div>
                 <span className="text-[11.5px] text-muted-foreground mt-0.5 line-clamp-1">
-                  Quản lý danh sách tài khoản, kiểm tra Live, Token, Cookie & chạy tương tác
+                  Quản lý danh sách tài khoản, kiểm tra Live, Token, Cookie &
+                  chạy tương tác
                 </span>
               </div>
             </div>

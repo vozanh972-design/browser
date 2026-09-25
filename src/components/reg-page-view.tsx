@@ -66,7 +66,7 @@ export function RegPageView({
   const [searchQuery, setSearchQuery] = useState("");
 
   // Placeholder created pages list (empty by default)
-  const [createdPages, setCreatedPages] = useState<CreatedPageItem[]>([]);
+  const [createdPages, _setCreatedPages] = useState<CreatedPageItem[]>([]);
   const [selectedPageIds, setSelectedPageIds] = useState<string[]>([]);
 
   const pageNames = pageNamesText
@@ -232,7 +232,9 @@ export function RegPageView({
                 min={1}
                 max={10}
                 value={pagesPerAccount}
-                onChange={(e) => setPagesPerAccount(Number(e.target.value) || 1)}
+                onChange={(e) =>
+                  setPagesPerAccount(Number(e.target.value) || 1)
+                }
                 className="h-8 text-xs bg-muted/20 border-border/70 font-mono"
               />
             </div>
@@ -259,7 +261,9 @@ export function RegPageView({
             <select
               value={proxyMode}
               onChange={(e) =>
-                setProxyMode(e.target.value as "account" | "direct" | "rotating")
+                setProxyMode(
+                  e.target.value as "account" | "direct" | "rotating",
+                )
               }
               className="h-8 w-full rounded-lg border border-border/70 bg-muted/20 px-2.5 text-xs text-foreground outline-none focus:border-primary/50 cursor-pointer"
             >
@@ -344,7 +348,9 @@ export function RegPageView({
                 size="sm"
                 variant="outline"
                 onClick={() =>
-                  showSuccessToast("Chức năng xuất danh sách đang được chuẩn bị!")
+                  showSuccessToast(
+                    "Chức năng xuất danh sách đang được chuẩn bị!",
+                  )
                 }
                 className="h-7 text-[11px] gap-1 cursor-pointer"
               >
