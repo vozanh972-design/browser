@@ -18,6 +18,7 @@ Nam = "Nam"
 Bloks = "Bloks"
 bloks = "bloks"
 thay = "thay"
+thi = "thi"
 
 [default.extend-identifiers]
 # Chrome Web Store extension name in the known-VPN list.
@@ -25,3 +26,4 @@ VeePN = "VeePN"
 bloks = "bloks"
 Bloks = "Bloks"
 Nam = "Nam"
+thi = "thi"

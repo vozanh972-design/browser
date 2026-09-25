@@ -597,7 +597,7 @@ export function RegPageView({
             </select>
           </div>
 
-          {/* Hộp tóm tắt cấu hình thực thi */}
+          {/* Tóm tắt cấu hình */}
           <div className="p-2.5 rounded-lg bg-muted/25 border border-border/60 text-xs flex flex-col gap-1 text-muted-foreground">
             <div className="flex justify-between">
               <span>Acc chủ đã tick:</span>
