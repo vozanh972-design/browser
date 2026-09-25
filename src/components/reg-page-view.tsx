@@ -78,7 +78,9 @@ export function RegPageView({
 }: RegPageViewProps) {
   // Config States
   const [pageNamesText, setPageNamesText] = useState("");
-  const [nameType, setNameType] = useState<"vietnamese" | "western">("vietnamese");
+  const [nameType, setNameType] = useState<"vietnamese" | "western">(
+    "vietnamese",
+  );
   const [regCount, setRegCount] = useState(15);
   const [delayMs, setDelayMs] = useState(1500);
   const [proxyMode, setProxyMode] = useState<"account" | "direct">("account");
@@ -142,7 +144,9 @@ export function RegPageView({
 
   const handleDeleteSelected = () => {
     if (selectedPageIds.length === 0) return;
-    setCreatedPages((prev) => prev.filter((p) => !selectedPageIds.includes(p.id)));
+    setCreatedPages((prev) =>
+      prev.filter((p) => !selectedPageIds.includes(p.id)),
+    );
     setSelectedPageIds([]);
     showSuccessToast("Đã xóa các trang đã chọn khỏi danh sách!");
   };
@@ -162,9 +166,12 @@ export function RegPageView({
       return;
     }
     const lines = createdPages.map(
-      (p) => `${p.pageId}|${p.name}|${p.category}|${p.creatorUid}|${p.createdAt}`,
+      (p) =>
+        `${p.pageId}|${p.name}|${p.category}|${p.creatorUid}|${p.createdAt}`,
     );
-    const blob = new Blob([lines.join("\r\n")], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([lines.join("\r\n")], {
+      type: "text/plain;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -187,7 +194,9 @@ export function RegPageView({
 
     // Xác định danh sách tài khoản thực hiện
     const liveAccounts = accounts.filter(
-      (a) => (a.platform ?? "facebook") === "facebook" && a.status !== "checkpoint",
+      (a) =>
+        (a.platform ?? "facebook") === "facebook" &&
+        a.status !== "checkpoint",
     );
 
     let targetAccounts: FacebookAccount[] = [];
@@ -209,7 +218,7 @@ export function RegPageView({
     stopRequestedRef.current = false;
     showSuccessToast("Bắt đầu khởi chạy tiến trình Reg Page...");
 
-    let remainingNames = [...pageNames];
+    const remainingNames = [...pageNames];
     let totalSuccess = 0;
 
     try {
@@ -264,7 +273,9 @@ export function RegPageView({
           setStatusMessage(
             `[${step}/${regCount}] Đang tạo trang "${currentPageName}" cho ${acc.name || acc.uid}...`,
           );
-          setProgressText(`Tài khoản ${accIdx + 1}/${targetAccounts.length} • Lần ${step}/${regCount}`);
+          setProgressText(
+            `Tài khoản ${accIdx + 1}/${targetAccounts.length} • Lần ${step}/${regCount}`,
+          );
 
           const res = await createFacebookPageApi({
             pageName: currentPageName,
@@ -295,8 +306,12 @@ export function RegPageView({
             };
 
             setCreatedPages((prev) => [newPage, ...prev]);
-            showSuccessToast(`Đã tạo thành công Page: ${currentPageName} (${finalId})`);
-            setStatusMessage(`Đã tạo thành công: ${currentPageName} [${finalId}]`);
+            showSuccessToast(
+              `Đã tạo thành công Page: ${currentPageName} (${finalId})`,
+            );
+            setStatusMessage(
+              `Đã tạo thành công: ${currentPageName} [${finalId}]`,
+            );
           } else {
             const errMsg = res.errorMessage || "Không thể tạo trang";
             setStatusMessage(`Tạo thất bại: ${errMsg}`);
@@ -308,7 +323,9 @@ export function RegPageView({
               errMsg.includes("Checkpoint") ||
               errMsg.includes("limit")
             ) {
-              showSuccessToast(`Tài khoản ${acc.uid} bị giới hạn tạo trang, chuyển nick tiếp theo!`);
+              showSuccessToast(
+                `Tài khoản ${acc.uid} bị giới hạn tạo trang, chuyển nick tiếp theo!`,
+              );
               break;
             }
           }
@@ -331,7 +348,8 @@ export function RegPageView({
           : "Tiến trình kết thúc.",
       );
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Lỗi xảy ra trong tiến trình";
+      const msg =
+        err instanceof Error ? err.message : "Lỗi xảy ra trong tiến trình";
       setStatusMessage(`Lỗi: ${msg}`);
     } finally {
       setIsRunning(false);
@@ -347,7 +365,7 @@ export function RegPageView({
       page.name.toLowerCase().includes(q) ||
       page.pageId.toLowerCase().includes(q) ||
       page.creatorUid.toLowerCase().includes(q) ||
-      (page.creatorName && page.creatorName.toLowerCase().includes(q))
+      page.creatorName?.toLowerCase().includes(q)
     );
   });
 
@@ -566,7 +584,9 @@ export function RegPageView({
                 setNameType("vietnamese");
                 setRegCount(15);
                 setDelayMs(1500);
-                showSuccessToast("Đã khôi phục cấu hình mặc định (15 Page, 1500ms)!");
+                showSuccessToast(
+                  "Đã khôi phục cấu hình mặc định (15 Page, 1500ms)!",
+                );
               }}
               className="h-7 text-xs text-muted-foreground hover:text-foreground cursor-pointer gap-1"
             >
@@ -765,9 +785,7 @@ export function RegPageView({
               <span
                 className={cn(
                   "size-2 rounded-full shrink-0",
-                  isRunning
-                    ? "bg-amber-400 animate-pulse"
-                    : "bg-emerald-500",
+                  isRunning ? "bg-amber-400 animate-pulse" : "bg-emerald-500",
                 )}
               />
               <span className="truncate">{statusMessage}</span>

@@ -26,30 +26,139 @@ export const AUTO_CATEGORIES = [
 ];
 
 const VIETNAMESE_FIRST = [
-  "Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ", "Võ",
-  "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô", "Dương", "Lý", "Đinh", "Đoàn", "Lâm", "Trịnh"
+  "Nguyễn",
+  "Trần",
+  "Lê",
+  "Phạm",
+  "Hoàng",
+  "Huỳnh",
+  "Phan",
+  "Vũ",
+  "Võ",
+  "Đặng",
+  "Bùi",
+  "Đỗ",
+  "Hồ",
+  "Ngô",
+  "Dương",
+  "Lý",
+  "Đinh",
+  "Đoàn",
+  "Lâm",
+  "Trịnh",
 ];
 
 const VIETNAMESE_MIDDLE = [
-  "Thị", "Văn", "Thùy", "Ngọc", "Thu", "Xuân", "Thanh", "Minh", "Đức",
-  "Hải", "Tuấn", "Hoàng", "Gia", "Bảo", "Khánh", "Phương", "Diệu", "Mỹ", "Quỳnh"
+  "Thị",
+  "Văn",
+  "Thùy",
+  "Ngọc",
+  "Thu",
+  "Xuân",
+  "Thanh",
+  "Minh",
+  "Đức",
+  "Hải",
+  "Tuấn",
+  "Hoàng",
+  "Gia",
+  "Bảo",
+  "Khánh",
+  "Phương",
+  "Diệu",
+  "Mỹ",
+  "Quỳnh",
 ];
 
 const VIETNAMESE_LAST = [
-  "Dung", "Anh", "Linh", "Trang", "Hương", "Hà", "Nhi", "Mai", "Thảo",
-  "Uyên", "Yến", "Vy", "Huyền", "Ngân", "Tâm", "Hằng", "Chi", "Quân", "Nhật", "Phong", "Huy", "Sơn"
+  "Dung",
+  "Anh",
+  "Linh",
+  "Trang",
+  "Hương",
+  "Hà",
+  "Nhi",
+  "Mai",
+  "Thảo",
+  "Uyên",
+  "Yến",
+  "Vy",
+  "Huyền",
+  "Ngân",
+  "Tâm",
+  "Hằng",
+  "Chi",
+  "Quân",
+  "Nhật",
+  "Phong",
+  "Huy",
+  "Sơn",
 ];
 
 const WESTERN_FIRST = [
-  "James", "John", "Robert", "Michael", "William", "David", "Richard", "Joseph", "Thomas", "Charles",
-  "Emma", "Olivia", "Sophia", "Ava", "Isabella", "Mia", "Emily", "Abigail", "Harper", "Ella",
-  "Alexander", "Daniel", "Matthew", "Lucas", "Henry", "Sebastian", "Jack", "Chloe", "Grace", "Zoey"
+  "James",
+  "John",
+  "Robert",
+  "Michael",
+  "William",
+  "David",
+  "Richard",
+  "Joseph",
+  "Thomas",
+  "Charles",
+  "Emma",
+  "Olivia",
+  "Sophia",
+  "Ava",
+  "Isabella",
+  "Mia",
+  "Emily",
+  "Abigail",
+  "Harper",
+  "Ella",
+  "Alexander",
+  "Daniel",
+  "Matthew",
+  "Lucas",
+  "Henry",
+  "Sebastian",
+  "Jack",
+  "Chloe",
+  "Grace",
+  "Zoey",
 ];
 
 const WESTERN_LAST = [
-  "Smith", "Johnson", "Williams", "Brown", "Jones", "Miller", "Davis", "Garcia", "Rodriguez", "Wilson",
-  "Martinez", "Anderson", "Taylor", "Thomas", "Hernandez", "Moore", "Martin", "Jackson", "Thompson", "White",
-  "Harris", "Clark", "Lewis", "Robinson", "Walker", "Young", "Allen", "King", "Wright", "Scott"
+  "Smith",
+  "Johnson",
+  "Williams",
+  "Brown",
+  "Jones",
+  "Miller",
+  "Davis",
+  "Garcia",
+  "Rodriguez",
+  "Wilson",
+  "Martinez",
+  "Anderson",
+  "Taylor",
+  "Thomas",
+  "Hernandez",
+  "Moore",
+  "Martin",
+  "Jackson",
+  "Thompson",
+  "White",
+  "Harris",
+  "Clark",
+  "Lewis",
+  "Robinson",
+  "Walker",
+  "Young",
+  "Allen",
+  "King",
+  "Wright",
+  "Scott",
 ];
 
 /**
@@ -65,14 +174,19 @@ export function generateRandomName(type: "vietnamese" | "western"): string {
   // Tên Việt: 50% là 3 từ (Họ + Đệm + Tên) và 50% là 2 từ (Đệm + Tên / Họ + Tên)
   const isThree = Math.random() > 0.4;
   if (isThree) {
-    const f = VIETNAMESE_FIRST[Math.floor(Math.random() * VIETNAMESE_FIRST.length)];
-    const m = VIETNAMESE_MIDDLE[Math.floor(Math.random() * VIETNAMESE_MIDDLE.length)];
-    const l = VIETNAMESE_LAST[Math.floor(Math.random() * VIETNAMESE_LAST.length)];
+    const f =
+      VIETNAMESE_FIRST[Math.floor(Math.random() * VIETNAMESE_FIRST.length)];
+    const m =
+      VIETNAMESE_MIDDLE[Math.floor(Math.random() * VIETNAMESE_MIDDLE.length)];
+    const l =
+      VIETNAMESE_LAST[Math.floor(Math.random() * VIETNAMESE_LAST.length)];
     return `${f} ${m} ${l}`;
   }
 
-  const m = VIETNAMESE_MIDDLE[Math.floor(Math.random() * VIETNAMESE_MIDDLE.length)];
-  const l = VIETNAMESE_LAST[Math.floor(Math.random() * VIETNAMESE_LAST.length)];
+  const m =
+    VIETNAMESE_MIDDLE[Math.floor(Math.random() * VIETNAMESE_MIDDLE.length)];
+  const l =
+    VIETNAMESE_LAST[Math.floor(Math.random() * VIETNAMESE_LAST.length)];
   return `${m} ${l}`;
 }
 
@@ -80,7 +194,8 @@ export function generateRandomName(type: "vietnamese" | "western"): string {
  * Tự động chọn ngẫu nhiên danh mục hợp lệ
  */
 export function getRandomCategory(): { id: string; name: string } {
-  const item = AUTO_CATEGORIES[Math.floor(Math.random() * AUTO_CATEGORIES.length)];
+  const item =
+    AUTO_CATEGORIES[Math.floor(Math.random() * AUTO_CATEGORIES.length)];
   return item || { id: "180164648685982", name: "Blog cá nhân" };
 }
 
@@ -131,8 +246,10 @@ export async function createFacebookPageApi({
 
   const level1 = {
     params: JSON.stringify({ params: JSON.stringify(innerParams) }),
-    bloks_versioning_id: "338f8ead5977a2c41eba3e92584dcf1d132e8b7928f1f5796662ec064023047d",
-    app_id: "com.bloks.www.additional.profile.plus.creation.action.category.submit",
+    bloks_versioning_id:
+      "338f8ead5977a2c41eba3e92584dcf1d132e8b7928f1f5796662ec064023047d",
+    app_id:
+      "com.bloks.www.additional.profile.plus.creation.action.category.submit",
   };
 
   const ntContext = {
@@ -148,7 +265,8 @@ export async function createFacebookPageApi({
         design_system_name: "FDS",
       },
     ],
-    bloks_version: "338f8ead5977a2c41eba3e92584dcf1d132e8b7928f1f5796662ec064023047d",
+    bloks_version:
+      "338f8ead5977a2c41eba3e92584dcf1d132e8b7928f1f5796662ec064023047d",
   };
 
   const variables = {
@@ -255,14 +373,14 @@ export async function createFacebookPageApi({
 
     // Toast lỗi
     const toastMatch = raw.match(/\(bk\.action\.io\.Toast,\s*"([^"]+)"/);
-    if (toastMatch && toastMatch[1].trim()) {
+    if (toastMatch?.[1].trim()) {
       errorMessage = toastMatch[1].trim();
     }
 
     // Generic Toast
     if (!errorMessage) {
       const genToast = raw.match(/Toast,\s*["']([^"']+)["']/i);
-      if (genToast && genToast[1].trim()) {
+      if (genToast?.[1].trim()) {
         errorMessage = genToast[1].trim();
       }
     }
@@ -275,7 +393,8 @@ export async function createFacebookPageApi({
         lower.includes("confirm_phone") ||
         lower.includes("xác minh số điện thoại")
       ) {
-        errorMessage = "Tài khoản yêu cầu xác minh Số điện thoại / SMS (Checkpoint)";
+        errorMessage =
+          "Tài khoản yêu cầu xác minh Số điện thoại / SMS (Checkpoint)";
       } else if (lower.includes("checkpoint")) {
         errorMessage = "Tài khoản bị Checkpoint bảo mật từ chối tạo Page";
       } else if (
@@ -285,9 +404,14 @@ export async function createFacebookPageApi({
         lower.includes("too many") ||
         lower.includes("limit_reached")
       ) {
-        errorMessage = "Tài khoản bị giới hạn (Đã tạo quá nhiều Trang gần đây, hãy thử lại sau)";
-      } else if (lower.includes("invalid_name") || lower.includes("tên không hợp lệ")) {
-        errorMessage = "Tên Page không hợp lệ hoặc chứa từ khóa bị Facebook chặn";
+        errorMessage =
+          "Tài khoản bị giới hạn (Đã tạo quá nhiều Trang gần đây, hãy thử lại sau)";
+      } else if (
+        lower.includes("invalid_name") ||
+        lower.includes("tên không hợp lệ")
+      ) {
+        errorMessage =
+          "Tên Page không hợp lệ hoặc chứa từ khóa bị Facebook chặn";
       }
     }
 
@@ -307,7 +431,9 @@ export async function createFacebookPageApi({
 
     if (!errorMessage) {
       const clean = raw.replace(/[\r\n\t]+/g, " ").slice(0, 150);
-      errorMessage = clean ? `Lỗi: ${clean}` : "Không thể tạo Trang (Lỗi không xác định)";
+      errorMessage = clean
+        ? `Lỗi: ${clean}`
+        : "Không thể tạo Trang (Lỗi không xác định)";
     }
 
     return {
@@ -318,7 +444,10 @@ export async function createFacebookPageApi({
       rawResponse: raw,
     };
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Lỗi kết nối khi gửi yêu cầu Reg Page";
+    const msg =
+      err instanceof Error
+        ? err.message
+        : "Lỗi kết nối khi gửi yêu cầu Reg Page";
     return {
       isSuccess: false,
       pageName,
