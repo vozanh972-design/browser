@@ -100,8 +100,8 @@ export function RegPageView({
   );
 
   // Expanded accounts to show their created pages
-  const [expandedAccountUids, setExpandedAccountUids] = useState<string[]>(
-    () => accounts.map((a) => a.uid),
+  const [expandedAccountUids, setExpandedAccountUids] = useState<string[]>(() =>
+    accounts.map((a) => a.uid),
   );
 
   // Per-account real-time execution status & success count
@@ -468,7 +468,8 @@ export function RegPageView({
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/20 border border-border/60 text-xs">
             <span className="text-muted-foreground">Acc chủ đã tick:</span>
             <span className="font-semibold text-primary font-mono">
-              {selectedAccountUids.length}/{availableAccountsCount || accounts.length}
+              {selectedAccountUids.length}/
+              {availableAccountsCount || accounts.length}
             </span>
           </div>
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400">
@@ -514,8 +515,8 @@ export function RegPageView({
               </option>
             </select>
             <p className="text-[10.5px] text-muted-foreground leading-normal">
-              Tên sinh ra sẽ có tiền tố "Page : " (ví dụ: Page : Vũ Hà). Acc
-              chủ hiển thị tên Profile thuần.
+              Tên sinh ra sẽ có tiền tố "Page : " (ví dụ: Page : Vũ Hà). Acc chủ
+              hiển thị tên Profile thuần.
             </p>
           </div>
 
@@ -764,8 +765,8 @@ export function RegPageView({
                 Chưa có tài khoản Facebook nào
               </p>
               <p className="text-[11px] text-muted-foreground max-w-sm mt-1 leading-relaxed">
-                Vui lòng quay lại tab "Nuôi Acc" để thêm tài khoản Facebook trước
-                khi thực hiện Reg Page.
+                Vui lòng quay lại tab "Nuôi Acc" để thêm tài khoản Facebook
+                trước khi thực hiện Reg Page.
               </p>
             </div>
           ) : (
