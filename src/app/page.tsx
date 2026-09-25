@@ -586,16 +586,16 @@ export default function HomePage() {
                       type="button"
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-background text-foreground shadow-2xs border border-border/80 cursor-pointer"
                     >
-                      <LuUsers className="size-3.5 text-emerald-400" />
+                      <LuUsers className="size-3.5 text-emerald-400 shrink-0" />
                       <span>Nuôi Acc</span>
-                      <span className="ml-1 size-1.5 rounded-full bg-emerald-500" />
+                      <span className="ml-1 size-1.5 rounded-full bg-emerald-500 shrink-0" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setCurrentPage("reg-page")}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
                     >
-                      <LuFlag className="size-3.5 text-indigo-400" />
+                      <LuFlag className="size-3.5 text-indigo-400 shrink-0" />
                       <span>Reg Page</span>
                     </button>
                   </div>
@@ -1018,6 +1018,7 @@ export default function HomePage() {
                 filteredAccounts.filter((a) => a.status === "live").length ||
                 filteredAccounts.length
               }
+              accounts={accounts}
             />
           )}
 

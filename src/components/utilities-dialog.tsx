@@ -24,9 +24,9 @@ export function UtilitiesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-6 bg-background border-border">
         <DialogHeader>
-          <div className="flex items-center gap-2.5 mb-1">
-            <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-              <LuBoxes className="size-5" />
+          <div className="flex items-center gap-3 mb-1">
+            <div className="flex size-9 min-w-9 min-h-9 shrink-0 aspect-square items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
+              <LuBoxes className="size-5 shrink-0" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-foreground">
@@ -49,11 +49,11 @@ export function UtilitiesDialog({
             }}
             className="group flex items-center justify-between p-3.5 rounded-xl border border-border/80 bg-muted/20 hover:bg-muted/50 hover:border-primary/50 transition-all text-left cursor-pointer"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-105 transition-transform">
-                <LuFlag className="size-5" />
+            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+              <div className="flex size-11 min-w-11 min-h-11 shrink-0 aspect-square items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-105 transition-transform">
+                <LuFlag className="size-5 shrink-0" />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                     1. Reg Page
@@ -79,11 +79,11 @@ export function UtilitiesDialog({
             }}
             className="group flex items-center justify-between p-3.5 rounded-xl border border-border/80 bg-muted/20 hover:bg-muted/50 hover:border-primary/50 transition-all text-left cursor-pointer"
           >
-            <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:scale-105 transition-transform">
-                <LuUsers className="size-5" />
+            <div className="flex items-center gap-3.5 min-w-0 flex-1">
+              <div className="flex size-11 min-w-11 min-h-11 shrink-0 aspect-square items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                <LuUsers className="size-5 shrink-0" />
               </div>
-              <div className="flex flex-col">
+              <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                     2. Nuôi Acc
