@@ -457,7 +457,7 @@ export function RegPageView({
             />
           </div>
 
-          {/* Loại tên (Tên Việt hay Tên Tây) - Đã thay thế ô Thể loại / Danh mục */}
+          {/* Cấu hình Loại tên (Tên Việt hoặc Tên Tây) */}
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs font-medium text-foreground">
               Loại tên

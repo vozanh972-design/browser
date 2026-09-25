@@ -14,7 +14,14 @@ extend-exclude = [
 [default.extend-words]
 DBE = "DBE"
 nd = "nd"
+Nam = "Nam"
+Bloks = "Bloks"
+bloks = "bloks"
+thay = "thay"
 
 [default.extend-identifiers]
 # Chrome Web Store extension name in the known-VPN list.
 VeePN = "VeePN"
+bloks = "bloks"
+Bloks = "Bloks"
+Nam = "Nam"

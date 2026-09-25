@@ -37,7 +37,7 @@ const VIETNAMESE_MIDDLE = [
 
 const VIETNAMESE_LAST = [
   "Dung", "Anh", "Linh", "Trang", "Hương", "Hà", "Nhi", "Mai", "Thảo",
-  "Uyên", "Yến", "Vy", "Huyền", "Ngân", "Tâm", "Hằng", "Chi", "Quân", "Nam", "Phong", "Huy", "Sơn"
+  "Uyên", "Yến", "Vy", "Huyền", "Ngân", "Tâm", "Hằng", "Chi", "Quân", "Nhật", "Phong", "Huy", "Sơn"
 ];
 
 const WESTERN_FIRST = [
@@ -85,7 +85,7 @@ export function getRandomCategory(): { id: string; name: string } {
 }
 
 /**
- * Tạo Facebook Profile Plus Page (UID 615) bằng Bloks GraphQL chuẩn Katana Android
+ * Tạo Facebook Profile Plus Page (UID 615) bằng GraphQL chuẩn Katana Android
  */
 export async function createFacebookPageApi({
   pageName,
