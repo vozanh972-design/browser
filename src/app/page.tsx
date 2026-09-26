@@ -32,6 +32,7 @@ import {
   checkUidLive,
   facebookLogin,
   fetchAccountDetailsWithToken,
+  getTokenAndInfoFromCookie,
 } from "@/lib/facebook-api";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";
@@ -53,7 +54,7 @@ interface FacebookAccount {
   note?: string;
   proxy?: string;
   platform?: "facebook" | "instagram";
-  status: "live" | "checkpoint" | "unverified";
+  status: "live" | "checkpoint" | "die" | "unverified";
   rawText: string;
 }
 
@@ -210,6 +211,7 @@ export default function HomePage() {
           : undefined;
 
       let isLive = false;
+      let accountStatus: "live" | "checkpoint" | "die" = "die";
       let fetchedUid = targetAccount.uid;
       let fetchedName = targetAccount.name;
       let fetchedAvatar = targetAccount.avatar;
@@ -218,78 +220,167 @@ export default function HomePage() {
       let fetchedToken = targetAccount.token;
       let fetchedCookie = targetAccount.cookie;
 
-      // 1. Kiểm tra UID công khai (chuẩn xác 100% như các tool check UID)
-      if (fetchedUid && /^\d+$/.test(fetchedUid.trim())) {
-        const uidStatus = await checkUidLive(fetchedUid, proxyParam);
-        if (uidStatus.isLive) {
-          isLive = true;
-          if (uidStatus.avatarUrl && !fetchedAvatar) {
-            fetchedAvatar = uidStatus.avatarUrl;
-          }
-        }
-      }
+      const hasCookie = Boolean(
+        fetchedCookie &&
+          (fetchedCookie.includes("c_user=") || fetchedCookie.includes("xs=")),
+      );
+      const hasToken = Boolean(fetchedToken?.trim().startsWith("EAA"));
+      const hasPassword = Boolean(targetAccount.pass?.trim());
+      const hasUid = Boolean(fetchedUid && /^\d+$/.test(fetchedUid.trim()));
 
-      // 2. Nếu có Token, lấy full chi tiết (avatar HD, cover, email, name, uid)
-      if (fetchedToken) {
-        const info = await fetchAccountDetailsWithToken(
-          fetchedToken,
-          proxyParam,
-        );
-        if (info.isLive) {
-          isLive = true;
-          if (info.uid && (!fetchedUid || !/^\d+$/.test(fetchedUid))) {
-            fetchedUid = info.uid;
-          }
-          if (info.name) fetchedName = info.name;
-          if (info.avatar) fetchedAvatar = info.avatar;
-          if (info.cover) fetchedCover = info.cover;
-          if (info.email) fetchedMail = info.email;
-        }
-      }
-
-      // 3. Nếu chưa có Token nhưng có UID & Mật khẩu (và 2FA), thực hiện đăng nhập qua API b-graph
-      if (!fetchedToken && fetchedUid && targetAccount.pass) {
-        const loginRes = await facebookLogin({
-          email: fetchedUid,
-          password: targetAccount.pass,
-          auth2fa: targetAccount.twoFactor,
-          cookie: fetchedCookie,
-          proxy: proxyParam,
-        });
-        if (loginRes.success && loginRes.token) {
-          isLive = true;
-          fetchedToken = loginRes.token;
-          if (loginRes.cookie) fetchedCookie = loginRes.cookie;
-          if (loginRes.uid && (!fetchedUid || !/^\d+$/.test(fetchedUid))) {
-            fetchedUid = loginRes.uid;
-          }
-          // Lấy tiếp avatar HD & cover từ token vừa đăng nhập
-          try {
-            const tokenDetails = await fetchAccountDetailsWithToken(
-              loginRes.token,
+      // 1. Nếu có Cookie: Ưu tiên kiểm tra Cookie vì đây là session đăng nhập chính
+      if (hasCookie && fetchedCookie) {
+        try {
+          const cookieInfo = await getTokenAndInfoFromCookie(
+            fetchedCookie,
+            proxyParam,
+          );
+          if (cookieInfo.isLive) {
+            isLive = true;
+            accountStatus = "live";
+            if (cookieInfo.token && !fetchedToken)
+              fetchedToken = cookieInfo.token;
+            if (cookieInfo.name) fetchedName = cookieInfo.name;
+            if (cookieInfo.avatar) fetchedAvatar = cookieInfo.avatar;
+            if (cookieInfo.cover) fetchedCover = cookieInfo.cover;
+            if (cookieInfo.email) fetchedMail = cookieInfo.email;
+            if (
+              cookieInfo.uid &&
+              (!fetchedUid || fetchedUid.startsWith("acc_"))
+            ) {
+              fetchedUid = cookieInfo.uid;
+            }
+          } else {
+            const mbasicCheck = await checkCookieLive(
+              fetchedCookie,
               proxyParam,
             );
-            if (tokenDetails.isLive) {
-              if (tokenDetails.name) fetchedName = tokenDetails.name;
-              if (tokenDetails.avatar) fetchedAvatar = tokenDetails.avatar;
-              if (tokenDetails.cover) fetchedCover = tokenDetails.cover;
-              if (tokenDetails.email) fetchedMail = tokenDetails.email;
+            if (mbasicCheck.isLive) {
+              isLive = true;
+              accountStatus = "live";
+              if (mbasicCheck.name && !fetchedName)
+                fetchedName = mbasicCheck.name;
+              if (
+                mbasicCheck.uid &&
+                (!fetchedUid || fetchedUid.startsWith("acc_"))
+              ) {
+                fetchedUid = mbasicCheck.uid;
+              }
+            } else {
+              isLive = false;
+              accountStatus =
+                mbasicCheck.status === "checkpoint" ||
+                cookieInfo.error?.toLowerCase().includes("checkpoint")
+                  ? "checkpoint"
+                  : "die";
             }
-          } catch {
-            // ignore
           }
+        } catch {
+          isLive = false;
+          accountStatus = "die";
         }
       }
 
-      // 4. Nếu có Cookie, kiểm tra Cookie Live
-      if (fetchedCookie) {
-        const cookieCheck = await checkCookieLive(fetchedCookie, proxyParam);
-        if (cookieCheck.isLive) {
-          isLive = true;
-          if (cookieCheck.name && !fetchedName) fetchedName = cookieCheck.name;
-          if (cookieCheck.uid && (!fetchedUid || !/^\d+$/.test(fetchedUid))) {
-            fetchedUid = cookieCheck.uid;
+      // 2. Nếu có Token (và chưa Live từ Cookie)
+      if (!isLive && hasToken && fetchedToken) {
+        try {
+          const info = await fetchAccountDetailsWithToken(
+            fetchedToken,
+            proxyParam,
+          );
+          if (info.isLive) {
+            isLive = true;
+            accountStatus = "live";
+            if (info.uid && (!fetchedUid || !/^\d+$/.test(fetchedUid))) {
+              fetchedUid = info.uid;
+            }
+            if (info.name) fetchedName = info.name;
+            if (info.avatar) fetchedAvatar = info.avatar;
+            if (info.cover) fetchedCover = info.cover;
+            if (info.email) fetchedMail = info.email;
+          } else {
+            isLive = false;
+            accountStatus = info.error?.toLowerCase().includes("checkpoint")
+              ? "checkpoint"
+              : "die";
           }
+        } catch {
+          isLive = false;
+          accountStatus = "die";
+        }
+      }
+
+      // 3. Nếu chưa Live, không có Cookie/Token hoặc đã hỏng nhưng có Pass + UID: Thử đăng nhập API
+      if (
+        !isLive &&
+        !hasCookie &&
+        !hasToken &&
+        hasUid &&
+        hasPassword &&
+        targetAccount.pass
+      ) {
+        try {
+          const loginRes = await facebookLogin({
+            email: fetchedUid,
+            password: targetAccount.pass,
+            auth2fa: targetAccount.twoFactor,
+            cookie: fetchedCookie,
+            proxy: proxyParam,
+          });
+          if (loginRes.success && loginRes.token) {
+            isLive = true;
+            accountStatus = "live";
+            fetchedToken = loginRes.token;
+            if (loginRes.cookie) fetchedCookie = loginRes.cookie;
+            if (loginRes.uid && (!fetchedUid || !/^\d+$/.test(fetchedUid))) {
+              fetchedUid = loginRes.uid;
+            }
+            try {
+              const tokenDetails = await fetchAccountDetailsWithToken(
+                loginRes.token,
+                proxyParam,
+              );
+              if (tokenDetails.isLive) {
+                if (tokenDetails.name) fetchedName = tokenDetails.name;
+                if (tokenDetails.avatar) fetchedAvatar = tokenDetails.avatar;
+                if (tokenDetails.cover) fetchedCover = tokenDetails.cover;
+                if (tokenDetails.email) fetchedMail = tokenDetails.email;
+              }
+            } catch {
+              // ignore
+            }
+          } else {
+            isLive = false;
+            accountStatus = loginRes.error
+              ?.toLowerCase()
+              .includes("checkpoint")
+              ? "checkpoint"
+              : "die";
+          }
+        } catch {
+          isLive = false;
+          accountStatus = "die";
+        }
+      }
+
+      // 4. Nếu chỉ có UID thuần (không có Cookie, không có Token, không có Pass)
+      if (!isLive && !hasCookie && !hasToken && !hasPassword && hasUid) {
+        try {
+          const uidStatus = await checkUidLive(fetchedUid, proxyParam);
+          if (uidStatus.isLive) {
+            isLive = true;
+            accountStatus = "live";
+            if (uidStatus.name && !fetchedName) fetchedName = uidStatus.name;
+            if (uidStatus.avatarUrl && !fetchedAvatar) {
+              fetchedAvatar = uidStatus.avatarUrl;
+            }
+          } else {
+            isLive = false;
+            accountStatus = "die";
+          }
+        } catch {
+          isLive = false;
+          accountStatus = "die";
         }
       }
 
@@ -301,7 +392,10 @@ export default function HomePage() {
         mail: fetchedMail,
         token: fetchedToken,
         cookie: fetchedCookie,
-        status: (isLive ? "live" : "checkpoint") as "live" | "checkpoint",
+        status: (isLive ? "live" : accountStatus) as
+          | "live"
+          | "checkpoint"
+          | "die",
       };
 
       setAccounts((prev) => {
@@ -871,6 +965,10 @@ export default function HomePage() {
                             ) : acc.status === "live" ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
                                 Live
+                              </span>
+                            ) : acc.status === "die" ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
+                                Die
                               </span>
                             ) : acc.status === "checkpoint" ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">

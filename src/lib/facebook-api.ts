@@ -59,37 +59,82 @@ export async function executeCurlRequest(options: {
 export async function checkUidLive(
   uid: string,
   proxy?: string,
-): Promise<{ isLive: boolean; avatarUrl?: string }> {
+): Promise<{ isLive: boolean; avatarUrl?: string; name?: string }> {
   const cleanUid = uid.trim();
   if (!cleanUid || !/^\d+$/.test(cleanUid)) {
     return { isLive: false };
   }
-  const url = `https://graph.facebook.com/${cleanUid}/picture?type=normal`;
+
   try {
-    const raw = await executeCurlRequest({
-      url,
+    // 1. Kiểm tra ảnh avatar qua Graph API
+    const pictureUrl = `https://graph.facebook.com/${cleanUid}/picture?type=normal`;
+    const rawPicture = await executeCurlRequest({
+      url: pictureUrl,
       method: "GET",
       proxy,
       includeHeaders: true,
     });
+
     if (
-      raw.includes("302 Found") ||
-      raw.includes("Location: http") ||
-      raw.includes("image/jpeg") ||
-      raw.includes("image/png")
+      rawPicture.includes('"error"') &&
+      (rawPicture.includes("Unsupported get request") ||
+        rawPicture.includes("does not exist") ||
+        rawPicture.includes("Tried accessing nonexisting field"))
+    ) {
+      return { isLive: false };
+    }
+
+    const locationMatch = rawPicture.match(/location:\s*([^\r\n]+)/i);
+    const redirectUrl = locationMatch ? locationMatch[1].trim() : "";
+
+    // Nếu ảnh trỏ về scontent CDN thật (người dùng có ảnh đại diện thật) và không phải silhouette mặc định
+    if (
+      redirectUrl &&
+      !redirectUrl.includes("rsrc.php") &&
+      !redirectUrl.includes("static.xx.fbcdn.net") &&
+      (redirectUrl.includes("scontent") || redirectUrl.includes("fbcdn.net"))
     ) {
       return {
         isLive: true,
         avatarUrl: `https://graph.facebook.com/${cleanUid}/picture?type=large`,
       };
     }
-    if (
-      raw.includes('"error"') &&
-      (raw.includes("Unsupported get request") ||
-        raw.includes("does not exist"))
-    ) {
-      return { isLive: false };
+
+    // 2. Nếu là silhouette mặc định hoặc không có redirect rõ ràng,
+    // kiểm tra trang công khai bằng User-Agent Facebook Crawler để xác nhận profile live và lấy tên
+    const webRaw = await executeCurlRequest({
+      url: `https://www.facebook.com/${cleanUid}`,
+      method: "GET",
+      headers: [
+        "User-Agent: facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+      ],
+      proxy,
+    });
+
+    const titleMatch = webRaw.match(/<title>([^<]+)<\/title>/i);
+    if (titleMatch && titleMatch[1]) {
+      const pageTitle = titleMatch[1].trim();
+      const lowerTitle = pageTitle.toLowerCase();
+      if (
+        pageTitle &&
+        !lowerTitle.includes("facebook") &&
+        !lowerTitle.includes("error") &&
+        !lowerTitle.includes("log in") &&
+        !lowerTitle.includes("đăng nhập") &&
+        !lowerTitle.includes("trang này không khả dụng") &&
+        !lowerTitle.includes("content not found") &&
+        !lowerTitle.includes("page not found")
+      ) {
+        return {
+          isLive: true,
+          name: pageTitle,
+          avatarUrl: `https://graph.facebook.com/${cleanUid}/picture?type=large`,
+        };
+      }
     }
+
     return { isLive: false };
   } catch {
     return { isLive: false };
@@ -102,10 +147,22 @@ export async function checkUidLive(
 export async function checkCookieLive(
   cookieStr: string,
   proxy?: string,
-): Promise<{ isLive: boolean; uid?: string; name?: string }> {
+): Promise<{
+  isLive: boolean;
+  uid?: string;
+  name?: string;
+  status: "live" | "checkpoint" | "die";
+}> {
   const cleanCookie = cookieStr.replace(/[\r\n]+/g, "").trim();
   const cUserMatch = cleanCookie.match(/c_user=([^;]+)/);
   const uid = cUserMatch ? cUserMatch[1].trim() : undefined;
+
+  if (
+    !cleanCookie ||
+    (!cleanCookie.includes("c_user=") && !cleanCookie.includes("xs="))
+  ) {
+    return { isLive: false, uid, status: "die" };
+  }
 
   try {
     const raw = await executeCurlRequest({
@@ -119,12 +176,23 @@ export async function checkCookieLive(
       includeHeaders: true,
     });
 
+    const lower = raw.toLowerCase();
+
     if (
-      raw.includes("/login.php") ||
-      raw.includes("checkpoint") ||
-      raw.includes('name="login"')
+      lower.includes("checkpoint") ||
+      lower.includes("/checkpoint/") ||
+      lower.includes("checkpoint_title")
     ) {
-      return { isLive: false, uid };
+      return { isLive: false, uid, status: "checkpoint" };
+    }
+
+    if (
+      lower.includes("/login.php") ||
+      lower.includes('name="login"') ||
+      lower.includes("login_form") ||
+      lower.includes("error facebook")
+    ) {
+      return { isLive: false, uid, status: "die" };
     }
 
     if (
@@ -141,12 +209,12 @@ export async function checkCookieLive(
       ) {
         name = titleMatch[1].trim();
       }
-      return { isLive: true, uid, name };
+      return { isLive: true, uid, name, status: "live" };
     }
 
-    return { isLive: false, uid };
+    return { isLive: false, uid, status: "die" };
   } catch {
-    return { isLive: false, uid };
+    return { isLive: false, uid, status: "die" };
   }
 }
 

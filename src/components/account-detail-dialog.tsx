@@ -38,7 +38,7 @@ export interface AccountDetailData {
   note?: string;
   proxy?: string;
   platform?: "facebook" | "instagram";
-  status: "live" | "checkpoint" | "unverified";
+  status: "live" | "checkpoint" | "die" | "unverified";
   rawText: string;
 }
 
@@ -161,6 +161,10 @@ export function AccountDetailDialog({
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                       <LuShieldCheck className="size-3" />
                       Live
+                    </span>
+                  ) : account.status === "die" ? (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                      Die
                     </span>
                   ) : account.status === "checkpoint" ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20">

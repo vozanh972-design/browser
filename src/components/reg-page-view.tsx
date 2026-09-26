@@ -56,7 +56,7 @@ export interface FacebookAccount {
   note?: string;
   proxy?: string;
   platform?: "facebook" | "instagram";
-  status: "live" | "checkpoint" | "unverified";
+  status: "live" | "checkpoint" | "die" | "unverified";
   rawText: string;
 }
 
