@@ -525,17 +525,24 @@ export default function HomePage() {
     );
 
     if (currentPlatform === "facebook") {
-      // Chạy kiểm tra ngầm mượt mà tuần tự để tránh giật lag giao diện
+      // Chạy kiểm tra ngầm tuần tự với delay an toàn để tránh bị Facebook hạn chế rate-limit
       void (async () => {
         for (const acc of newAccounts) {
           await handleCheckAccount(acc);
-          await new Promise((r) => setTimeout(r, 60));
+          const safeDelay = 1200 + Math.floor(Math.random() * 800);
+          await new Promise((r) => setTimeout(r, safeDelay));
         }
       })();
     }
   };
 
   const handleRunAccount = (acc: FacebookAccount) => {
+    if (acc.status === "checkpoint" || acc.status === "die") {
+      showSuccessToast(
+        `Tài khoản ${acc.name || acc.uid} đang bị ${acc.status === "checkpoint" ? "Checkpoint" : "Die"}, không thể chạy!`,
+      );
+      return;
+    }
     setAccounts((prev) => {
       const updated = prev.map((item) =>
         item.id === acc.id
@@ -564,9 +571,22 @@ export default function HomePage() {
 
   const handleRunSelected = () => {
     if (selectedIds.length === 0) return;
+    const runnableAccounts = accounts.filter(
+      (a) =>
+        selectedIds.includes(a.id) &&
+        a.status !== "checkpoint" &&
+        a.status !== "die",
+    );
+    if (runnableAccounts.length === 0) {
+      showSuccessToast(
+        "Các tài khoản được chọn đều bị Checkpoint/Die, không thể chạy!",
+      );
+      return;
+    }
+    const runnableIds = runnableAccounts.map((a) => a.id);
     setAccounts((prev) => {
       const updated = prev.map((item) =>
-        selectedIds.includes(item.id)
+        runnableIds.includes(item.id)
           ? { ...item, note: "Đang chạy..." }
           : item,
       );
@@ -580,7 +600,9 @@ export default function HomePage() {
       }
       return updated;
     });
-    showSuccessToast(`Bắt đầu chạy ${selectedIds.length} tài khoản đã chọn!`);
+    showSuccessToast(
+      `Bắt đầu chạy ${runnableAccounts.length} tài khoản hợp lệ!`,
+    );
   };
 
   const handleDeleteAccount = (id: string) => {
@@ -719,7 +741,9 @@ export default function HomePage() {
                         void (async () => {
                           for (const acc of toCheck) {
                             await handleCheckAccount(acc);
-                            await new Promise((r) => setTimeout(r, 60));
+                            const safeDelay =
+                              1200 + Math.floor(Math.random() * 800);
+                            await new Promise((r) => setTimeout(r, safeDelay));
                           }
                         })();
                       }}
@@ -771,7 +795,7 @@ export default function HomePage() {
               {/* Table View matching Image 2 */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
+                <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
                   <div className="flex items-center justify-center">
                     <Checkbox
                       checked={
@@ -864,6 +888,8 @@ export default function HomePage() {
                     {filteredAccounts.map((acc) => {
                       const isChecking = checkingIds.includes(acc.id);
                       const isSelected = selectedIds.includes(acc.id);
+                      const isCheckpointOrDie =
+                        acc.status === "checkpoint" || acc.status === "die";
                       const isRunning = acc.note === "Đang chạy...";
                       const avatarSrc =
                         acc.avatar ||
@@ -893,10 +919,12 @@ export default function HomePage() {
                             toggleSelectOne(acc.id);
                           }}
                           className={cn(
-                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_110px] items-center px-3 py-1.5 min-h-[46px] h-[46px] text-xs text-foreground cursor-pointer transition-colors select-none outline-none focus-visible:bg-muted/50",
+                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-1.5 min-h-[46px] h-[46px] text-xs text-foreground cursor-pointer transition-colors select-none outline-none focus-visible:bg-muted/50",
                             isSelected
                               ? "bg-primary/10 border-l-2 border-primary"
-                              : "hover:bg-muted/30",
+                              : isCheckpointOrDie
+                                ? "bg-muted/30 opacity-60 hover:bg-muted/40"
+                                : "hover:bg-muted/30",
                           )}
                         >
                           {/* Checkbox */}
@@ -909,12 +937,25 @@ export default function HomePage() {
 
                           {/* Tên & UID với Avatar Thật */}
                           <div className="flex items-center gap-2.5 truncate pr-2">
-                            <AccountAvatar
-                              url={avatarSrc}
-                              isInstagram={acc.platform === "instagram"}
-                            />
+                            <div
+                              className={cn(
+                                isCheckpointOrDie && "grayscale opacity-75",
+                              )}
+                            >
+                              <AccountAvatar
+                                url={avatarSrc}
+                                isInstagram={acc.platform === "instagram"}
+                              />
+                            </div>
                             <div className="flex flex-col min-w-0 justify-center">
-                              <span className="font-semibold text-foreground truncate leading-tight">
+                              <span
+                                className={cn(
+                                  "font-semibold truncate leading-tight",
+                                  isCheckpointOrDie
+                                    ? "text-muted-foreground"
+                                    : "text-foreground",
+                                )}
+                              >
                                 {acc.name || acc.uid}
                               </span>
                               <span className="text-[10px] font-mono text-muted-foreground truncate leading-tight">
@@ -981,7 +1022,13 @@ export default function HomePage() {
 
                           {/* HÀNH ĐỘNG */}
                           <div className="text-muted-foreground truncate pr-2 font-medium">
-                            {isRunning ? (
+                            {isCheckpointOrDie ? (
+                              <span className="text-rose-500/80 font-medium">
+                                {acc.status === "checkpoint"
+                                  ? "Bị Checkpoint"
+                                  : "Đã Die"}
+                              </span>
+                            ) : isRunning ? (
                               <span className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold">
                                 <span className="relative flex size-2">
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
@@ -1012,23 +1059,47 @@ export default function HomePage() {
                               <LuCircleAlert className="size-3.5" />
                             </button>
 
-                            {/* Nút tam giác: Chạy tài khoản */}
+                            {/* Nút kiểm tra lại trạng thái Live/Die/Checkpoint */}
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                void handleCheckAccount(acc);
+                              }}
+                              title="Kiểm tra lại tài khoản"
+                              className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                            >
+                              <LuRefreshCw
+                                className={cn(
+                                  "size-3.5",
+                                  isChecking && "animate-spin text-primary",
+                                )}
+                              />
+                            </button>
+
+                            {/* Nút tam giác: Chạy tài khoản (Vô hiệu khi checkpoint/die) */}
+                            <button
+                              type="button"
+                              disabled={isCheckpointOrDie}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isCheckpointOrDie) return;
                                 handleRunAccount(acc);
                               }}
                               title={
-                                isRunning
-                                  ? "Dừng chạy tài khoản"
-                                  : "Chạy tài khoản"
+                                isCheckpointOrDie
+                                  ? "Tài khoản bị Checkpoint/Die, không thể chạy"
+                                  : isRunning
+                                    ? "Dừng chạy tài khoản"
+                                    : "Chạy tài khoản"
                               }
                               className={cn(
-                                "p-1 rounded transition-colors cursor-pointer",
-                                isRunning
-                                  ? "text-emerald-500 bg-emerald-500/15 hover:bg-emerald-500/25"
-                                  : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10",
+                                "p-1 rounded transition-colors",
+                                isCheckpointOrDie
+                                  ? "text-muted-foreground/30 opacity-40 cursor-not-allowed"
+                                  : isRunning
+                                    ? "text-emerald-500 bg-emerald-500/15 hover:bg-emerald-500/25 cursor-pointer"
+                                    : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 cursor-pointer",
                               )}
                             >
                               <LuPlay className="size-3.5 fill-current" />

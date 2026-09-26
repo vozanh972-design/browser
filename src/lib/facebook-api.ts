@@ -13,6 +13,26 @@ export interface FacebookAccountInfo {
   error?: string;
 }
 
+let lastDirectFbRequestTime = 0;
+
+async function throttleDirectFbRequest(
+  url: string,
+  proxy?: string,
+): Promise<void> {
+  if (proxy?.trim()) return;
+
+  const isFbDomain = url.includes("facebook.com") || url.includes("fbcdn.net");
+  if (!isFbDomain) return;
+
+  const now = Date.now();
+  const timeSinceLast = now - lastDirectFbRequestTime;
+  const minInterval = 1000 + Math.floor(Math.random() * 400);
+  if (timeSinceLast < minInterval) {
+    await new Promise((r) => setTimeout(r, minInterval - timeSinceLast));
+  }
+  lastDirectFbRequestTime = Date.now();
+}
+
 export async function executeCurlRequest(options: {
   url: string;
   method?: string;
@@ -22,6 +42,7 @@ export async function executeCurlRequest(options: {
   proxy?: string;
   includeHeaders?: boolean;
 }): Promise<string> {
+  await throttleDirectFbRequest(options.url, options.proxy);
   try {
     return await invoke<string>("curl_request", {
       url: options.url,

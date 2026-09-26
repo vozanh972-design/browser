@@ -164,18 +164,20 @@ export function RegPageView({
         .filter(
           (a) =>
             (a.platform ?? "facebook") === "facebook" &&
-            a.status !== "checkpoint",
+            a.status !== "checkpoint" &&
+            a.status !== "die",
         )
         .map((a) => a.uid);
-      setSelectedAccountUids(
-        liveUids.length > 0 ? liveUids : accounts.map((a) => a.uid),
-      );
+      setSelectedAccountUids(liveUids);
     }
   }, [accounts, selectedAccountUids.length]);
 
   // Account selection helpers
   const handleSelectAllAccounts = () => {
-    setSelectedAccountUids(accounts.map((a) => a.uid));
+    const liveUids = accounts
+      .filter((a) => a.status !== "checkpoint" && a.status !== "die")
+      .map((a) => a.uid);
+    setSelectedAccountUids(liveUids);
   };
 
   const handleSelectOnlyLive = () => {
@@ -191,6 +193,13 @@ export function RegPageView({
   };
 
   const handleToggleAccount = (uid: string) => {
+    const target = accounts.find((a) => a.uid === uid);
+    if (target?.status === "checkpoint" || target?.status === "die") {
+      showSuccessToast(
+        "Tài khoản đang bị Checkpoint/Die, không thể chọn để chạy!",
+      );
+      return;
+    }
     setSelectedAccountUids((prev) =>
       prev.includes(uid) ? prev.filter((id) => id !== uid) : [...prev, uid],
     );
@@ -225,13 +234,16 @@ export function RegPageView({
       return;
     }
 
-    const targetAccounts = accounts.filter((a) =>
-      selectedAccountUids.includes(a.uid),
+    const targetAccounts = accounts.filter(
+      (a) =>
+        selectedAccountUids.includes(a.uid) &&
+        a.status !== "checkpoint" &&
+        a.status !== "die",
     );
 
     if (targetAccounts.length === 0) {
       showSuccessToast(
-        "Vui lòng tick chọn ít nhất 1 tài khoản để bắt đầu chạy!",
+        "Vui lòng tick chọn ít nhất 1 tài khoản hợp lệ (không bị Checkpoint/Die) để bắt đầu chạy!",
       );
       return;
     }
@@ -712,6 +724,8 @@ export function RegPageView({
               {filteredAccounts.map((acc) => {
                 const isSelected = selectedAccountUids.includes(acc.uid);
                 const isExpanded = expandedAccountUids.includes(acc.uid);
+                const isCheckpointOrDie =
+                  acc.status === "checkpoint" || acc.status === "die";
                 const statusText = accountStatuses[acc.uid] || "Sẵn sàng";
                 const accPages = createdPages.filter(
                   (p) => p.creatorUid === acc.uid,
@@ -727,12 +741,15 @@ export function RegPageView({
                         "grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_60px] items-center px-3 py-2.5 text-xs transition-colors border-b border-border/20",
                         isSelected
                           ? "bg-primary/5 hover:bg-primary/10"
-                          : "hover:bg-muted/10",
+                          : isCheckpointOrDie
+                            ? "bg-muted/20 opacity-55 hover:bg-muted/30"
+                            : "hover:bg-muted/10",
                       )}
                     >
                       <div className="flex items-center justify-center">
                         <Checkbox
-                          checked={isSelected}
+                          disabled={isCheckpointOrDie}
+                          checked={!isCheckpointOrDie && isSelected}
                           onCheckedChange={() => handleToggleAccount(acc.uid)}
                         />
                       </div>
@@ -760,7 +777,12 @@ export function RegPageView({
                           <div className="size-5 shrink-0" />
                         )}
 
-                        <div className="size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
+                        <div
+                          className={cn(
+                            "size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs",
+                            isCheckpointOrDie && "grayscale opacity-75",
+                          )}
+                        >
                           {acc.avatar ? (
                             // biome-ignore lint/performance/noImgElement: avatar
                             <img
@@ -774,9 +796,25 @@ export function RegPageView({
                         </div>
 
                         <div className="flex flex-col min-w-0">
-                          <span className="font-bold text-foreground truncate">
-                            {acc.name || acc.uid}
-                          </span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              className={cn(
+                                "font-bold truncate",
+                                isCheckpointOrDie
+                                  ? "text-muted-foreground"
+                                  : "text-foreground",
+                              )}
+                            >
+                              {acc.name || acc.uid}
+                            </span>
+                            {isCheckpointOrDie && (
+                              <span className="text-[9.5px] px-1 py-0.2 rounded font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20 shrink-0">
+                                {acc.status === "checkpoint"
+                                  ? "Checkpoint"
+                                  : "Die"}
+                              </span>
+                            )}
+                          </div>
                           {/* Nút ẩn/hiện page con: bình thường ẩn đi, bấm vô để xem */}
                           {accPages.length > 0 ? (
                             <button
@@ -823,23 +861,31 @@ export function RegPageView({
 
                       {/* Tiến độ Reg Page của Acc chủ */}
                       <div className="min-w-0 pr-2">
-                        <span
-                          className={cn(
-                            "text-[11px] truncate block font-medium",
-                            statusText.includes("Đang tạo")
-                              ? "text-amber-400 animate-pulse font-semibold"
-                              : statusText.includes("Đã tạo") ||
-                                  statusText.includes("Hoàn tất")
-                                ? "text-emerald-400 font-semibold"
-                                : statusText.includes("Lỗi") ||
-                                    statusText.includes("Dừng")
-                                  ? "text-rose-400 font-semibold"
-                                  : "text-muted-foreground",
-                          )}
-                          title={statusText}
-                        >
-                          {statusText}
-                        </span>
+                        {isCheckpointOrDie ? (
+                          <span className="text-[11px] font-semibold text-rose-500/80">
+                            {acc.status === "checkpoint"
+                              ? "Checkpoint (Vô hiệu)"
+                              : "Die (Vô hiệu)"}
+                          </span>
+                        ) : (
+                          <span
+                            className={cn(
+                              "text-[11px] truncate block font-medium",
+                              statusText.includes("Đang tạo")
+                                ? "text-amber-400 animate-pulse font-semibold"
+                                : statusText.includes("Đã tạo") ||
+                                    statusText.includes("Hoàn tất")
+                                  ? "text-emerald-400 font-semibold"
+                                  : statusText.includes("Lỗi") ||
+                                      statusText.includes("Dừng")
+                                    ? "text-rose-400 font-semibold"
+                                    : "text-muted-foreground",
+                            )}
+                            title={statusText}
+                          >
+                            {statusText}
+                          </span>
+                        )}
                       </div>
 
                       {/* Thao tác: Dấu chấm than xem chi tiết Profile */}
