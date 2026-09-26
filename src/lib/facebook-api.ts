@@ -114,7 +114,7 @@ export async function checkUidLive(
     });
 
     const titleMatch = webRaw.match(/<title>([^<]+)<\/title>/i);
-    if (titleMatch && titleMatch[1]) {
+    if (titleMatch?.[1]) {
       const pageTitle = titleMatch[1].trim();
       const lowerTitle = pageTitle.toLowerCase();
       if (

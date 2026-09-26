@@ -351,9 +351,7 @@ export default function HomePage() {
             }
           } else {
             isLive = false;
-            accountStatus = loginRes.error
-              ?.toLowerCase()
-              .includes("checkpoint")
+            accountStatus = loginRes.error?.toLowerCase().includes("checkpoint")
               ? "checkpoint"
               : "die";
           }
