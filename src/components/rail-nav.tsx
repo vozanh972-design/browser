@@ -3,9 +3,8 @@
 import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FaDownload } from "react-icons/fa";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
-import { LuBoxes, LuInfo, LuKeyboard, LuUser } from "react-icons/lu";
+import { LuBoxes, LuInfo, LuUser } from "react-icons/lu";
 import { launchDonutClone } from "@/lib/donut-physics";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
@@ -21,9 +20,7 @@ export type AppPage =
   | "vpns"
   | "settings"
   | "account"
-  | "reg-page"
-  | "import"
-  | "shortcuts";
+  | "reg-page";
 
 const CLICK_THRESHOLD = 5;
 const CLICK_WINDOW_MS = 2000;
@@ -185,22 +182,6 @@ const MORE_ITEMS: MoreMenuItem[] = [
     hintKey: "rail.more.utilitiesHint",
     defaultLabel: "Tiện ích",
     defaultHint: "Quản lý tài khoản & công cụ",
-  },
-  {
-    page: "import",
-    Icon: FaDownload,
-    labelKey: "rail.more.importProfile",
-    hintKey: "rail.more.importProfileHint",
-    defaultLabel: "Nhập tài khoản",
-    defaultHint: "Nhập profiles từ file hoặc bên ngoài",
-  },
-  {
-    page: "shortcuts",
-    Icon: LuKeyboard,
-    labelKey: "rail.more.keyboardShortcuts",
-    hintKey: "rail.more.keyboardShortcutsHint",
-    defaultLabel: "Phím tắt",
-    defaultHint: "Xem danh sách phím tắt",
   },
 ];
 

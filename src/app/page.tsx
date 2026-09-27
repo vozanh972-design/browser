@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FaDownload, FaFacebook, FaInstagram } from "react-icons/fa";
+import { FaFacebook, FaInstagram } from "react-icons/fa";
 import {
   LuCircleAlert,
   LuFlag,
@@ -22,7 +22,6 @@ import { AppHeader } from "@/components/app-header";
 import { AppSettingsDialog } from "@/components/app-settings-dialog";
 import { type AppPage, RailNav } from "@/components/rail-nav";
 import { RegPageView } from "@/components/reg-page-view";
-import { ShortcutsPage } from "@/components/shortcuts-page";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UtilitiesDialog } from "@/components/utilities-dialog";
@@ -662,10 +661,6 @@ export default function HomePage() {
         return "Tiện ích / Nuôi Acc";
       case "reg-page":
         return "Tiện ích / Reg Page";
-      case "import":
-        return t("rail.more.importProfile", "Import");
-      case "shortcuts":
-        return t("rail.more.keyboardShortcuts", "Shortcuts");
       case "settings":
         return t("rail.settings", "Settings");
       default:
@@ -1187,45 +1182,6 @@ export default function HomePage() {
               }
               accounts={accounts}
             />
-          )}
-
-          {currentPage === "import" && (
-            <motion.div
-              key="import"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
-              className="mx-auto flex w-full max-w-4xl flex-col gap-4"
-            >
-              <div className="flex items-center justify-between border-b border-border/40 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <FaDownload className="size-5 text-primary" />
-                  <div>
-                    <h2 className="text-lg font-semibold">
-                      Nhập dữ liệu (Import)
-                    </h2>
-                    <p className="text-xs text-muted-foreground">
-                      Nhập file, dữ liệu hoặc cấu hình từ bên ngoài.
-                    </p>
-                  </div>
-                </div>
-              </div>
-              <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-border text-center text-xs text-muted-foreground">
-                Khung import trống
-              </div>
-            </motion.div>
-          )}
-
-          {currentPage === "shortcuts" && (
-            <motion.div
-              key="shortcuts"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
-              className="flex min-h-0 flex-1 flex-col"
-            >
-              <ShortcutsPage groupTargets={[]} />
-            </motion.div>
           )}
         </main>
 
