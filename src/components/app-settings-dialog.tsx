@@ -27,11 +27,7 @@ import {
 import { AnimatedSwitch } from "@/components/ui/animated-switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -106,7 +102,8 @@ export function AppSettingsDialog({
   const { i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
 
-  const [activeSection, setActiveSection] = useState<SettingsSection>("account");
+  const [activeSection, setActiveSection] =
+    useState<SettingsSection>("account");
   const [searchQuery, setSearchQuery] = useState("");
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -218,7 +215,8 @@ export function AppSettingsDialog({
     try {
       localStorage.setItem("autolunex_display_scale", val);
       if (typeof document !== "undefined") {
-        document.documentElement.style.zoom = val === "100" ? "" : `${Number(val) / 100}`;
+        document.documentElement.style.zoom =
+          val === "100" ? "" : `${Number(val) / 100}`;
       }
     } catch {
       // ignore
@@ -296,7 +294,9 @@ export function AppSettingsDialog({
     {
       id: "account" as const,
       label: "Tài khoản người dùng",
-      subLabel: xsmmAccount?.isLoggedIn ? xsmmAccount.username : "XSMM & Dữ liệu",
+      subLabel: xsmmAccount?.isLoggedIn
+        ? xsmmAccount.username
+        : "XSMM & Dữ liệu",
       icon: LuUser,
       color: "bg-blue-500",
     },
@@ -365,7 +365,9 @@ export function AppSettingsDialog({
             : "w-[94vw] max-w-4xl h-[650px] max-h-[88vh]",
         )}
       >
-        <DialogTitle className="sr-only">Cài đặt hệ thống AutoLunex</DialogTitle>
+        <DialogTitle className="sr-only">
+          Cài đặt hệ thống AutoLunex
+        </DialogTitle>
 
         {/* macOS Top Window Bar with Traffic Light Controls */}
         <div
@@ -467,7 +469,9 @@ export function AppSettingsDialog({
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-xs font-semibold text-foreground">
-                  {xsmmAccount?.isLoggedIn ? xsmmAccount.username : "Khách / Chưa kết nối"}
+                  {xsmmAccount?.isLoggedIn
+                    ? xsmmAccount.username
+                    : "Khách / Chưa kết nối"}
                 </span>
                 <span className="truncate text-[11px] text-muted-foreground">
                   {xsmmAccount?.isLoggedIn
@@ -531,7 +535,8 @@ export function AppSettingsDialog({
                     Tài khoản người dùng
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Quản lý phiên đăng nhập XSMM, số dư xu và dữ liệu tài khoản mạng xã hội.
+                    Quản lý phiên đăng nhập XSMM, số dư xu và dữ liệu tài khoản
+                    mạng xã hội.
                   </p>
                 </div>
 
@@ -556,7 +561,10 @@ export function AppSettingsDialog({
                           Đã kích hoạt
                         </Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px] px-2 py-0">
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-2 py-0"
+                        >
                           Khách
                         </Badge>
                       )}
@@ -605,7 +613,9 @@ export function AppSettingsDialog({
                   <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Trạng thái API</div>
+                        <div className="font-medium text-foreground">
+                          Trạng thái API
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Hệ thống máy chủ dịch vụ tự động hóa XSMM
                         </div>
@@ -618,7 +628,9 @@ export function AppSettingsDialog({
 
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Token phiên làm việc</div>
+                        <div className="font-medium text-foreground">
+                          Token phiên làm việc
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Mã xác thực bảo mật cục bộ
                         </div>
@@ -632,7 +644,9 @@ export function AppSettingsDialog({
 
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Đổi tài khoản</div>
+                        <div className="font-medium text-foreground">
+                          Đổi tài khoản
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Đăng nhập bằng tài khoản hoặc mã token khác
                         </div>
@@ -656,25 +670,33 @@ export function AppSettingsDialog({
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="rounded-xl border border-border/50 bg-card/60 p-3 flex flex-col">
-                      <span className="text-[11px] text-muted-foreground">Tổng số tài khoản</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        Tổng số tài khoản
+                      </span>
                       <span className="text-lg font-bold text-foreground mt-0.5">
                         {stats.total}
                       </span>
                     </div>
                     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex flex-col">
-                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400">Đang Live</span>
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                        Đang Live
+                      </span>
                       <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                         {stats.live}
                       </span>
                     </div>
                     <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex flex-col">
-                      <span className="text-[11px] text-amber-600 dark:text-amber-400">Checkpoint</span>
+                      <span className="text-[11px] text-amber-600 dark:text-amber-400">
+                        Checkpoint
+                      </span>
                       <span className="text-lg font-bold text-amber-600 dark:text-amber-400 mt-0.5">
                         {stats.checkpoint}
                       </span>
                     </div>
                     <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 flex flex-col">
-                      <span className="text-[11px] text-rose-600 dark:text-rose-400">Die / Khóa</span>
+                      <span className="text-[11px] text-rose-600 dark:text-rose-400">
+                        Die / Khóa
+                      </span>
                       <span className="text-lg font-bold text-rose-600 dark:text-rose-400 mt-0.5">
                         {stats.die}
                       </span>
@@ -688,9 +710,12 @@ export function AppSettingsDialog({
             {activeSection === "appearance" && (
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Giao diện</h2>
+                  <h2 className="text-xl font-bold text-foreground">
+                    Giao diện
+                  </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Tùy chọn phong cách hiển thị sáng, tối hoặc theo hệ thống macOS/Windows.
+                    Tùy chọn phong cách hiển thị sáng, tối hoặc theo hệ thống
+                    macOS/Windows.
                   </p>
                 </div>
 
@@ -798,7 +823,9 @@ export function AppSettingsDialog({
                     {/* Accent Color Circles (macOS Style) */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 gap-2.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Màu điểm nhấn (Accent Color)</div>
+                        <div className="font-medium text-foreground">
+                          Màu điểm nhấn (Accent Color)
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Màu sắc nổi bật cho nút bấm, viền và thanh điều hướng
                         </div>
@@ -812,7 +839,8 @@ export function AppSettingsDialog({
                             onClick={() => handleAccentChange(item.id)}
                             className={cn(
                               "size-5 rounded-full flex items-center justify-center transition-transform hover:scale-110 cursor-pointer shadow-xs",
-                              accentColor === item.id && "ring-2 ring-foreground/40 ring-offset-2 ring-offset-background",
+                              accentColor === item.id &&
+                                "ring-2 ring-foreground/40 ring-offset-2 ring-offset-background",
                             )}
                             style={{ backgroundColor: item.color }}
                           >
@@ -827,17 +855,25 @@ export function AppSettingsDialog({
                     {/* Pro Theme Palettes */}
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Bộ giao diện mở rộng</div>
+                        <div className="font-medium text-foreground">
+                          Bộ giao diện mở rộng
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Chọn bảng màu IDE cao cấp (Dracula, Nord, Tokyo Night, ...)
+                          Chọn bảng màu IDE cao cấp (Dracula, Nord, Tokyo Night,
+                          ...)
                         </div>
                       </div>
-                      <Select value={theme} onValueChange={(val) => setTheme(val)}>
+                      <Select
+                        value={theme}
+                        onValueChange={(val) => setTheme(val)}
+                      >
                         <SelectTrigger className="w-44 h-8 text-xs">
                           <SelectValue placeholder="Chọn phong cách" />
                         </SelectTrigger>
                         <SelectContent className="max-h-56">
-                          <SelectItem value="system">Theo hệ điều hành</SelectItem>
+                          <SelectItem value="system">
+                            Theo hệ điều hành
+                          </SelectItem>
                           <SelectItem value="dark">Tối tiêu chuẩn</SelectItem>
                           <SelectItem value="light">Sáng tiêu chuẩn</SelectItem>
                           {THEMES.map((th) => (
@@ -857,9 +893,12 @@ export function AppSettingsDialog({
             {activeSection === "displays" && (
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Màn hình & Độ sáng</h2>
+                  <h2 className="text-xl font-bold text-foreground">
+                    Màn hình & Độ sáng
+                  </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Tùy chỉnh độ sáng mô phỏng, độ phóng đại và hiệu ứng thị giác như trên iMac.
+                    Tùy chỉnh độ sáng mô phỏng, độ phóng đại và hiệu ứng thị
+                    giác như trên iMac.
                   </p>
                 </div>
 
@@ -870,8 +909,12 @@ export function AppSettingsDialog({
                   </span>
                   <div className="rounded-xl border border-border/60 bg-card/60 p-4 shadow-xs flex flex-col gap-3">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-medium text-foreground">Mức sáng mô phỏng</span>
-                      <span className="font-semibold text-primary">{brightness}%</span>
+                      <span className="font-medium text-foreground">
+                        Mức sáng mô phỏng
+                      </span>
+                      <span className="font-semibold text-primary">
+                        {brightness}%
+                      </span>
                     </div>
                     <div className="flex items-center gap-3">
                       <LuSunMedium className="size-4 text-muted-foreground shrink-0" />
@@ -880,7 +923,9 @@ export function AppSettingsDialog({
                         min="70"
                         max="125"
                         value={brightness}
-                        onChange={(e) => handleBrightnessChange(Number(e.target.value))}
+                        onChange={(e) =>
+                          handleBrightnessChange(Number(e.target.value))
+                        }
                         className="w-full accent-primary h-2 bg-muted rounded-lg cursor-pointer"
                       />
                       <LuSun className="size-5 text-amber-500 shrink-0" />
@@ -908,12 +953,17 @@ export function AppSettingsDialog({
                     {/* Scale Select */}
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Tỷ lệ thu phóng (Display Scale)</div>
+                        <div className="font-medium text-foreground">
+                          Tỷ lệ thu phóng (Display Scale)
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Kích thước chữ và các thành phần giao diện
                         </div>
                       </div>
-                      <Select value={displayScale} onValueChange={handleDisplayScaleChange}>
+                      <Select
+                        value={displayScale}
+                        onValueChange={handleDisplayScaleChange}
+                      >
                         <SelectTrigger className="w-36 h-8 text-xs">
                           <SelectValue placeholder="Tỷ lệ" />
                         </SelectTrigger>
@@ -929,7 +979,9 @@ export function AppSettingsDialog({
                     {/* Glassmorphism / Backdrop blur */}
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Hiệu ứng làm mờ kính (Glassmorphism)</div>
+                        <div className="font-medium text-foreground">
+                          Hiệu ứng làm mờ kính (Glassmorphism)
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Bật hiệu ứng mờ nền chuẩn giao diện macOS
                         </div>
@@ -943,7 +995,9 @@ export function AppSettingsDialog({
                     {/* Reduced Motion */}
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Giảm chuyển động (Reduced Motion)</div>
+                        <div className="font-medium text-foreground">
+                          Giảm chuyển động (Reduced Motion)
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Hạn chế các hiệu ứng chuyển cảnh để tối ưu hiệu năng
                         </div>
@@ -962,9 +1016,12 @@ export function AppSettingsDialog({
             {activeSection === "language" && (
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Ngôn ngữ & Khu vực</h2>
+                  <h2 className="text-xl font-bold text-foreground">
+                    Ngôn ngữ & Khu vực
+                  </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Chọn ngôn ngữ chính hiển thị trên toàn bộ ứng dụng và định dạng ngày giờ.
+                    Chọn ngôn ngữ chính hiển thị trên toàn bộ ứng dụng và định
+                    dạng ngày giờ.
                   </p>
                 </div>
 
@@ -975,7 +1032,9 @@ export function AppSettingsDialog({
                   <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Ngôn ngữ ưu tiên</div>
+                        <div className="font-medium text-foreground">
+                          Ngôn ngữ ưu tiên
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Ngôn ngữ của menu, thông báo và hộp thoại
                         </div>
@@ -999,7 +1058,9 @@ export function AppSettingsDialog({
 
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Định dạng thời gian 24 giờ</div>
+                        <div className="font-medium text-foreground">
+                          Định dạng thời gian 24 giờ
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Ví dụ: 17:30 thay vì 5:30 PM
                         </div>
@@ -1009,7 +1070,9 @@ export function AppSettingsDialog({
 
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Định dạng số</div>
+                        <div className="font-medium text-foreground">
+                          Định dạng số
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Phân cách hàng nghìn (1.000.000 / 1,000,000)
                         </div>
@@ -1027,9 +1090,12 @@ export function AppSettingsDialog({
             {activeSection === "automation" && (
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Tự động & Nuôi acc</h2>
+                  <h2 className="text-xl font-bold text-foreground">
+                    Tự động & Nuôi acc
+                  </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Cấu hình an toàn luồng chạy job, khoảng cách giãn cách request và xử lý checkpoint.
+                    Cấu hình an toàn luồng chạy job, khoảng cách giãn cách
+                    request và xử lý checkpoint.
                   </p>
                 </div>
 
@@ -1045,7 +1111,8 @@ export function AppSettingsDialog({
                           Tự động vô hiệu hóa nick Checkpoint
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Làm mờ tài khoản checkpoint và ngăn không đưa vào luồng chạy job nuôi/reg page
+                          Làm mờ tài khoản checkpoint và ngăn không đưa vào
+                          luồng chạy job nuôi/reg page
                         </div>
                       </div>
                       <AnimatedSwitch
@@ -1057,20 +1124,31 @@ export function AppSettingsDialog({
                     {/* Delay */}
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Giãn cách an toàn giữa các request</div>
+                        <div className="font-medium text-foreground">
+                          Giãn cách an toàn giữa các request
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Tránh bị Facebook chặn IP hoặc đánh spam
                         </div>
                       </div>
-                      <Select value={safeRequestDelay} onValueChange={setSafeRequestDelay}>
+                      <Select
+                        value={safeRequestDelay}
+                        onValueChange={setSafeRequestDelay}
+                      >
                         <SelectTrigger className="w-36 h-8 text-xs">
                           <SelectValue placeholder="Độ trễ" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="0.8">0.8 giây (Nhanh)</SelectItem>
-                          <SelectItem value="1.2">1.2 giây (Khuyến nghị)</SelectItem>
-                          <SelectItem value="2.0">2.0 giây (An toàn)</SelectItem>
-                          <SelectItem value="3.0">3.0 giây (Siêu bảo vệ)</SelectItem>
+                          <SelectItem value="1.2">
+                            1.2 giây (Khuyến nghị)
+                          </SelectItem>
+                          <SelectItem value="2.0">
+                            2.0 giây (An toàn)
+                          </SelectItem>
+                          <SelectItem value="3.0">
+                            3.0 giây (Siêu bảo vệ)
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -1078,7 +1156,9 @@ export function AppSettingsDialog({
                     {/* Auto Save State */}
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Tự động lưu lịch sử thao tác</div>
+                        <div className="font-medium text-foreground">
+                          Tự động lưu lịch sử thao tác
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Lưu nhật ký tương tác và kết quả job vào máy cục bộ
                         </div>
@@ -1094,9 +1174,12 @@ export function AppSettingsDialog({
             {activeSection === "privacy" && (
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
-                  <h2 className="text-xl font-bold text-foreground">Bảo mật & Dữ liệu</h2>
+                  <h2 className="text-xl font-bold text-foreground">
+                    Bảo mật & Dữ liệu
+                  </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Quản lý lưu trữ cục bộ, cookie trình duyệt và làm sạch bộ nhớ tạm.
+                    Quản lý lưu trữ cục bộ, cookie trình duyệt và làm sạch bộ
+                    nhớ tạm.
                   </p>
                 </div>
 
@@ -1107,9 +1190,12 @@ export function AppSettingsDialog({
                   <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Mã hóa lưu trữ Cookie & Token</div>
+                        <div className="font-medium text-foreground">
+                          Mã hóa lưu trữ Cookie & Token
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Dữ liệu tài khoản được mã hóa bảo mật trong localStorage máy tính
+                          Dữ liệu tài khoản được mã hóa bảo mật trong
+                          localStorage máy tính
                         </div>
                       </div>
                       <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-xs">
@@ -1119,7 +1205,9 @@ export function AppSettingsDialog({
 
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
-                        <div className="font-medium text-foreground">Xóa bộ nhớ đệm cache</div>
+                        <div className="font-medium text-foreground">
+                          Xóa bộ nhớ đệm cache
+                        </div>
                         <div className="text-[11px] text-muted-foreground">
                           Giải phóng bộ nhớ tạm trình duyệt
                         </div>
@@ -1165,9 +1253,12 @@ export function AppSettingsDialog({
                     </span>
                   </div>
                   <div className="flex justify-between p-3">
-                    <span className="text-muted-foreground">Hệ điều hành máy</span>
+                    <span className="text-muted-foreground">
+                      Hệ điều hành máy
+                    </span>
                     <span className="font-semibold text-foreground">
-                      {systemInfo?.os || "Windows 11"} ({systemInfo?.arch || "x86_64"})
+                      {systemInfo?.os || "Windows 11"} (
+                      {systemInfo?.arch || "x86_64"})
                     </span>
                   </div>
                   <div className="flex justify-between p-3">
@@ -1177,9 +1268,13 @@ export function AppSettingsDialog({
                     </span>
                   </div>
                   <div className="flex justify-between p-3">
-                    <span className="text-muted-foreground">Kênh phân phối</span>
+                    <span className="text-muted-foreground">
+                      Kênh phân phối
+                    </span>
                     <span className="font-semibold text-foreground">
-                      {systemInfo?.portable ? "Bản Portable (Không cần cài đặt)" : "Bản chính thức"}
+                      {systemInfo?.portable
+                        ? "Bản Portable (Không cần cài đặt)"
+                        : "Bản chính thức"}
                     </span>
                   </div>
                 </div>
@@ -1199,8 +1294,15 @@ export function AppSettingsDialog({
                     disabled={isCheckingUpdate}
                     className="gap-1.5 text-xs bg-primary text-primary-foreground h-8"
                   >
-                    <LuRefreshCw className={cn("size-3.5", isCheckingUpdate && "animate-spin")} />
-                    {isCheckingUpdate ? "Đang kiểm tra..." : "Kiểm tra bản cập nhật"}
+                    <LuRefreshCw
+                      className={cn(
+                        "size-3.5",
+                        isCheckingUpdate && "animate-spin",
+                      )}
+                    />
+                    {isCheckingUpdate
+                      ? "Đang kiểm tra..."
+                      : "Kiểm tra bản cập nhật"}
                   </Button>
                   <Button
                     variant="outline"
@@ -1214,7 +1316,8 @@ export function AppSettingsDialog({
                 </div>
 
                 <p className="text-[11px] text-muted-foreground mt-2">
-                  Bản quyền © 2026 AutoLunex Technologies. Tất cả các quyền được bảo lưu.
+                  Bản quyền © 2026 AutoLunex Technologies. Tất cả các quyền được
+                  bảo lưu.
                 </p>
               </div>
             )}
