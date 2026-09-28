@@ -1796,8 +1796,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "donutbrowser"
-version = "0.29.1"
+name = "autolunex"
+version = "1.0.0"
 dependencies = [
  "aes 0.9.1",
  "aes-gcm 0.11.0",

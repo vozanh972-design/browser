@@ -36,8 +36,8 @@ export interface Theme {
 
 export const THEMES: Theme[] = [
   {
-    id: "prfnoir-mono",
-    name: "PrfNoir Mono",
+    id: "autolunex-mono",
+    name: "AutoLunex Mono",
     mode: "dark",
     colors: {
       "--background": "#070707",

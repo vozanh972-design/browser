@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
 import { LuBoxes, LuUser } from "react-icons/lu";
-import { launchDonutClone } from "@/lib/donut-physics";
+import { launchLogoClone } from "@/lib/logo-physics";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -53,7 +53,7 @@ function useLogoEasterEgg({
     const el = logoRef.current;
     if (!el || isFalling) return;
     setIsFalling(true);
-    cancelFallRef.current = launchDonutClone(el, {
+    cancelFallRef.current = launchLogoClone(el, {
       onExit: () => {
         try {
           sessionStorage.setItem(LOGO_HIDDEN_KEY, "1");
@@ -215,7 +215,7 @@ export function RailNav({
             <button
               ref={logoRef}
               type="button"
-              aria-label={t("header.donutLogo")}
+              aria-label={t("header.appLogo", "AutoLunex Logo")}
               className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-xl bg-transparent select-none"
               onClick={handleClick}
               onPointerDown={() => setIsPressed(true)}

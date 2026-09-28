@@ -17,7 +17,7 @@ import { FadingScrollArea } from "@/components/ui/fading-scroll-area";
 import { Input } from "@/components/ui/input";
 import { StepTransition } from "@/components/ui/step-transition";
 import licenses from "@/generated/licenses.json";
-import { launchDonutClone } from "@/lib/donut-physics";
+import { launchLogoClone } from "@/lib/logo-physics";
 import { Logo } from "./icons/logo";
 import { RippleButton } from "./ui/ripple";
 
@@ -35,7 +35,7 @@ interface SystemInfo {
 
 type AboutView = "about" | "licenses";
 
-// Flywheel: each click adds spin; past this speed the donut escapes the
+// Flywheel: each click adds spin; past this speed the logo escapes the
 // dialog and bounces around the window (shared physics with the rail egg).
 const SPIN_PER_CLICK = 540; // deg/s
 const ESCAPE_VELOCITY = 2200; // deg/s
@@ -87,11 +87,11 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
       el.style.transform = `rotate(${rotationRef.current}deg)`;
 
       if (velocityRef.current >= ESCAPE_VELOCITY) {
-        // The flywheel wins: the donut tears loose and joins the bounce sim,
+        // The flywheel wins: the logo tears loose and joins the bounce sim,
         // keeping its spin.
         stopSpin();
         setLogoFlown(true);
-        cancelLaunchRef.current = launchDonutClone(el, {
+        cancelLaunchRef.current = launchLogoClone(el, {
           initialVX: Math.random() > 0.5 ? 420 : -420,
           initialVY: -750,
           spinSpeed: ESCAPE_VELOCITY,
@@ -213,7 +213,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                 <button
                   ref={logoRef}
                   type="button"
-                  aria-label={t("header.donutLogo")}
+                  aria-label={t("header.appLogo", "AutoLunex Logo")}
                   onClick={handleLogoClick}
                   className="grid size-16 cursor-pointer place-items-center rounded-full bg-transparent text-foreground select-none will-change-transform"
                   style={logoFlown ? { visibility: "hidden" } : undefined}

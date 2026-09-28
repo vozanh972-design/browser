@@ -35,9 +35,6 @@
   ],
   "exclude": [
     "node_modules",
-    "nodecar",
-    "src-tauri/target",
-    "donut-sync",
-    "**/donut-sync/**"
+    "src-tauri/target"
   ]
 }

@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-  donutbrowser_lib::run()
+  autolunex_lib::run()
 }

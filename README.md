@@ -1,13 +1,11 @@
 <div align="center">
-  <img src="assets/logo.png" alt="PrfNoir Logo" width="150">
-  <h1>PrfNoir</h1>
-  <strong>Anti-Detect Browser</strong>
+  <img src="assets/logo.png" alt="AutoLunex Logo" width="150">
+  <h1>AutoLunex</h1>
+  <strong>Anti-Detect Automation & Management Suite</strong>
   <br>
   <a href="https://lunex.io.vn">lunex.io.vn</a>
 </div>
 <br>
-
-<img alt="PrfNoir Preview" src="assets/donut-preview.png" />
 
 ## Features
 
@@ -20,7 +18,7 @@
 - Profile groups: organize profiles and apply bulk settings
 - Import profiles: migrate from Chrome, Edge, Brave, or other Chromium browsers
 - Cookie & extension management: import/export cookies, manage extensions per profile
-- Default browser: set PrfNoir as your default browser and choose which profile opens each link
+- Default browser: set AutoLunex as your default browser and choose which profile opens each link
 - Cloud sync: sync profiles, proxies, and groups across devices (self-hostable)
 - E2E encryption: optional end-to-end encrypted sync with a password only you know
 - Zero telemetry: no tracking or device fingerprinting

@@ -1,7 +1,3 @@
-packages:
-  - nodecar
-  - donut-sync
-
 onlyBuiltDependencies:
   - '@biomejs/biome'
   - '@nestjs/core'
