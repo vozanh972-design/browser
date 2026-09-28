@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslation } from "react-i18next";
 import { LuArrowRight, LuBoxes, LuFlag, LuUsers } from "react-icons/lu";
 import {
   Dialog,
@@ -20,6 +21,9 @@ export function UtilitiesDialog({
   onOpenChange,
   onSelectOption,
 }: UtilitiesDialogProps) {
+  const { i18n } = useTranslation();
+  const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
+  const tr = (vi: string, en: string) => (isVi ? vi : en);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md p-6 bg-background border-border">
@@ -30,10 +34,13 @@ export function UtilitiesDialog({
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-foreground">
-                Tiện ích mở rộng
+                {tr("Tiện ích mở rộng", "Extensions & Utilities")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
-                Chọn công cụ tiện ích bạn muốn làm việc
+                {tr(
+                  "Chọn công cụ tiện ích bạn muốn làm việc",
+                  "Choose the utility tool you want to work with",
+                )}
               </DialogDescription>
             </div>
           </div>
@@ -63,7 +70,10 @@ export function UtilitiesDialog({
                   </span>
                 </div>
                 <span className="text-[11.5px] text-muted-foreground mt-0.5 line-clamp-1">
-                  Tạo Fanpage tự động hàng loạt, cấu hình tên page & thể loại
+                  {tr(
+                    "Tạo Fanpage tự động hàng loạt, cấu hình tên page & thể loại",
+                    "Bulk create Fanpages automatically, configure page names & categories",
+                  )}
                 </span>
               </div>
             </div>
@@ -86,15 +96,17 @@ export function UtilitiesDialog({
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                    2. Nuôi Acc
+                    {tr("2. Nuôi Acc", "2. Account Farm")}
                   </span>
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    Tài khoản
+                    {tr("Tài khoản", "Accounts")}
                   </span>
                 </div>
                 <span className="text-[11.5px] text-muted-foreground mt-0.5 line-clamp-1">
-                  Quản lý danh sách tài khoản, kiểm tra Live, Token, Cookie &
-                  chạy tương tác
+                  {tr(
+                    "Quản lý danh sách tài khoản, kiểm tra Live, Token, Cookie & chạy tương tác",
+                    "Manage accounts, check Live, Token, Cookie & run automated interactions",
+                  )}
                 </span>
               </div>
             </div>

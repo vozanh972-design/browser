@@ -2,7 +2,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   LuCheck,
@@ -80,17 +80,6 @@ interface SystemInfo {
   portable: boolean;
 }
 
-const ACCENT_COLORS = [
-  { id: "blue", label: "Xanh dương (Blue)", color: "#007aff" },
-  { id: "purple", label: "Tím (Purple)", color: "#af52de" },
-  { id: "pink", label: "Hồng (Pink)", color: "#ff2d55" },
-  { id: "red", label: "Đỏ (Red)", color: "#ff3b30" },
-  { id: "orange", label: "Cam (Orange)", color: "#ff9500" },
-  { id: "yellow", label: "Vàng (Yellow)", color: "#ffcc00" },
-  { id: "green", label: "Xanh lá (Green)", color: "#34c759" },
-  { id: "graphite", label: "Xám (Graphite)", color: "#8e8e93" },
-];
-
 export function AppSettingsDialog({
   isOpen,
   onClose,
@@ -102,10 +91,16 @@ export function AppSettingsDialog({
   const { i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
 
+  // Multi-language translation helper
+  const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
+  const tr = useCallback(
+    (viText: string, enText: string) => (isVi ? viText : enText),
+    [isVi],
+  );
+
   const [activeSection, setActiveSection] =
     useState<SettingsSection>("account");
   const [searchQuery, setSearchQuery] = useState("");
-  const [isMaximized, setIsMaximized] = useState(false);
 
   // Display & Brightness state
   const [brightness, setBrightness] = useState<number>(() => {
@@ -181,6 +176,9 @@ export function AppSettingsDialog({
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
 
+  // Synchronized app version across all views
+  const appVersion = systemInfo?.app_version || "1.0.0";
+
   // Load system info on open
   useEffect(() => {
     if (!isOpen) return;
@@ -188,7 +186,7 @@ export function AppSettingsDialog({
       .then(setSystemInfo)
       .catch(() => {
         setSystemInfo({
-          app_version: "2.4.0",
+          app_version: "1.0.0",
           os: "Windows 11",
           arch: "x86_64",
           portable: true,
@@ -261,6 +259,11 @@ export function AppSettingsDialog({
 
   const handleLanguageChange = (code: string) => {
     void i18n.changeLanguage(code);
+    try {
+      localStorage.setItem("autolunex_language", code);
+    } catch {
+      // ignore
+    }
   };
 
   const handleCheckUpdate = () => {
@@ -268,7 +271,12 @@ export function AppSettingsDialog({
     setUpdateStatus(null);
     setTimeout(() => {
       setIsCheckingUpdate(false);
-      setUpdateStatus("AutoLunex v2.4.0 đã là phiên bản mới nhất!");
+      setUpdateStatus(
+        tr(
+          `AutoLunex v${appVersion} đã là phiên bản mới nhất!`,
+          `AutoLunex v${appVersion} is already up to date!`,
+        ),
+      );
     }, 1200);
   };
 
@@ -289,60 +297,96 @@ export function AppSettingsDialog({
     return { total, live, checkpoint, die };
   }, [accounts]);
 
+  const accentColors = useMemo(
+    () => [
+      { id: "blue", label: tr("Xanh dương (Blue)", "Blue"), color: "#007aff" },
+      { id: "purple", label: tr("Tím (Purple)", "Purple"), color: "#af52de" },
+      { id: "pink", label: tr("Hồng (Pink)", "Pink"), color: "#ff2d55" },
+      { id: "red", label: tr("Đỏ (Red)", "Red"), color: "#ff3b30" },
+      { id: "orange", label: tr("Cam (Orange)", "Orange"), color: "#ff9500" },
+      { id: "yellow", label: tr("Vàng (Yellow)", "Yellow"), color: "#ffcc00" },
+      { id: "green", label: tr("Xanh lá (Green)", "Green"), color: "#34c759" },
+      {
+        id: "graphite",
+        label: tr("Xám (Graphite)", "Graphite"),
+        color: "#8e8e93",
+      },
+    ],
+    [tr],
+  );
+
   // Sidebar navigation items (macOS iMac Style)
-  const navItems = [
-    {
-      id: "account" as const,
-      label: "Tài khoản người dùng",
-      subLabel: xsmmAccount?.isLoggedIn
-        ? xsmmAccount.username
-        : "XSMM & Dữ liệu",
-      icon: LuUser,
-      color: "bg-blue-500",
-    },
-    {
-      id: "appearance" as const,
-      label: "Giao diện",
-      subLabel: "Sáng, Tối, Màu nhấn & Chủ đề",
-      icon: LuPalette,
-      color: "bg-purple-500",
-    },
-    {
-      id: "displays" as const,
-      label: "Màn hình & Độ sáng",
-      subLabel: "Độ sáng, Thu phóng & Hiệu ứng",
-      icon: LuMonitor,
-      color: "bg-cyan-500",
-    },
-    {
-      id: "language" as const,
-      label: "Ngôn ngữ & Khu vực",
-      subLabel: "Tiếng Việt, English & Định dạng",
-      icon: LuGlobe,
-      color: "bg-emerald-500",
-    },
-    {
-      id: "automation" as const,
-      label: "Tự động & Nuôi acc",
-      subLabel: "Cấu hình luồng & Độ trễ an toàn",
-      icon: LuCpu,
-      color: "bg-orange-500",
-    },
-    {
-      id: "privacy" as const,
-      label: "Bảo mật & Dữ liệu",
-      subLabel: "Bộ nhớ đệm & Mã hóa",
-      icon: LuShieldCheck,
-      color: "bg-rose-500",
-    },
-    {
-      id: "about" as const,
-      label: "Giới thiệu AutoLunex",
-      subLabel: "Phiên bản, Cập nhật & Bản quyền",
-      icon: LuInfo,
-      color: "bg-slate-500",
-    },
-  ];
+  const navItems = useMemo(
+    () => [
+      {
+        id: "account" as const,
+        label: tr("Tài khoản người dùng", "User Account"),
+        subLabel: xsmmAccount?.isLoggedIn
+          ? xsmmAccount.username
+          : tr("XSMM & Dữ liệu", "XSMM & Data"),
+        icon: LuUser,
+        color: "bg-blue-500",
+      },
+      {
+        id: "appearance" as const,
+        label: tr("Giao diện", "Appearance"),
+        subLabel: tr(
+          "Sáng, Tối, Màu nhấn & Chủ đề",
+          "Light, Dark, Accent & Themes",
+        ),
+        icon: LuPalette,
+        color: "bg-purple-500",
+      },
+      {
+        id: "displays" as const,
+        label: tr("Màn hình & Độ sáng", "Displays & Brightness"),
+        subLabel: tr(
+          "Độ sáng, Thu phóng & Hiệu ứng",
+          "Brightness, Scaling & Effects",
+        ),
+        icon: LuMonitor,
+        color: "bg-cyan-500",
+      },
+      {
+        id: "language" as const,
+        label: tr("Ngôn ngữ & Khu vực", "Language & Region"),
+        subLabel: tr(
+          "Tiếng Việt, English & Định dạng",
+          "Vietnamese, English & Formats",
+        ),
+        icon: LuGlobe,
+        color: "bg-emerald-500",
+      },
+      {
+        id: "automation" as const,
+        label: tr("Tự động & Nuôi acc", "Automation & Farming"),
+        subLabel: tr(
+          "Cấu hình luồng & Độ trễ an toàn",
+          "Threads & Safe Request Delays",
+        ),
+        icon: LuCpu,
+        color: "bg-orange-500",
+      },
+      {
+        id: "privacy" as const,
+        label: tr("Bảo mật & Dữ liệu", "Privacy & Data"),
+        subLabel: tr("Bộ nhớ đệm & Mã hóa", "Cache & Storage Encryption"),
+        icon: LuShieldCheck,
+        color: "bg-rose-500",
+      },
+      {
+        id: "about" as const,
+        label: tr("Giới thiệu AutoLunex", "About AutoLunex"),
+        subLabel: tr(
+          "Phiên bản, Cập nhật & Bản quyền",
+          "Version, Updates & License",
+        ),
+        icon: LuInfo,
+        color: "bg-slate-500",
+      },
+    ],
+    [tr, xsmmAccount],
+  );
 
   const filteredNavItems = navItems.filter((item) => {
     if (!searchQuery.trim()) return true;
@@ -358,56 +402,21 @@ export function AppSettingsDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         hideClose
-        className={cn(
-          "p-0 gap-0 overflow-hidden rounded-2xl border border-border/80 shadow-2xl bg-background/95 backdrop-blur-2xl transition-all duration-300 flex flex-col",
-          isMaximized
-            ? "w-[98vw] max-w-[1240px] h-[92vh]"
-            : "w-[94vw] max-w-4xl h-[650px] max-h-[88vh]",
-        )}
+        className="p-0 gap-0 overflow-hidden rounded-2xl border border-border/80 shadow-2xl bg-background/95 backdrop-blur-2xl transition-all duration-300 flex flex-col w-[94vw] max-w-4xl h-[650px] max-h-[88vh]"
       >
         <DialogTitle className="sr-only">
-          Cài đặt hệ thống AutoLunex
+          {tr("Cài đặt hệ thống AutoLunex", "AutoLunex System Settings")}
         </DialogTitle>
 
-        {/* macOS Top Window Bar with Traffic Light Controls */}
+        {/* Top Window Bar */}
         <div
           data-tauri-drag-region
-          className="flex h-11 shrink-0 select-none items-center justify-between border-b border-border/50 bg-muted/30 px-3.5"
+          className="flex h-11 shrink-0 select-none items-center justify-between border-b border-border/50 bg-muted/30 px-4"
         >
-          {/* Traffic Lights */}
+          {/* Left Title */}
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Đóng cài đặt"
-              className="group relative flex size-3 items-center justify-center rounded-full bg-[#FF5F56] border border-[#E0443E] transition-transform active:scale-90"
-            >
-              <span className="opacity-0 group-hover:opacity-100 text-[8px] font-bold text-black/70 leading-none">
-                ×
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Thu nhỏ"
-              className="group relative flex size-3 items-center justify-center rounded-full bg-[#FFBD2E] border border-[#DEA123] transition-transform active:scale-90"
-            >
-              <span className="opacity-0 group-hover:opacity-100 text-[8px] font-bold text-black/70 leading-none">
-                –
-              </span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsMaximized((v) => !v)}
-              aria-label="Phóng to cửa sổ"
-              className="group relative flex size-3 items-center justify-center rounded-full bg-[#27C93F] border border-[#1AAB29] transition-transform active:scale-90"
-            >
-              <span className="opacity-0 group-hover:opacity-100 text-[7px] font-bold text-black/70 leading-none">
-                +
-              </span>
-            </button>
-            <span className="ml-2 text-xs font-medium text-muted-foreground/80">
-              Cài đặt hệ thống
+            <span className="text-xs font-semibold text-foreground">
+              {tr("Cài đặt hệ thống", "System Settings")}
             </span>
           </div>
 
@@ -425,9 +434,9 @@ export function AppSettingsDialog({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-7 px-2 text-xs rounded-lg text-muted-foreground hover:text-foreground"
+            className="h-7 px-2.5 text-xs rounded-lg text-muted-foreground hover:text-foreground cursor-pointer hover:bg-foreground/5"
           >
-            Xong
+            {tr("Xong", "Done")}
           </Button>
         </div>
 
@@ -441,7 +450,7 @@ export function AppSettingsDialog({
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm cài đặt..."
+                placeholder={tr("Tìm kiếm cài đặt...", "Search settings...")}
                 className="h-8 pl-8 text-xs rounded-lg bg-background/60 border-border/50 focus-visible:ring-1"
               />
             </div>
@@ -471,12 +480,12 @@ export function AppSettingsDialog({
                 <span className="truncate text-xs font-semibold text-foreground">
                   {xsmmAccount?.isLoggedIn
                     ? xsmmAccount.username
-                    : "Khách / Chưa kết nối"}
+                    : tr("Khách / Chưa kết nối", "Guest / Not connected")}
                 </span>
                 <span className="truncate text-[11px] text-muted-foreground">
                   {xsmmAccount?.isLoggedIn
-                    ? `Số dư: ${xsmmAccount.balance} xu`
-                    : "Đăng nhập XSMM"}
+                    ? `${tr("Số dư", "Balance")}: ${xsmmAccount.balance} xu`
+                    : tr("Đăng nhập XSMM", "Sign in to XSMM")}
                 </span>
               </div>
               <LuChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
@@ -516,11 +525,11 @@ export function AppSettingsDialog({
               })}
             </div>
 
-            {/* Bottom Footer Info */}
+            {/* Bottom Footer Info - Synchronized Version */}
             <div className="mt-auto pt-3 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground/80 px-1">
               <span>AutoLunex Pro</span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-                v2.4.0
+                v{appVersion}
               </Badge>
             </div>
           </aside>
@@ -532,11 +541,13 @@ export function AppSettingsDialog({
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
                   <h2 className="text-xl font-bold text-foreground">
-                    Tài khoản người dùng
+                    {tr("Tài khoản người dùng", "User Account")}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Quản lý phiên đăng nhập XSMM, số dư xu và dữ liệu tài khoản
-                    mạng xã hội.
+                    {tr(
+                      "Quản lý phiên đăng nhập XSMM, số dư xu và dữ liệu tài khoản mạng xã hội.",
+                      "Manage XSMM session, coin balance, and social account data.",
+                    )}
                   </p>
                 </div>
 
@@ -554,18 +565,21 @@ export function AppSettingsDialog({
                       <span className="text-base font-bold text-foreground">
                         {xsmmAccount?.isLoggedIn
                           ? xsmmAccount.username
-                          : "Tài khoản cục bộ (Chưa liên kết XSMM)"}
+                          : tr(
+                              "Tài khoản cục bộ (Chưa liên kết XSMM)",
+                              "Local Account (No XSMM link)",
+                            )}
                       </span>
                       {xsmmAccount?.isLoggedIn ? (
                         <Badge className="bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/20 text-[10px] px-2 py-0 border-emerald-500/30">
-                          Đã kích hoạt
+                          {tr("Đã kích hoạt", "Active")}
                         </Badge>
                       ) : (
                         <Badge
                           variant="secondary"
                           className="text-[10px] px-2 py-0"
                         >
-                          Khách
+                          {tr("Khách", "Guest")}
                         </Badge>
                       )}
                     </div>
@@ -578,7 +592,9 @@ export function AppSettingsDialog({
                         xu
                       </span>
                       <span>•</span>
-                      <span>Quyền hạn: Thành viên VIP</span>
+                      <span>
+                        {tr("Quyền hạn: Thành viên VIP", "Role: VIP Member")}
+                      </span>
                     </div>
                   </div>
                   <div className="shrink-0">
@@ -590,7 +606,7 @@ export function AppSettingsDialog({
                         className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
                       >
                         <LuLogOut className="size-3.5" />
-                        Đăng xuất
+                        {tr("Đăng xuất", "Sign out")}
                       </Button>
                     ) : (
                       <Button
@@ -599,7 +615,7 @@ export function AppSettingsDialog({
                         className="gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium"
                       >
                         <LuUser className="size-3.5" />
-                        Đăng nhập XSMM
+                        {tr("Đăng nhập XSMM", "Sign in to XSMM")}
                       </Button>
                     )}
                   </div>
@@ -608,47 +624,56 @@ export function AppSettingsDialog({
                 {/* Inset Group: Dịch vụ & Kết nối */}
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    Thông tin phiên làm việc
+                    {tr("Thông tin phiên làm việc", "Session Information")}
                   </span>
                   <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Trạng thái API
+                          {tr("Trạng thái API", "API Status")}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Hệ thống máy chủ dịch vụ tự động hóa XSMM
+                          {tr(
+                            "Hệ thống máy chủ dịch vụ tự động hóa XSMM",
+                            "XSMM Automation API Server",
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 text-emerald-500 font-medium">
                         <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                        Đang hoạt động
+                        {tr("Đang hoạt động", "Online")}
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Token phiên làm việc
+                          {tr("Token phiên làm việc", "Session Token")}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Mã xác thực bảo mật cục bộ
+                          {tr(
+                            "Mã xác thực bảo mật cục bộ",
+                            "Local secure auth token",
+                          )}
                         </div>
                       </div>
                       <span className="font-mono text-[11px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-border/50">
                         {xsmmAccount?.isLoggedIn
                           ? `sk-xsmm-••••••••${xsmmAccount.username.slice(-2)}`
-                          : "Chưa thiết lập"}
+                          : tr("Chưa thiết lập", "Not set")}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Đổi tài khoản
+                          {tr("Đổi tài khoản", "Switch Account")}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Đăng nhập bằng tài khoản hoặc mã token khác
+                          {tr(
+                            "Đăng nhập bằng tài khoản hoặc mã token khác",
+                            "Sign in with a different account or token",
+                          )}
                         </div>
                       </div>
                       <Button
@@ -657,7 +682,7 @@ export function AppSettingsDialog({
                         onClick={onXsmmLoginClick}
                         className="h-7 text-xs"
                       >
-                        Đổi phiên
+                        {tr("Đổi phiên", "Switch account")}
                       </Button>
                     </div>
                   </div>
@@ -666,12 +691,15 @@ export function AppSettingsDialog({
                 {/* Inset Group: Dữ liệu Facebook trong máy */}
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    Thống kê tài khoản lưu trong app
+                    {tr(
+                      "Thống kê tài khoản lưu trong app",
+                      "Saved Accounts Statistics",
+                    )}
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="rounded-xl border border-border/50 bg-card/60 p-3 flex flex-col">
                       <span className="text-[11px] text-muted-foreground">
-                        Tổng số tài khoản
+                        {tr("Tổng số tài khoản", "Total Accounts")}
                       </span>
                       <span className="text-lg font-bold text-foreground mt-0.5">
                         {stats.total}
@@ -679,7 +707,7 @@ export function AppSettingsDialog({
                     </div>
                     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex flex-col">
                       <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                        Đang Live
+                        {tr("Đang Live", "Live")}
                       </span>
                       <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
                         {stats.live}
@@ -695,7 +723,7 @@ export function AppSettingsDialog({
                     </div>
                     <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 flex flex-col">
                       <span className="text-[11px] text-rose-600 dark:text-rose-400">
-                        Die / Khóa
+                        {tr("Die / Khóa", "Dead / Locked")}
                       </span>
                       <span className="text-lg font-bold text-rose-600 dark:text-rose-400 mt-0.5">
                         {stats.die}
@@ -711,18 +739,20 @@ export function AppSettingsDialog({
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
                   <h2 className="text-xl font-bold text-foreground">
-                    Giao diện
+                    {tr("Giao diện", "Appearance")}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Tùy chọn phong cách hiển thị sáng, tối hoặc theo hệ thống
-                    macOS/Windows.
+                    {tr(
+                      "Tùy chọn phong cách hiển thị sáng, tối hoặc theo hệ thống macOS/Windows.",
+                      "Choose light, dark, or system matching appearance.",
+                    )}
                   </p>
                 </div>
 
                 {/* macOS Style 3 Theme Mockup Cards */}
                 <div className="flex flex-col gap-2">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Chế độ giao diện
+                    {tr("Chế độ giao diện", "Appearance Mode")}
                   </Label>
                   <div className="grid grid-cols-3 gap-3">
                     {/* Light Mode Card */}
@@ -749,7 +779,7 @@ export function AppSettingsDialog({
                       </div>
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                         <LuSun className="size-3.5 text-amber-500" />
-                        Sáng
+                        {tr("Sáng", "Light")}
                       </div>
                     </button>
 
@@ -777,7 +807,7 @@ export function AppSettingsDialog({
                       </div>
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                         <LuMoon className="size-3.5 text-indigo-400" />
-                        Tối
+                        {tr("Tối", "Dark")}
                       </div>
                     </button>
 
@@ -808,7 +838,7 @@ export function AppSettingsDialog({
                       </div>
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                         <LuSparkles className="size-3.5 text-purple-400" />
-                        Tự động
+                        {tr("Tự động", "Auto")}
                       </div>
                     </button>
                   </div>
@@ -817,21 +847,24 @@ export function AppSettingsDialog({
                 {/* Inset Group: Accent Color & Themes */}
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    Màu sắc & Phối màu
+                    {tr("Màu sắc & Phối màu", "Colors & Palette")}
                   </span>
                   <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
                     {/* Accent Color Circles (macOS Style) */}
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 gap-2.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Màu điểm nhấn (Accent Color)
+                          {tr("Màu điểm nhấn (Accent Color)", "Accent Color")}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Màu sắc nổi bật cho nút bấm, viền và thanh điều hướng
+                          {tr(
+                            "Màu sắc nổi bật cho nút bấm, viền và thanh điều hướng",
+                            "Highlight color for buttons, borders, and rail nav",
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {ACCENT_COLORS.map((item) => (
+                        {accentColors.map((item) => (
                           <button
                             key={item.id}
                             type="button"
@@ -856,11 +889,13 @@ export function AppSettingsDialog({
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Bộ giao diện mở rộng
+                          {tr("Bộ giao diện mở rộng", "Theme Palettes")}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Chọn bảng màu IDE cao cấp (Dracula, Nord, Tokyo Night,
-                          ...)
+                          {tr(
+                            "Chọn bảng màu IDE cao cấp (Dracula, Nord, Tokyo Night, ...)",
+                            "Select high-contrast IDE themes",
+                          )}
                         </div>
                       </div>
                       <Select
@@ -868,14 +903,20 @@ export function AppSettingsDialog({
                         onValueChange={(val) => setTheme(val)}
                       >
                         <SelectTrigger className="w-44 h-8 text-xs">
-                          <SelectValue placeholder="Chọn phong cách" />
+                          <SelectValue
+                            placeholder={tr("Chọn phong cách", "Select theme")}
+                          />
                         </SelectTrigger>
                         <SelectContent className="max-h-56">
                           <SelectItem value="system">
-                            Theo hệ điều hành
+                            {tr("Theo hệ điều hành", "Follow System")}
                           </SelectItem>
-                          <SelectItem value="dark">Tối tiêu chuẩn</SelectItem>
-                          <SelectItem value="light">Sáng tiêu chuẩn</SelectItem>
+                          <SelectItem value="dark">
+                            {tr("Tối tiêu chuẩn", "Default Dark")}
+                          </SelectItem>
+                          <SelectItem value="light">
+                            {tr("Sáng tiêu chuẩn", "Default Light")}
+                          </SelectItem>
                           {THEMES.map((th) => (
                             <SelectItem key={th.id} value={th.id}>
                               {th.name}
@@ -894,23 +935,25 @@ export function AppSettingsDialog({
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
                   <h2 className="text-xl font-bold text-foreground">
-                    Màn hình & Độ sáng
+                    {tr("Màn hình & Độ sáng", "Displays & Brightness")}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Tùy chỉnh độ sáng mô phỏng, độ phóng đại và hiệu ứng thị
-                    giác như trên iMac.
+                    {tr(
+                      "Tùy chỉnh độ sáng mô phỏng, độ phóng đại và hiệu ứng thị giác như trên iMac.",
+                      "Adjust simulated brightness, UI scaling, and visual effects like on iMac.",
+                    )}
                   </p>
                 </div>
 
                 {/* Brightness Slider Group */}
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    Độ sáng giao diện
+                    {tr("Độ sáng giao diện", "Interface Brightness")}
                   </span>
                   <div className="rounded-xl border border-border/60 bg-card/60 p-4 shadow-xs flex flex-col gap-3">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium text-foreground">
-                        Mức sáng mô phỏng
+                        {tr("Mức sáng mô phỏng", "Simulated brightness level")}
                       </span>
                       <span className="font-semibold text-primary">
                         {brightness}%
@@ -931,15 +974,15 @@ export function AppSettingsDialog({
                       <LuSun className="size-5 text-amber-500 shrink-0" />
                     </div>
                     <div className="flex justify-between items-center text-[11px] text-muted-foreground pt-1">
-                      <span>Dịu mắt (70%)</span>
+                      <span>{tr("Dịu mắt (70%)", "Dim (70%)")}</span>
                       <button
                         type="button"
                         onClick={() => handleBrightnessChange(100)}
                         className="hover:underline text-primary cursor-pointer"
                       >
-                        Đặt lại chuẩn (100%)
+                        {tr("Đặt lại chuẩn (100%)", "Reset default (100%)")}
                       </button>
-                      <span>Sáng rực (125%)</span>
+                      <span>{tr("Sáng rực (125%)", "Bright (125%)")}</span>
                     </div>
                   </div>
                 </div>
@@ -947,17 +990,26 @@ export function AppSettingsDialog({
                 {/* Display Scale & Visual Effects */}
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    Tùy biến hiển thị & Hiệu ứng
+                    {tr(
+                      "Tùy biến hiển thị & Hiệu ứng",
+                      "Display Options & Effects",
+                    )}
                   </span>
                   <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
                     {/* Scale Select */}
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Tỷ lệ thu phóng (Display Scale)
+                          {tr(
+                            "Tỷ lệ thu phóng (Display Scale)",
+                            "Display Scale",
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Kích thước chữ và các thành phần giao diện
+                          {tr(
+                            "Kích thước chữ và các thành phần giao diện",
+                            "Scale text and UI elements",
+                          )}
                         </div>
                       </div>
                       <Select
@@ -965,13 +1017,21 @@ export function AppSettingsDialog({
                         onValueChange={handleDisplayScaleChange}
                       >
                         <SelectTrigger className="w-36 h-8 text-xs">
-                          <SelectValue placeholder="Tỷ lệ" />
+                          <SelectValue placeholder={tr("Tỷ lệ", "Scale")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="90">Nhỏ (90%)</SelectItem>
-                          <SelectItem value="100">Tiêu chuẩn (100%)</SelectItem>
-                          <SelectItem value="110">Lớn (110%)</SelectItem>
-                          <SelectItem value="120">Rất lớn (120%)</SelectItem>
+                          <SelectItem value="90">
+                            {tr("Nhỏ (90%)", "Small (90%)")}
+                          </SelectItem>
+                          <SelectItem value="100">
+                            {tr("Tiêu chuẩn (100%)", "Default (100%)")}
+                          </SelectItem>
+                          <SelectItem value="110">
+                            {tr("Lớn (110%)", "Large (110%)")}
+                          </SelectItem>
+                          <SelectItem value="120">
+                            {tr("Rất lớn (120%)", "Extra Large (120%)")}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -980,10 +1040,16 @@ export function AppSettingsDialog({
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Hiệu ứng làm mờ kính (Glassmorphism)
+                          {tr(
+                            "Hiệu ứng làm mờ kính (Glassmorphism)",
+                            "Backdrop Blur (Glassmorphism)",
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Bật hiệu ứng mờ nền chuẩn giao diện macOS
+                          {tr(
+                            "Bật hiệu ứng mờ nền chuẩn giao diện macOS",
+                            "Enable macOS-style frosted glass blur",
+                          )}
                         </div>
                       </div>
                       <AnimatedSwitch
@@ -996,10 +1062,16 @@ export function AppSettingsDialog({
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Giảm chuyển động (Reduced Motion)
+                          {tr(
+                            "Giảm chuyển động (Reduced Motion)",
+                            "Reduced Motion",
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Hạn chế các hiệu ứng chuyển cảnh để tối ưu hiệu năng
+                          {tr(
+                            "Hạn chế các hiệu ứng chuyển cảnh để tối ưu hiệu năng",
+                            "Minimize UI animation transitions",
+                          )}
                         </div>
                       </div>
                       <AnimatedSwitch
@@ -1017,26 +1089,34 @@ export function AppSettingsDialog({
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
                   <h2 className="text-xl font-bold text-foreground">
-                    Ngôn ngữ & Khu vực
+                    {tr("Ngôn ngữ & Khu vực", "Language & Region")}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Chọn ngôn ngữ chính hiển thị trên toàn bộ ứng dụng và định
-                    dạng ngày giờ.
+                    {tr(
+                      "Chọn ngôn ngữ chính hiển thị trên toàn bộ ứng dụng và định dạng ngày giờ.",
+                      "Choose interface language and regional date/time formats.",
+                    )}
                   </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    Ngôn ngữ giao diện chính
+                    {tr(
+                      "Ngôn ngữ giao diện chính",
+                      "Primary Interface Language",
+                    )}
                   </span>
                   <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Ngôn ngữ ưu tiên
+                          {tr("Ngôn ngữ ưu tiên", "Preferred Language")}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Ngôn ngữ của menu, thông báo và hộp thoại
+                          {tr(
+                            "Ngôn ngữ của menu, thông báo và hộp thoại",
+                            "Language used for menus, toasts, and dialogs",
+                          )}
                         </div>
                       </div>
                       <Select
@@ -1044,7 +1124,9 @@ export function AppSettingsDialog({
                         onValueChange={handleLanguageChange}
                       >
                         <SelectTrigger className="w-48 h-8 text-xs">
-                          <SelectValue placeholder="Chọn ngôn ngữ" />
+                          <SelectValue
+                            placeholder={tr("Chọn ngôn ngữ", "Select language")}
+                          />
                         </SelectTrigger>
                         <SelectContent className="max-h-60">
                           {SUPPORTED_LANGUAGES.map((lang) => (
@@ -1059,10 +1141,16 @@ export function AppSettingsDialog({
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Định dạng thời gian 24 giờ
+                          {tr(
+                            "Định dạng thời gian 24 giờ",
+                            "24-Hour Time Format",
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Ví dụ: 17:30 thay vì 5:30 PM
+                          {tr(
+                            "Ví dụ: 17:30 thay vì 5:30 PM",
+                            "e.g. 17:30 instead of 5:30 PM",
+                          )}
                         </div>
                       </div>
                       <AnimatedSwitch defaultChecked />
@@ -1071,14 +1159,17 @@ export function AppSettingsDialog({
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Định dạng số
+                          {tr("Định dạng số", "Number Format")}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Phân cách hàng nghìn (1.000.000 / 1,000,000)
+                          {tr(
+                            "Phân cách hàng nghìn (1.000.000 / 1,000,000)",
+                            "Thousands separator",
+                          )}
                         </div>
                       </div>
                       <Badge variant="outline" className="text-xs">
-                        Việt Nam (1.000.000)
+                        {isVi ? "Việt Nam (1.000.000)" : "Standard (1,000,000)"}
                       </Badge>
                     </div>
                   </div>
@@ -1091,28 +1182,38 @@ export function AppSettingsDialog({
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
                   <h2 className="text-xl font-bold text-foreground">
-                    Tự động & Nuôi acc
+                    {tr("Tự động & Nuôi acc", "Automation & Farming")}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Cấu hình an toàn luồng chạy job, khoảng cách giãn cách
-                    request và xử lý checkpoint.
+                    {tr(
+                      "Cấu hình an toàn luồng chạy job, khoảng cách giãn cách request và xử lý checkpoint.",
+                      "Configure job concurrency, request rate-limits, and checkpoint handling.",
+                    )}
                   </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    Cơ chế an toàn Facebook
+                    {tr(
+                      "Cơ chế an toàn Facebook",
+                      "Facebook Protection Mechanisms",
+                    )}
                   </span>
                   <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
                     {/* Auto Skip Checkpoint */}
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div className="max-w-md">
                         <div className="font-medium text-foreground">
-                          Tự động vô hiệu hóa nick Checkpoint
+                          {tr(
+                            "Tự động vô hiệu hóa nick Checkpoint",
+                            "Auto-disable Checkpoint Accounts",
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Làm mờ tài khoản checkpoint và ngăn không đưa vào
-                          luồng chạy job nuôi/reg page
+                          {tr(
+                            "Làm mờ tài khoản checkpoint và ngăn không đưa vào luồng chạy job nuôi/reg page",
+                            "Dim checkpoint accounts and exclude from farm/reg jobs",
+                          )}
                         </div>
                       </div>
                       <AnimatedSwitch
@@ -1125,10 +1226,16 @@ export function AppSettingsDialog({
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Giãn cách an toàn giữa các request
+                          {tr(
+                            "Giãn cách an toàn giữa các request",
+                            "Safe Delay Between Requests",
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Tránh bị Facebook chặn IP hoặc đánh spam
+                          {tr(
+                            "Tránh bị Facebook chặn IP hoặc đánh spam",
+                            "Prevent Facebook rate-limits and spam blocks",
+                          )}
                         </div>
                       </div>
                       <Select
@@ -1136,18 +1243,23 @@ export function AppSettingsDialog({
                         onValueChange={setSafeRequestDelay}
                       >
                         <SelectTrigger className="w-36 h-8 text-xs">
-                          <SelectValue placeholder="Độ trễ" />
+                          <SelectValue placeholder={tr("Độ trễ", "Delay")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="0.8">0.8 giây (Nhanh)</SelectItem>
+                          <SelectItem value="0.8">
+                            {tr("0.8 giây (Nhanh)", "0.8s (Fast)")}
+                          </SelectItem>
                           <SelectItem value="1.2">
-                            1.2 giây (Khuyến nghị)
+                            {tr("1.2 giây (Khuyến nghị)", "1.2s (Recommended)")}
                           </SelectItem>
                           <SelectItem value="2.0">
-                            2.0 giây (An toàn)
+                            {tr("2.0 giây (An toàn)", "2.0s (Safe)")}
                           </SelectItem>
                           <SelectItem value="3.0">
-                            3.0 giây (Siêu bảo vệ)
+                            {tr(
+                              "3.0 giây (Siêu bảo vệ)",
+                              "3.0s (Ultra Protected)",
+                            )}
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -1157,10 +1269,16 @@ export function AppSettingsDialog({
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Tự động lưu lịch sử thao tác
+                          {tr(
+                            "Tự động lưu lịch sử thao tác",
+                            "Auto-save Execution History",
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Lưu nhật ký tương tác và kết quả job vào máy cục bộ
+                          {tr(
+                            "Lưu nhật ký tương tác và kết quả job vào máy cục bộ",
+                            "Save interaction logs and job results locally",
+                          )}
                         </div>
                       </div>
                       <AnimatedSwitch defaultChecked />
@@ -1175,50 +1293,67 @@ export function AppSettingsDialog({
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
                   <h2 className="text-xl font-bold text-foreground">
-                    Bảo mật & Dữ liệu
+                    {tr("Bảo mật & Dữ liệu", "Privacy & Data")}
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Quản lý lưu trữ cục bộ, cookie trình duyệt và làm sạch bộ
-                    nhớ tạm.
+                    {tr(
+                      "Quản lý lưu trữ cục bộ, cookie trình duyệt và làm sạch bộ nhớ tạm.",
+                      "Manage local storage, browser cookies, and cache cleaning.",
+                    )}
                   </p>
                 </div>
 
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    Lưu trữ trên máy
+                    {tr("Lưu trữ trên máy", "Local Device Storage")}
                   </span>
                   <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Mã hóa lưu trữ Cookie & Token
+                          {tr(
+                            "Mã hóa lưu trữ Cookie & Token",
+                            "Encrypted Cookie & Token Storage",
+                          )}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Dữ liệu tài khoản được mã hóa bảo mật trong
-                          localStorage máy tính
+                          {tr(
+                            "Dữ liệu tài khoản được mã hóa bảo mật trong localStorage máy tính",
+                            "Account credentials stored encrypted in local machine storage",
+                          )}
                         </div>
                       </div>
                       <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-xs">
-                        Đang kích hoạt
+                        {tr("Đang kích hoạt", "Active")}
                       </Badge>
                     </div>
 
                     <div className="flex items-center justify-between p-3.5 text-xs">
                       <div>
                         <div className="font-medium text-foreground">
-                          Xóa bộ nhớ đệm cache
+                          {tr("Xóa bộ nhớ đệm cache", "Clear Cache Storage")}
                         </div>
                         <div className="text-[11px] text-muted-foreground">
-                          Giải phóng bộ nhớ tạm trình duyệt
+                          {tr(
+                            "Giải phóng bộ nhớ tạm trình duyệt",
+                            "Free temporary browser cache memory",
+                          )}
                         </div>
                       </div>
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => alert("Đã dọn sạch bộ nhớ cache!")}
+                        onClick={() =>
+                          alert(
+                            tr(
+                              "Đã dọn sạch bộ nhớ cache!",
+                              "Cache storage successfully cleaned!",
+                            ),
+                          )
+                        }
                         className="h-7 text-xs"
                       >
-                        Dọn dẹp
+                        {tr("Dọn dẹp", "Clean up")}
                       </Button>
                     </div>
                   </div>
@@ -1247,14 +1382,16 @@ export function AppSettingsDialog({
                 {/* macOS Style Inset Specs Card */}
                 <div className="w-full rounded-2xl border border-border/60 bg-card/60 divide-y divide-border/40 text-left text-xs shadow-xs overflow-hidden">
                   <div className="flex justify-between p-3">
-                    <span className="text-muted-foreground">Phiên bản</span>
+                    <span className="text-muted-foreground">
+                      {tr("Phiên bản", "Version")}
+                    </span>
                     <span className="font-semibold text-foreground">
-                      {systemInfo?.app_version || "2.4.0"} (Sonoma Edition)
+                      {appVersion} (Sonoma Edition)
                     </span>
                   </div>
                   <div className="flex justify-between p-3">
                     <span className="text-muted-foreground">
-                      Hệ điều hành máy
+                      {tr("Hệ điều hành máy", "Operating System")}
                     </span>
                     <span className="font-semibold text-foreground">
                       {systemInfo?.os || "Windows 11"} (
@@ -1262,19 +1399,24 @@ export function AppSettingsDialog({
                     </span>
                   </div>
                   <div className="flex justify-between p-3">
-                    <span className="text-muted-foreground">Lõi phần mềm</span>
+                    <span className="text-muted-foreground">
+                      {tr("Lõi phần mềm", "Software Core")}
+                    </span>
                     <span className="font-semibold text-foreground">
                       Tauri v2 • Chromium WebKit • React 19
                     </span>
                   </div>
                   <div className="flex justify-between p-3">
                     <span className="text-muted-foreground">
-                      Kênh phân phối
+                      {tr("Kênh phân phối", "Distribution Channel")}
                     </span>
                     <span className="font-semibold text-foreground">
                       {systemInfo?.portable
-                        ? "Bản Portable (Không cần cài đặt)"
-                        : "Bản chính thức"}
+                        ? tr(
+                            "Bản Portable (Không cần cài đặt)",
+                            "Portable Edition",
+                          )
+                        : tr("Bản chính thức", "Official Release")}
                     </span>
                   </div>
                 </div>
@@ -1292,7 +1434,7 @@ export function AppSettingsDialog({
                     size="sm"
                     onClick={handleCheckUpdate}
                     disabled={isCheckingUpdate}
-                    className="gap-1.5 text-xs bg-primary text-primary-foreground h-8"
+                    className="gap-1.5 text-xs bg-primary text-primary-foreground h-8 cursor-pointer"
                   >
                     <LuRefreshCw
                       className={cn(
@@ -1301,23 +1443,25 @@ export function AppSettingsDialog({
                       )}
                     />
                     {isCheckingUpdate
-                      ? "Đang kiểm tra..."
-                      : "Kiểm tra bản cập nhật"}
+                      ? tr("Đang kiểm tra...", "Checking...")
+                      : tr("Kiểm tra bản cập nhật", "Check for Updates")}
                   </Button>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleOpenUrl("https://lunex.io.vn")}
-                    className="gap-1.5 text-xs h-8"
+                    className="gap-1.5 text-xs h-8 cursor-pointer"
                   >
                     <LuExternalLink className="size-3.5" />
-                    Trang chủ lunex.io.vn
+                    {tr("Trang chủ lunex.io.vn", "Website lunex.io.vn")}
                   </Button>
                 </div>
 
                 <p className="text-[11px] text-muted-foreground mt-2">
-                  Bản quyền © 2026 AutoLunex Technologies. Tất cả các quyền được
-                  bảo lưu.
+                  {tr(
+                    "Bản quyền © 2026 AutoLunex Technologies. Tất cả các quyền được bảo lưu.",
+                    "Copyright © 2026 AutoLunex Technologies. All rights reserved.",
+                  )}
                 </p>
               </div>
             )}

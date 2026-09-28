@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
-import { LuBoxes, LuInfo, LuUser } from "react-icons/lu";
+import { LuBoxes, LuUser } from "react-icons/lu";
 import { launchDonutClone } from "@/lib/donut-physics";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
@@ -165,33 +165,13 @@ const TOP_ITEMS: RailItem[] = [
   { page: "gl", textLabel: "GL", labelKey: "GL" },
 ];
 
-interface MoreMenuItem {
-  page: AppPage;
-  Icon: React.ComponentType<{ className?: string }>;
-  labelKey: string;
-  hintKey: string;
-  defaultLabel: string;
-  defaultHint: string;
-}
-
-const MORE_ITEMS: MoreMenuItem[] = [
-  {
-    page: "account",
-    Icon: LuBoxes,
-    labelKey: "rail.more.utilities",
-    hintKey: "rail.more.utilitiesHint",
-    defaultLabel: "Tiện ích",
-    defaultHint: "Quản lý tài khoản & công cụ",
-  },
-];
-
 export function RailNav({
   currentPage,
   onNavigate,
-  onOpenAbout,
   onOpenUtilities,
 }: RailNavProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
   const [moreOpen, setMoreOpen] = useState(false);
   const visibleTopItems = TOP_ITEMS;
 
@@ -382,13 +362,13 @@ export function RailNav({
           </TooltipContent>
         </Tooltip>
 
-        {/* More */}
+        {/* More 3-dots button */}
         <Tooltip delayDuration={400}>
           <TooltipTrigger asChild>
             <button
               type="button"
               onClick={() => setMoreOpen((v) => !v)}
-              aria-label={t("rail.more.label")}
+              aria-label={t("rail.more.label", "More")}
               aria-expanded={moreOpen}
               className={cn(
                 "grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-all duration-150",
@@ -401,76 +381,47 @@ export function RailNav({
             </button>
           </TooltipTrigger>
           <TooltipContent side="top" sideOffset={8}>
-            {t("rail.more.label")}
+            {t("rail.more.label", "More")}
           </TooltipContent>
         </Tooltip>
       </div>
 
-      {/* More popup — opens upward from pill */}
+      {/* More popup — ONLY Tiện ích (About AutoLunex is removed!) */}
       {moreOpen && (
         <>
           <button
             type="button"
-            aria-label={t("rail.more.closeAriaLabel")}
+            aria-label={t("rail.more.closeAriaLabel", "Close")}
             className="fixed inset-0 z-30 cursor-default bg-transparent"
             onClick={() => setMoreOpen(false)}
           />
           <div
             role="menu"
-            aria-label={t("rail.more.label")}
+            aria-label={t("rail.more.label", "More")}
             className="surface-material-card absolute bottom-16 left-1/2 z-40 w-52 -translate-x-1/2 animate-in rounded-xl border border-border p-1 shadow-2xl duration-100 fade-in-0 slide-in-from-bottom-2"
           >
-            {MORE_ITEMS.map(
-              ({
-                page,
-                Icon,
-                labelKey,
-                hintKey,
-                defaultLabel,
-                defaultHint,
-              }) => (
-                <button
-                  key={page}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setMoreOpen(false);
-                    if (page === "account" && onOpenUtilities) {
-                      onOpenUtilities();
-                    } else {
-                      onNavigate(page);
-                    }
-                  }}
-                  className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
-                >
-                  <Icon className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="flex min-w-0 flex-col">
-                    <span className="truncate text-xs font-medium text-foreground">
-                      {t(labelKey, defaultLabel)}
-                    </span>
-                    <span className="truncate text-[10px] text-muted-foreground">
-                      {t(hintKey, defaultHint)}
-                    </span>
-                  </span>
-                </button>
-              ),
-            )}
             <button
               type="button"
               role="menuitem"
               onClick={() => {
                 setMoreOpen(false);
-                onOpenAbout();
+                if (onOpenUtilities) {
+                  onOpenUtilities();
+                } else {
+                  onNavigate("account");
+                }
               }}
               className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
             >
-              <LuInfo className="size-4 shrink-0 text-muted-foreground" />
+              <LuBoxes className="size-4 shrink-0 text-muted-foreground" />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-xs font-medium text-foreground">
-                  {t("rail.more.about")}
+                  {isVi ? "Tiện ích" : "Utilities"}
                 </span>
                 <span className="truncate text-[10px] text-muted-foreground">
-                  {t("rail.more.aboutHint")}
+                  {isVi
+                    ? "Quản lý tài khoản & công cụ"
+                    : "Account management & tools"}
                 </span>
               </span>
             </button>

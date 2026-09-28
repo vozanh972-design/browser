@@ -74,10 +74,22 @@ const resources = {
   vi: { translation: vi },
 };
 
+const getInitialLanguage = (): string => {
+  if (typeof window !== "undefined") {
+    try {
+      const saved = localStorage.getItem("autolunex_language");
+      if (saved) return saved;
+    } catch {
+      // ignore
+    }
+  }
+  return "vi";
+};
+
 i18n.use(initReactI18next).init({
   resources,
-  lng: "en",
-  fallbackLng: "en",
+  lng: getInitialLanguage(),
+  fallbackLng: "vi",
   interpolation: {
     escapeValue: false,
   },

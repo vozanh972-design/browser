@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { LuCoins, LuKey, LuLogOut, LuPlus, LuUser } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ export function AppHeader({
   onNewClick,
   showXsmm = true,
 }: AppHeaderProps) {
+  const { i18n } = useTranslation();
+  const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
   const [platform, setPlatform] = useState<OperatingSystem>("macos");
 
   useEffect(() => {
@@ -117,7 +120,7 @@ export function AppHeader({
                 <button
                   type="button"
                   onClick={onXsmmLogoutClick}
-                  title="Đăng xuất XSMM"
+                  title={isVi ? "Đăng xuất XSMM" : "Sign out XSMM"}
                   className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
                 >
                   <LuLogOut className="size-3.5" />
@@ -132,7 +135,7 @@ export function AppHeader({
                 className="flex h-7 items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
               >
                 <LuKey className="size-3" />
-                <span>Đăng nhập XSMM</span>
+                <span>{isVi ? "Đăng nhập XSMM" : "Sign in XSMM"}</span>
               </button>
             )
           ))}
@@ -144,7 +147,7 @@ export function AppHeader({
             className="flex h-7 items-center gap-1 px-2.5 text-xs cursor-pointer shadow-xs font-medium"
           >
             <LuPlus className="size-3.5" />
-            <span>+ Mới</span>
+            <span>{isVi ? "+ Mới" : "+ New"}</span>
           </Button>
         )}
       </div>

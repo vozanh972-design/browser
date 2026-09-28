@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import {
   LuCheck,
@@ -91,6 +92,10 @@ export function AccountDetailDialog({
   onRecheck,
   isChecking = false,
 }: AccountDetailDialogProps) {
+  const { i18n } = useTranslation();
+  const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
+  const tr = (vi: string, en: string) => (isVi ? vi : en);
+
   const [showPassword, setShowPassword] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -100,7 +105,7 @@ export function AccountDetailDialog({
     if (!text) return;
     void navigator.clipboard.writeText(text);
     setCopiedKey(key);
-    showSuccessToast(`Đã sao chép ${label}!`);
+    showSuccessToast(tr(`Đã sao chép ${label}!`, `Copied ${label}!`));
     setTimeout(() => {
       setCopiedKey((prev) => (prev === key ? null : prev));
     }, 1800);
@@ -172,7 +177,7 @@ export function AccountDetailDialog({
                     </span>
                   ) : (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                      Chưa kiểm tra
+                      {tr("Chưa kiểm tra", "Unchecked")}
                     </span>
                   )}
                 </div>
@@ -182,7 +187,7 @@ export function AccountDetailDialog({
                     type="button"
                     onClick={() => handleCopy(account.uid, "uid", "UID")}
                     className="p-1 hover:text-foreground cursor-pointer rounded transition-colors"
-                    title="Sao chép UID"
+                    title={tr("Sao chép UID", "Copy UID")}
                   >
                     {copiedKey === "uid" ? (
                       <LuCheck className="size-3 text-emerald-500" />
@@ -207,7 +212,11 @@ export function AccountDetailDialog({
                 <LuRefreshCw
                   className={cn("size-3.5", isChecking && "animate-spin")}
                 />
-                <span>{isChecking ? "Đang check..." : "Kiểm tra lại"}</span>
+                <span>
+                  {isChecking
+                    ? tr("Đang check...", "Checking...")
+                    : tr("Kiểm tra lại", "Re-check")}
+                </span>
               </Button>
             )}
           </div>
@@ -221,7 +230,7 @@ export function AccountDetailDialog({
               {/* Password */}
               <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 flex flex-col gap-1">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-                  <span>Mật khẩu</span>
+                  <span>{tr("Mật khẩu", "Password")}</span>
                   {account.pass && (
                     <div className="flex items-center gap-1">
                       <button
@@ -238,7 +247,11 @@ export function AccountDetailDialog({
                       <button
                         type="button"
                         onClick={() =>
-                          handleCopy(account.pass, "pass", "Mật khẩu")
+                          handleCopy(
+                            account.pass,
+                            "pass",
+                            tr("Mật khẩu", "Password"),
+                          )
                         }
                         className="hover:text-foreground cursor-pointer p-0.5"
                       >
@@ -256,19 +269,23 @@ export function AccountDetailDialog({
                     ? showPassword
                       ? account.pass
                       : "••••••••••••"
-                    : "Chưa có"}
+                    : tr("Chưa có", "None")}
                 </span>
               </div>
 
               {/* 2FA */}
               <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 flex flex-col gap-1">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-                  <span>Mã 2FA (Secret)</span>
+                  <span>{tr("Mã 2FA (Secret)", "2FA Secret")}</span>
                   {account.twoFactor && (
                     <button
                       type="button"
                       onClick={() =>
-                        handleCopy(account.twoFactor, "2fa", "Mã 2FA")
+                        handleCopy(
+                          account.twoFactor,
+                          "2fa",
+                          tr("Mã 2FA", "2FA Key"),
+                        )
                       }
                       className="hover:text-foreground cursor-pointer p-0.5"
                     >
@@ -281,7 +298,7 @@ export function AccountDetailDialog({
                   )}
                 </span>
                 <span className="text-xs font-mono select-all break-all text-foreground">
-                  {account.twoFactor || "Chưa có"}
+                  {account.twoFactor || tr("Chưa có", "None")}
                 </span>
               </div>
             </div>
@@ -295,7 +312,9 @@ export function AccountDetailDialog({
                   {account.mail && (
                     <button
                       type="button"
-                      onClick={() => handleCopy(account.mail, "mail", "Email")}
+                      onClick={() =>
+                        handleCopy(account.mail, "mail", tr("Email", "Email"))
+                      }
                       className="hover:text-foreground cursor-pointer p-0.5"
                     >
                       {copiedKey === "mail" ? (
@@ -307,7 +326,7 @@ export function AccountDetailDialog({
                   )}
                 </span>
                 <span className="text-xs font-mono select-all break-all text-foreground">
-                  {account.mail || "Chưa có"}
+                  {account.mail || tr("Chưa có", "None")}
                 </span>
               </div>
 
@@ -319,7 +338,7 @@ export function AccountDetailDialog({
                     <button
                       type="button"
                       onClick={() =>
-                        handleCopy(account.proxy, "proxy", "Proxy")
+                        handleCopy(account.proxy, "proxy", tr("Proxy", "Proxy"))
                       }
                       className="hover:text-foreground cursor-pointer p-0.5"
                     >
@@ -332,7 +351,7 @@ export function AccountDetailDialog({
                   )}
                 </span>
                 <span className="text-xs font-mono select-all break-all text-foreground">
-                  {account.proxy || "Chưa chọn"}
+                  {account.proxy || tr("Chưa chọn", "Not set")}
                 </span>
               </div>
             </div>
@@ -347,7 +366,9 @@ export function AccountDetailDialog({
                 {account.token && (
                   <button
                     type="button"
-                    onClick={() => handleCopy(account.token, "token", "Token")}
+                    onClick={() =>
+                      handleCopy(account.token, "token", tr("Token", "Token"))
+                    }
                     className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
                   >
                     {copiedKey === "token" ? (
@@ -356,13 +377,15 @@ export function AccountDetailDialog({
                       <LuCopy className="size-3" />
                     )}
                     <span>
-                      {copiedKey === "token" ? "Đã chép" : "Copy Token"}
+                      {copiedKey === "token"
+                        ? tr("Đã chép", "Copied")
+                        : "Copy Token"}
                     </span>
                   </button>
                 )}
               </div>
               <div className="max-h-20 overflow-y-auto rounded bg-background/80 p-2 text-xs font-mono select-all break-all border border-border/50 text-foreground">
-                {account.token || "Chưa có Token"}
+                {account.token || tr("Chưa có Token", "No Token")}
               </div>
             </div>
 
@@ -376,7 +399,11 @@ export function AccountDetailDialog({
                   <button
                     type="button"
                     onClick={() =>
-                      handleCopy(account.cookie, "cookie", "Cookie")
+                      handleCopy(
+                        account.cookie,
+                        "cookie",
+                        tr("Cookie", "Cookie"),
+                      )
                     }
                     className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
                   >
@@ -386,13 +413,15 @@ export function AccountDetailDialog({
                       <LuCopy className="size-3" />
                     )}
                     <span>
-                      {copiedKey === "cookie" ? "Đã chép" : "Copy Cookie"}
+                      {copiedKey === "cookie"
+                        ? tr("Đã chép", "Copied")
+                        : "Copy Cookie"}
                     </span>
                   </button>
                 )}
               </div>
               <div className="max-h-20 overflow-y-auto rounded bg-background/80 p-2 text-xs font-mono select-all break-all border border-border/50 text-foreground">
-                {account.cookie || "Chưa có Cookie"}
+                {account.cookie || tr("Chưa có Cookie", "No Cookie")}
               </div>
             </div>
 
@@ -400,12 +429,16 @@ export function AccountDetailDialog({
             <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Chuỗi dữ liệu gốc (Raw Text)
+                  {tr("Chuỗi dữ liệu gốc (Raw Text)", "Raw Data String")}
                 </span>
                 <button
                   type="button"
                   onClick={() =>
-                    handleCopy(account.rawText, "raw", "Chuỗi dữ liệu gốc")
+                    handleCopy(
+                      account.rawText,
+                      "raw",
+                      tr("Chuỗi dữ liệu gốc", "Raw Text"),
+                    )
                   }
                   className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
                 >
@@ -414,7 +447,9 @@ export function AccountDetailDialog({
                   ) : (
                     <LuCopy className="size-3" />
                   )}
-                  <span>{copiedKey === "raw" ? "Đã chép" : "Copy Raw"}</span>
+                  <span>
+                    {copiedKey === "raw" ? tr("Đã chép", "Copied") : "Copy Raw"}
+                  </span>
                 </button>
               </div>
               <div className="rounded bg-background/80 p-2 text-xs font-mono select-all break-all border border-border/50 text-foreground">
@@ -431,7 +466,7 @@ export function AccountDetailDialog({
             onClick={onClose}
             className="cursor-pointer text-xs h-8 px-4"
           >
-            Đóng
+            {tr("Đóng", "Close")}
           </Button>
         </DialogFooter>
       </DialogContent>

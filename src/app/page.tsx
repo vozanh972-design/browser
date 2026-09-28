@@ -86,7 +86,9 @@ function AccountAvatar({
 }
 
 export default function HomePage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
+  const tr = (vi: string, en: string) => (isVi ? vi : en);
   const [currentPage, setCurrentPage] = useState<AppPage>("profiles");
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -600,7 +602,10 @@ export default function HomePage() {
       return updated;
     });
     showSuccessToast(
-      `Bắt đầu chạy ${runnableAccounts.length} tài khoản hợp lệ!`,
+      tr(
+        `Bắt đầu chạy ${runnableAccounts.length} tài khoản hợp lệ!`,
+        `Started running ${runnableAccounts.length} valid accounts!`,
+      ),
     );
   };
 
@@ -618,12 +623,14 @@ export default function HomePage() {
       return updated;
     });
     setSelectedIds((prev) => prev.filter((i) => i !== id));
-    showSuccessToast("Đã xóa vĩnh viễn tài khoản!");
+    showSuccessToast(
+      tr("Đã xóa vĩnh viễn tài khoản!", "Account permanently deleted!"),
+    );
   };
 
   const handleCopy = (text: string) => {
     void navigator.clipboard.writeText(text);
-    showSuccessToast("Đã sao chép vào bộ nhớ tạm!");
+    showSuccessToast(tr("Đã sao chép vào bộ nhớ tạm!", "Copied to clipboard!"));
   };
 
   const filteredAccounts = accounts.filter(
@@ -658,9 +665,9 @@ export default function HomePage() {
       case "gl":
         return "GL";
       case "account":
-        return "Tiện ích / Nuôi Acc";
+        return tr("Tiện ích / Nuôi Acc", "Utilities / Account Farm");
       case "reg-page":
-        return "Tiện ích / Reg Page";
+        return tr("Tiện ích / Reg Page", "Utilities / Reg Page");
       case "settings":
         return t("rail.settings", "Settings");
       default:
@@ -696,7 +703,7 @@ export default function HomePage() {
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-background text-foreground shadow-2xs border border-border/80 cursor-pointer"
                     >
                       <LuUsers className="size-3.5 text-emerald-400 shrink-0" />
-                      <span>Nuôi Acc</span>
+                      <span>{tr("Nuôi Acc", "Account Farm")}</span>
                       <span className="ml-1 size-1.5 rounded-full bg-emerald-500 shrink-0" />
                     </button>
                     <button
@@ -710,7 +717,10 @@ export default function HomePage() {
                   </div>
 
                   <div className="text-xs text-muted-foreground">
-                    Tiện ích nuôi & quản lý tài khoản
+                    {tr(
+                      "Tiện ích nuôi & quản lý tài khoản",
+                      "Account management & automation tools",
+                    )}
                   </div>
                 </div>
               )}
@@ -719,11 +729,11 @@ export default function HomePage() {
               {selectedIds.length > 0 && (
                 <div className="mb-2.5 flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs">
                   <div className="font-medium text-foreground">
-                    Đã chọn{" "}
+                    {tr("Đã chọn ", "Selected ")}
                     <span className="font-bold text-primary">
                       {selectedIds.length}
                     </span>{" "}
-                    tài khoản
+                    {tr("tài khoản", "accounts")}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button
@@ -745,7 +755,9 @@ export default function HomePage() {
                       className="h-7 text-[11px] gap-1 cursor-pointer"
                     >
                       <LuRefreshCw className="size-3" />
-                      <span>Kiểm tra lại ({selectedIds.length})</span>
+                      <span>
+                        {tr("Kiểm tra lại", "Re-check")} ({selectedIds.length})
+                      </span>
                     </Button>
                     <Button
                       size="sm"
@@ -767,13 +779,16 @@ export default function HomePage() {
                         });
                         setSelectedIds([]);
                         showSuccessToast(
-                          `Đã xóa vĩnh viễn ${selectedIds.length} tài khoản!`,
+                          tr(
+                            `Đã xóa vĩnh viễn ${selectedIds.length} tài khoản!`,
+                            `Permanently deleted ${selectedIds.length} accounts!`,
+                          ),
                         );
                       }}
                       className="h-7 text-[11px] gap-1 cursor-pointer"
                     >
                       <LuTrash2 className="size-3" />
-                      <span>Xóa vĩnh viễn</span>
+                      <span>{tr("Xóa vĩnh viễn", "Delete permanently")}</span>
                     </Button>
                     <Button
                       size="sm"
@@ -781,7 +796,9 @@ export default function HomePage() {
                       className="h-7 text-[11px] gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
                     >
                       <LuPlay className="size-3 fill-current" />
-                      <span>Chạy ({selectedIds.length})</span>
+                      <span>
+                        {tr("Chạy", "Run")} ({selectedIds.length})
+                      </span>
                     </Button>
                   </div>
                 </div>
@@ -801,14 +818,16 @@ export default function HomePage() {
                     />
                   </div>
                   <div className="flex items-center gap-1 hover:text-foreground cursor-pointer">
-                    <span>Tên & UID</span>
+                    <span>{tr("Tên & UID", "Name & UID")}</span>
                     <span className="text-[10px]">▲</span>
                   </div>
-                  <div>TIỆN ÍCH</div>
+                  <div>{tr("TIỆN ÍCH", "UTILITIES")}</div>
                   <div>Proxy / VPN</div>
-                  <div>TRẠNG THÁI</div>
-                  <div>HÀNH ĐỘNG</div>
-                  <div className="text-right pr-2">Thao tác</div>
+                  <div>{tr("TRẠNG THÁI", "STATUS")}</div>
+                  <div>{tr("HÀNH ĐỘNG", "ACTION / STATE")}</div>
+                  <div className="text-right pr-2">
+                    {tr("Thao tác", "Actions")}
+                  </div>
                 </div>
 
                 {/* Table Rows or Empty State */}
@@ -820,11 +839,16 @@ export default function HomePage() {
                           <LuShieldCheck className="size-6" />
                         </div>
                         <p className="text-xs font-semibold text-foreground">
-                          Chưa kết nối tài khoản XSMM
+                          {tr(
+                            "Chưa kết nối tài khoản XSMM",
+                            "XSMM account not connected",
+                          )}
                         </p>
                         <p className="text-[11px] text-muted-foreground max-w-xs leading-relaxed">
-                          Vui lòng đăng nhập tài khoản XSMM để quản lý và tự
-                          động hóa tài khoản.
+                          {tr(
+                            "Vui lòng đăng nhập tài khoản XSMM để quản lý và tự động hóa tài khoản.",
+                            "Please sign in to XSMM account to manage and automate accounts.",
+                          )}
                         </p>
                         <Button
                           size="sm"
@@ -832,7 +856,12 @@ export default function HomePage() {
                           className="mt-2 h-7.5 text-xs bg-amber-500 hover:bg-amber-600 text-black font-semibold cursor-pointer gap-1.5"
                         >
                           <LuKey className="size-3.5" />
-                          <span>Đăng nhập tài khoản XSMM</span>
+                          <span>
+                            {tr(
+                              "Đăng nhập tài khoản XSMM",
+                              "Sign in XSMM account",
+                            )}
+                          </span>
                         </Button>
                       </div>
                     ) : (
@@ -853,15 +882,20 @@ export default function HomePage() {
                         </div>
                         <p className="text-xs font-semibold text-foreground">
                           {currentPlatform === "instagram"
-                            ? "Chưa có tài khoản Instagram nào"
-                            : "Chưa có tài khoản Facebook nào"}
+                            ? tr(
+                                "Chưa có tài khoản Instagram nào",
+                                "No Instagram accounts yet",
+                              )
+                            : tr(
+                                "Chưa có tài khoản Facebook nào",
+                                "No Facebook accounts yet",
+                              )}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
-                          Bấm nút "+ Mới" ở góc trên bên phải để thêm tài khoản{" "}
-                          {currentPlatform === "instagram"
-                            ? "Instagram"
-                            : "Facebook"}
-                          .
+                          {tr(
+                            `Bấm nút "+ Mới" ở góc trên bên phải để thêm tài khoản ${currentPlatform === "instagram" ? "Instagram" : "Facebook"}.`,
+                            `Click "+ New" button at top right to add a ${currentPlatform === "instagram" ? "Instagram" : "Facebook"} account.`,
+                          )}
                         </p>
                         <Button
                           size="sm"
@@ -871,8 +905,14 @@ export default function HomePage() {
                           <LuPlus className="size-3.5" />
                           <span>
                             {currentPlatform === "instagram"
-                              ? "Thêm tài khoản Instagram"
-                              : "Thêm tài khoản Facebook"}
+                              ? tr(
+                                  "Thêm tài khoản Instagram",
+                                  "Add Instagram Account",
+                                )
+                              : tr(
+                                  "Thêm tài khoản Facebook",
+                                  "Add Facebook Account",
+                                )}
                           </span>
                         </Button>
                       </div>
@@ -971,7 +1011,10 @@ export default function HomePage() {
                                   if (acc.token) handleCopy(acc.token);
                                 }}
                                 className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 cursor-pointer"
-                                title="Click để copy Token"
+                                title={tr(
+                                  "Click để copy Token",
+                                  "Click to copy Token",
+                                )}
                               >
                                 Token
                               </button>
@@ -980,13 +1023,13 @@ export default function HomePage() {
                               <span className="text-[11px] font-mono">2FA</span>
                             ) : null}
                             {!acc.token && !acc.twoFactor && (
-                              <span>Mặc định</span>
+                              <span>{tr("Mặc định", "Default")}</span>
                             )}
                           </div>
 
                           {/* Proxy / VPN */}
                           <div className="text-muted-foreground truncate pr-2 font-mono text-[11px]">
-                            {acc.proxy || "Chưa chọn"}
+                            {acc.proxy || tr("Chưa chọn", "Not set")}
                           </div>
 
                           {/* TRẠNG THÁI */}
@@ -994,7 +1037,7 @@ export default function HomePage() {
                             {isChecking ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground whitespace-nowrap">
                                 <LuRefreshCw className="size-2.5 animate-spin shrink-0" />
-                                Đang kiểm tra
+                                {tr("Đang kiểm tra", "Checking")}
                               </span>
                             ) : acc.status === "live" ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
@@ -1010,7 +1053,7 @@ export default function HomePage() {
                               </span>
                             ) : (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 whitespace-nowrap">
-                                Chưa kiểm tra
+                                {tr("Chưa kiểm tra", "Unchecked")}
                               </span>
                             )}
                           </div>
@@ -1020,8 +1063,8 @@ export default function HomePage() {
                             {isCheckpointOrDie ? (
                               <span className="text-rose-500/80 font-medium">
                                 {acc.status === "checkpoint"
-                                  ? "Bị Checkpoint"
-                                  : "Đã Die"}
+                                  ? tr("Bị Checkpoint", "Checkpoint")
+                                  : tr("Đã Die", "Died")}
                               </span>
                             ) : isRunning ? (
                               <span className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold">
@@ -1029,12 +1072,12 @@ export default function HomePage() {
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                                   <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
                                 </span>
-                                Đang chạy...
+                                {tr("Đang chạy...", "Running...")}
                               </span>
                             ) : acc.note && acc.note !== "Không có ghi chú" ? (
                               acc.note
                             ) : (
-                              "Sẵn sàng"
+                              tr("Sẵn sàng", "Ready")
                             )}
                           </div>
 
@@ -1048,7 +1091,10 @@ export default function HomePage() {
                                 setDetailAccount(acc);
                                 setIsDetailOpen(true);
                               }}
-                              title="Xem toàn bộ thông tin tài khoản"
+                              title={tr(
+                                "Xem toàn bộ thông tin tài khoản",
+                                "View full account details",
+                              )}
                               className="p-1 text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
                             >
                               <LuCircleAlert className="size-3.5" />
@@ -1061,7 +1107,10 @@ export default function HomePage() {
                                 e.stopPropagation();
                                 void handleCheckAccount(acc);
                               }}
-                              title="Kiểm tra lại tài khoản"
+                              title={tr(
+                                "Kiểm tra lại tài khoản",
+                                "Re-check account",
+                              )}
                               className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
                             >
                               <LuRefreshCw
@@ -1083,10 +1132,16 @@ export default function HomePage() {
                               }}
                               title={
                                 isCheckpointOrDie
-                                  ? "Tài khoản bị Checkpoint/Die, không thể chạy"
+                                  ? tr(
+                                      "Tài khoản bị Checkpoint/Die, không thể chạy",
+                                      "Account is Checkpoint/Die, cannot run",
+                                    )
                                   : isRunning
-                                    ? "Dừng chạy tài khoản"
-                                    : "Chạy tài khoản"
+                                    ? tr(
+                                        "Dừng chạy tài khoản",
+                                        "Stop running account",
+                                      )
+                                    : tr("Chạy tài khoản", "Run account")
                               }
                               className={cn(
                                 "p-1 rounded transition-colors",
@@ -1107,7 +1162,7 @@ export default function HomePage() {
                                 e.stopPropagation();
                                 handleDeleteAccount(acc.id);
                               }}
-                              title="Xóa tài khoản"
+                              title={tr("Xóa tài khoản", "Delete account")}
                               className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
                             >
                               <LuTrash2 className="size-3.5" />
@@ -1144,15 +1199,15 @@ export default function HomePage() {
                     />
                   </div>
                   <div className="flex items-center gap-1">
-                    <span>Tên</span>
+                    <span>{tr("Tên", "Name")}</span>
                     <span className="text-[10px]">▲</span>
                   </div>
-                  <div>Thẻ</div>
-                  <div>Ghi chú</div>
+                  <div>{tr("Thẻ", "Tags")}</div>
+                  <div>{tr("Ghi chú", "Note")}</div>
                   <div>Proxy / VPN</div>
-                  <div>TIỆN ÍCH</div>
-                  <div>TRẠNG THÁI TÀI KHOẢN</div>
-                  <div>HÀNH ĐỘNG</div>
+                  <div>{tr("TIỆN ÍCH", "UTILITIES")}</div>
+                  <div>{tr("TRẠNG THÁI TÀI KHOẢN", "ACCOUNT STATUS")}</div>
+                  <div>{tr("HÀNH ĐỘNG", "ACTION")}</div>
                   <div className="text-right">#</div>
                 </div>
 
@@ -1162,11 +1217,16 @@ export default function HomePage() {
                     {currentPage.toUpperCase()}
                   </div>
                   <p className="text-sm font-medium text-foreground">
-                    Chưa có tài khoản {currentPage.toUpperCase()} nào
+                    {tr(
+                      `Chưa có tài khoản ${currentPage.toUpperCase()} nào`,
+                      `No ${currentPage.toUpperCase()} accounts yet`,
+                    )}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                    Giao diện {currentPage.toUpperCase()} đã sẵn sàng. Logic kết
-                    nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.
+                    {tr(
+                      `Giao diện ${currentPage.toUpperCase()} đã sẵn sàng. Logic kết nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.`,
+                      `${currentPage.toUpperCase()} interface is ready. Task connection logic will be configured in subsequent updates.`,
+                    )}
                   </p>
                 </div>
               </div>
