@@ -1233,6 +1233,10 @@ export default function HomePage() {
           setSettingsDialogOpen(false);
           setCurrentPage("profiles");
         }}
+        xsmmAccount={xsmmAccount}
+        accounts={accounts}
+        onXsmmLoginClick={() => setIsXsmmLoginOpen(true)}
+        onXsmmLogoutClick={handleXsmmLogout}
       />
 
       {/* About Dialog */}
