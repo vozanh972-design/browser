@@ -33,9 +33,9 @@ function getOrCreateAvatarSeed(): string {
   }
 }
 
-// Dicebear HTTP API v10 — style "notionists-neutral" (tối giản, sang trọng, hợp theme tối)
+// Dicebear HTTP API v10 — style "lorelei" hiện đại, chuẩn đẹp
 function buildAvatarUrl(seed: string): string {
-  return `https://api.dicebear.com/10.x/notionists-neutral/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
+  return `https://api.dicebear.com/10.x/lorelei/svg?seed=${encodeURIComponent(seed)}`;
 }
 
 interface KeyLoginScreenProps {
@@ -47,6 +47,7 @@ export function KeyLoginScreen({ onUnlock }: KeyLoginScreenProps) {
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [avatarError, setAvatarError] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -90,16 +91,17 @@ export function KeyLoginScreen({ onUnlock }: KeyLoginScreenProps) {
       >
         {/* Avatar circle — Dicebear API, duy nhất cho mỗi máy cài đặt */}
         <div className="size-[88px] rounded-full bg-muted/80 border border-border/60 flex items-center justify-center shadow-lg overflow-hidden">
-          {avatarUrl ? (
+          {avatarUrl && !avatarError ? (
             // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
             <img
               src={avatarUrl}
               alt="User avatar"
               className="size-full object-cover"
               draggable={false}
+              onError={() => setAvatarError(true)}
             />
           ) : (
-            // Fallback silhouette khi chưa load xong
+            // Fallback silhouette khi chưa load xong hoặc mất mạng
             <svg
               viewBox="0 0 88 88"
               fill="none"
