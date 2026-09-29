@@ -52,8 +52,10 @@ export function KeyLoginScreen({ onUnlock }: KeyLoginScreenProps) {
             viewBox="0 0 88 88"
             fill="none"
             className="size-full"
-            aria-hidden
+            role="img"
+            aria-label="User avatar"
           >
+            <title>User avatar</title>
             {/* Body */}
             <ellipse
               cx="44"
