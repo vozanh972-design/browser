@@ -5,6 +5,7 @@ import {
   executeFacebookLikePage,
   executeFacebookReaction,
   executeFacebookShare,
+  type FbTaskResult,
 } from "./facebook-task-engine";
 import {
   checkCookieIg,
@@ -13,6 +14,7 @@ import {
   doLike,
   extractPageTokens,
   extractTokensFromCookie,
+  type IgActionResult,
 } from "./instagram-api";
 import {
   addXsmmAccount,
@@ -314,7 +316,12 @@ class XsmmRunnerManager {
         const targetUrl = task.target_url || "";
         const taskId = task.id;
 
-        let actRes = { isSuccess: false, errorMessage: "Chưa hỗ trợ" };
+        let actRes: IgActionResult = {
+          isSuccess: false,
+          httpCode: 0,
+          rawBody: "",
+          errorMessage: "Chưa hỗ trợ",
+        };
 
         if (jobType === "instagram_follow") {
           const userFollow =
@@ -532,7 +539,12 @@ class XsmmRunnerManager {
         const taskId = task.id;
         const taskType = task.type || queryType;
 
-        let res = { isSuccess: false, message: "Chưa hỗ trợ" };
+        let res: FbTaskResult = {
+          isSuccess: false,
+          action: taskType,
+          targetId,
+          message: "Chưa hỗ trợ",
+        };
 
         if (taskType.includes("comment")) {
           const cmt = "Tương tác tuyệt vời!";
