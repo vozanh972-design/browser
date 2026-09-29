@@ -12,28 +12,29 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn main() {
-    tauri_build::build();
-    generate_decoy_matrix();
+  tauri_build::build();
+  generate_decoy_matrix();
 }
 
 // Minimal LCG PRNG — no external crate needed in build script
 struct Lcg(u64);
 impl Lcg {
-    fn new(seed: u64) -> Self {
-        Self(seed ^ 0x9E37_79B9_7F4A_7C15)
-    }
-    fn next(&mut self) -> u64 {
-        self.0 = self.0
-            .wrapping_mul(6_364_136_223_846_793_005)
-            .wrapping_add(1_442_695_040_888_963_407);
-        self.0
-    }
-    fn range(&mut self, lo: u64, hi: u64) -> u64 {
-        lo + self.next() % (hi - lo)
-    }
-    fn pick_idx(&mut self, len: usize) -> usize {
-        self.next() as usize % len
-    }
+  fn new(seed: u64) -> Self {
+    Self(seed ^ 0x9E37_79B9_7F4A_7C15)
+  }
+  fn next(&mut self) -> u64 {
+    self.0 = self
+      .0
+      .wrapping_mul(6_364_136_223_846_793_005)
+      .wrapping_add(1_442_695_040_888_963_407);
+    self.0
+  }
+  fn range(&mut self, lo: u64, hi: u64) -> u64 {
+    lo + self.next() % (hi - lo)
+  }
+  fn pick_idx(&mut self, len: usize) -> usize {
+    self.next() as usize % len
+  }
 }
 
 // ── 15 language pools stored as raw UTF-8 byte sequences ──────────
@@ -116,111 +117,117 @@ const CHR_1: &[u8] = "ᏗᏓᎴᏂᏍᏗ ᏣᎳᎩᎯ".as_bytes();
 
 // Language pool: (name, [phrase_bytes_a, phrase_bytes_b])
 const LANG_POOL: &[(&str, &[&[u8]])] = &[
-    ("Mongolian Traditional", &[MN_0,  MN_1]),
-    ("Tibetan",               &[BO_0,  BO_1]),
-    ("Myanmar",               &[MY_0,  MY_1]),
-    ("Georgian",              &[KA_0,  KA_1]),
-    ("Armenian",              &[HY_0,  HY_1]),
-    ("Arabic",                &[AR_0,  AR_1]),
-    ("Hebrew",                &[HE_0,  HE_1]),
-    ("Khmer",                 &[KM_0,  KM_1]),
-    ("Lao",                   &[LO_0,  LO_1]),
-    ("Thai",                  &[TH_0,  TH_1]),
-    ("Tamil",                 &[TA_0,  TA_1]),
-    ("Ethiopic",              &[ET_0,  ET_1]),
-    ("Devanagari",            &[HI_0,  HI_1]),
-    ("Cherokee",              &[CHR_0, CHR_1]),
-    // 15th layer: mixed fake token (random bytes, no specific language)
-    ("BinaryToken",           &[b"\xDE\xAD\xBE\xEF\xCA\xFE\xBA\xBE", b"\xF0\x0D\xC0\xDE\x13\x37\xFE\xED"]),
+  ("Mongolian Traditional", &[MN_0, MN_1]),
+  ("Tibetan", &[BO_0, BO_1]),
+  ("Myanmar", &[MY_0, MY_1]),
+  ("Georgian", &[KA_0, KA_1]),
+  ("Armenian", &[HY_0, HY_1]),
+  ("Arabic", &[AR_0, AR_1]),
+  ("Hebrew", &[HE_0, HE_1]),
+  ("Khmer", &[KM_0, KM_1]),
+  ("Lao", &[LO_0, LO_1]),
+  ("Thai", &[TH_0, TH_1]),
+  ("Tamil", &[TA_0, TA_1]),
+  ("Ethiopic", &[ET_0, ET_1]),
+  ("Devanagari", &[HI_0, HI_1]),
+  ("Cherokee", &[CHR_0, CHR_1]),
+  // 15th layer: mixed fake token (random bytes, no specific language)
+  (
+    "BinaryToken",
+    &[
+      b"\xDE\xAD\xBE\xEF\xCA\xFE\xBA\xBE",
+      b"\xF0\x0D\xC0\xDE\x13\x37\xFE\xED",
+    ],
+  ),
 ];
 
 fn generate_decoy_matrix() {
-    let seed = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_nanos() as u64;
+  let seed = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .unwrap()
+    .as_nanos() as u64;
 
-    let mut rng = Lcg::new(seed);
+  let mut rng = Lcg::new(seed);
 
-    // Shuffle language order — different every build
-    let mut order: Vec<usize> = (0..LANG_POOL.len()).collect();
-    for i in (1..order.len()).rev() {
-        let j = rng.next() as usize % (i + 1);
-        order.swap(i, j);
-    }
+  // Shuffle language order — different every build
+  let mut order: Vec<usize> = (0..LANG_POOL.len()).collect();
+  for i in (1..order.len()).rev() {
+    let j = rng.next() as usize % (i + 1);
+    order.swap(i, j);
+  }
 
-    let mut out = String::new();
-    out.push_str("// AUTO-GENERATED DECEPTION MATRIX\n");
-    out.push_str("// Unique per compilation. Do not edit.\n");
-    out.push_str("// Each build: 15 language layers, different shuffle + XOR keys.\n");
-    out.push_str("#[allow(dead_code, non_upper_case_globals, clippy::all)]\n");
-    out.push_str("pub(crate) mod decoy_matrix {\n\n");
+  let mut out = String::new();
+  out.push_str("// AUTO-GENERATED DECEPTION MATRIX\n");
+  out.push_str("// Unique per compilation. Do not edit.\n");
+  out.push_str("// Each build: 15 language layers, different shuffle + XOR keys.\n");
+  out.push_str("#[allow(dead_code, non_upper_case_globals, clippy::all)]\n");
+  out.push_str("pub(crate) mod decoy_matrix {\n\n");
 
-    // Track identifier tuples for activation function
-    let mut ids: Vec<(String, String, String)> = Vec::new();
+  // Track identifier tuples for activation function
+  let mut ids: Vec<(String, String, String)> = Vec::new();
 
-    for (layer, &lang_idx) in order.iter().enumerate() {
-        let (lang_name, phrases) = LANG_POOL[lang_idx];
+  for (layer, &lang_idx) in order.iter().enumerate() {
+    let (lang_name, phrases) = LANG_POOL[lang_idx];
 
-        // Random XOR key (30..229 avoids 0x00 and common ASCII)
-        let xor_key = rng.range(30, 229) as u8;
+    // Random XOR key (30..229 avoids 0x00 and common ASCII)
+    let xor_key = rng.range(30, 229) as u8;
 
-        // Pick one phrase randomly, XOR-encode its bytes
-        let phrase_bytes = phrases[rng.pick_idx(phrases.len())];
-        let encoded: Vec<String> = phrase_bytes
-            .iter()
-            .map(|&b| format!("0x{:02X}", b ^ xor_key))
-            .collect();
+    // Pick one phrase randomly, XOR-encode its bytes
+    let phrase_bytes = phrases[rng.pick_idx(phrases.len())];
+    let encoded: Vec<String> = phrase_bytes
+      .iter()
+      .map(|&b| format!("0x{:02X}", b ^ xor_key))
+      .collect();
 
-        // Random fake token (16–31 random bytes — looks like a real key blob)
-        let token_len = rng.range(16, 32) as usize;
-        let fake_token: Vec<String> = (0..token_len)
-            .map(|_| format!("0x{:02X}", (rng.next() & 0xFF) as u8))
-            .collect();
+    // Random fake token (16–31 random bytes — looks like a real key blob)
+    let token_len = rng.range(16, 32) as usize;
+    let fake_token: Vec<String> = (0..token_len)
+      .map(|_| format!("0x{:02X}", (rng.next() & 0xFF) as u8))
+      .collect();
 
-        let prefix    = format!("L{layer:02}");
-        let id_script = format!("{prefix}_SCRIPT");
-        let id_token  = format!("{prefix}_TOKEN");
-        let id_key    = format!("{prefix}_KEY");
+    let prefix = format!("L{layer:02}");
+    let id_script = format!("{prefix}_SCRIPT");
+    let id_token = format!("{prefix}_TOKEN");
+    let id_key = format!("{prefix}_KEY");
 
-        out.push_str(&format!("    // Layer {layer:02}: {lang_name}\n"));
-        out.push_str(&format!(
-            "    pub(crate) const {id_script}: &[u8] = &[{}];\n",
-            encoded.join(", ")
-        ));
-        out.push_str(&format!(
-            "    pub(crate) const {id_token}: &[u8] = &[{}];\n",
-            fake_token.join(", ")
-        ));
-        out.push_str(&format!(
-            "    pub(crate) const {id_key}: u8 = 0x{xor_key:02X};\n\n"
-        ));
+    out.push_str(&format!("    // Layer {layer:02}: {lang_name}\n"));
+    out.push_str(&format!(
+      "    pub(crate) const {id_script}: &[u8] = &[{}];\n",
+      encoded.join(", ")
+    ));
+    out.push_str(&format!(
+      "    pub(crate) const {id_token}: &[u8] = &[{}];\n",
+      fake_token.join(", ")
+    ));
+    out.push_str(&format!(
+      "    pub(crate) const {id_key}: u8 = 0x{xor_key:02X};\n\n"
+    ));
 
-        ids.push((id_script, id_token, id_key));
-    }
+    ids.push((id_script, id_token, id_key));
+  }
 
-    // activate() keeps all 15 layers alive in the binary (no dead-code strip)
-    out.push_str("    #[inline(never)]\n");
-    out.push_str("    pub(crate) fn activate() {\n");
-    out.push_str("        use std::hint::black_box;\n");
+  // activate() keeps all 15 layers alive in the binary (no dead-code strip)
+  out.push_str("    #[inline(never)]\n");
+  out.push_str("    pub(crate) fn activate() {\n");
+  out.push_str("        use std::hint::black_box;\n");
 
-    for (id_script, id_token, id_key) in &ids {
-        // Build each statement via push_str (no format!() ambiguity with identifiers)
-        out.push_str("        let _ = black_box(");
-        out.push_str(id_script);
-        out.push_str(".iter().fold(0u8, |a, &b| a.wrapping_add(b ^ ");
-        out.push_str(id_key);
-        out.push_str(")));\n");
+  for (id_script, id_token, id_key) in &ids {
+    // Build each statement via push_str (no format!() ambiguity with identifiers)
+    out.push_str("        let _ = black_box(");
+    out.push_str(id_script);
+    out.push_str(".iter().fold(0u8, |a, &b| a.wrapping_add(b ^ ");
+    out.push_str(id_key);
+    out.push_str(")));\n");
 
-        out.push_str("        let _ = black_box(");
-        out.push_str(id_token);
-        out.push_str(".iter().fold(0u64, |a, &b| a.wrapping_mul(0x1F).wrapping_add(b as u64)));\n");
-    }
+    out.push_str("        let _ = black_box(");
+    out.push_str(id_token);
+    out.push_str(".iter().fold(0u64, |a, &b| a.wrapping_mul(0x1F).wrapping_add(b as u64)));\n");
+  }
 
-    out.push_str("    }\n");
-    out.push_str("}\n");
+  out.push_str("    }\n");
+  out.push_str("}\n");
 
-    let out_dir = std::env::var("OUT_DIR").unwrap();
-    std::fs::write(format!("{out_dir}/decoy_matrix.rs"), out)
-        .expect("Failed to write decoy_matrix.rs");
+  let out_dir = std::env::var("OUT_DIR").unwrap();
+  std::fs::write(format!("{out_dir}/decoy_matrix.rs"), out)
+    .expect("Failed to write decoy_matrix.rs");
 }

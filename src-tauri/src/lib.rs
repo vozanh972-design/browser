@@ -20,7 +20,7 @@ use hmac::{Hmac, Mac};
 use obfstr::obfstr;
 use serde::Serialize;
 use sha2::Sha256;
-use std::fmt::Write as FmtWrite;
+use std::fmt::Write;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 use tauri::AppHandle;
@@ -41,22 +41,22 @@ const LIC_MAGIC: u64 = 0xCAFE_BABE_DEAD_BEEF;
 const LIC_SALT: u64 = 0xF00D_C0DE_1337_FEED;
 
 fn lic_set(valid: bool) {
-    let v: u64 = if valid { LIC_MAGIC } else { 0 };
-    let c: u64 = v.wrapping_mul(LIC_SALT) ^ LIC_SALT.rotate_right(13);
-    LIC_STATE.store(v, Ordering::SeqCst);
-    LIC_CHECK.store(c, Ordering::SeqCst);
+  let v: u64 = if valid { LIC_MAGIC } else { 0 };
+  let c: u64 = v.wrapping_mul(LIC_SALT) ^ LIC_SALT.rotate_right(13);
+  LIC_STATE.store(v, Ordering::SeqCst);
+  LIC_CHECK.store(c, Ordering::SeqCst);
 }
 
 /// Called at every gate — detects memory tampering
 fn lic_ok() -> bool {
-    let v = LIC_STATE.load(Ordering::SeqCst);
-    let c = LIC_CHECK.load(Ordering::SeqCst);
-    let expected = v.wrapping_mul(LIC_SALT) ^ LIC_SALT.rotate_right(13);
-    if c != expected {
-        // Tamper detected: checksum doesn't match → silent exit
-        std::process::exit(0);
-    }
-    v == LIC_MAGIC
+  let v = LIC_STATE.load(Ordering::SeqCst);
+  let c = LIC_CHECK.load(Ordering::SeqCst);
+  let expected = v.wrapping_mul(LIC_SALT) ^ LIC_SALT.rotate_right(13);
+  if c != expected {
+    // Tamper detected: checksum doesn't match → silent exit
+    std::process::exit(0);
+  }
+  v == LIC_MAGIC
 }
 
 // ============================================================
@@ -65,17 +65,17 @@ fn lic_ok() -> bool {
 // ============================================================
 #[inline(never)]
 fn gate_verify() -> bool {
-    lic_ok()
+  lic_ok()
 }
 
 #[inline(never)]
 fn gate_network() -> bool {
-    lic_ok()
+  lic_ok()
 }
 
 #[inline(never)]
 fn gate_xsmm() -> bool {
-    lic_ok()
+  lic_ok()
 }
 
 // ============================================================
@@ -83,30 +83,32 @@ fn gate_xsmm() -> bool {
 // ============================================================
 #[cfg(all(windows, not(debug_assertions)))]
 fn anti_debug() {
-    // Method 1: IsDebuggerPresent (kernel32, always linked on Windows)
-    extern "system" {
-        fn IsDebuggerPresent() -> u32;
-    }
-    #[allow(unsafe_code)]
-    if unsafe { IsDebuggerPresent() } != 0 {
-        std::process::exit(0);
-    }
+  // Method 1: IsDebuggerPresent (kernel32, always linked on Windows)
+  extern "system" {
+    fn IsDebuggerPresent() -> u32;
+  }
+  #[allow(unsafe_code)]
+  if unsafe { IsDebuggerPresent() } != 0 {
+    std::process::exit(0);
+  }
 
-    // Method 2: Timing check
-    // Normal execution completes the loop in < 30ms.
-    // A debugger stepping through slows it to > 200ms → detected.
-    let t0 = std::time::Instant::now();
-    let mut acc: u64 = 0xDEAD_BEEF;
-    for i in 0u64..50_000 {
-        acc = acc.wrapping_mul(6_364_136_223_846_793_005).wrapping_add(i ^ 0x1337);
-    }
-    // `acc` must appear to be used (anti-optimization)
-    if acc == 0xCAFE_BABE_DEAD_BEEF {
-        std::process::exit(1);
-    }
-    if t0.elapsed().as_millis() > 200 {
-        std::process::exit(0);
-    }
+  // Method 2: Timing check
+  // Normal execution completes the loop in < 30ms.
+  // A debugger stepping through slows it to > 200ms → detected.
+  let t0 = std::time::Instant::now();
+  let mut acc: u64 = 0xDEAD_BEEF;
+  for i in 0u64..50_000 {
+    acc = acc
+      .wrapping_mul(6_364_136_223_846_793_005)
+      .wrapping_add(i ^ 0x1337);
+  }
+  // `acc` must appear to be used (anti-optimization)
+  if acc == 0xCAFE_BABE_DEAD_BEEF {
+    std::process::exit(1);
+  }
+  if t0.elapsed().as_millis() > 200 {
+    std::process::exit(0);
+  }
 }
 
 #[cfg(not(all(windows, not(debug_assertions))))]
@@ -143,90 +145,90 @@ const K6: u8 = 0xE2;
 
 #[inline(never)]
 fn build_api_url() -> String {
-    let mut url = String::with_capacity(35);
-    for &b in U1 {
-        url.push((b ^ K1) as char);
-    }
-    for &b in U2 {
-        url.push((b ^ K2) as char);
-    }
-    for &b in U3 {
-        url.push((b ^ K3) as char);
-    }
-    for &b in U4 {
-        url.push((b ^ K4) as char);
-    }
-    for &b in U5 {
-        url.push((b ^ K5) as char);
-    }
-    for &b in U6 {
-        url.push((b ^ K6) as char);
-    }
-    url
+  let mut url = String::with_capacity(35);
+  for &b in U1 {
+    url.push((b ^ K1) as char);
+  }
+  for &b in U2 {
+    url.push((b ^ K2) as char);
+  }
+  for &b in U3 {
+    url.push((b ^ K3) as char);
+  }
+  for &b in U4 {
+    url.push((b ^ K4) as char);
+  }
+  for &b in U5 {
+    url.push((b ^ K5) as char);
+  }
+  for &b in U6 {
+    url.push((b ^ K6) as char);
+  }
+  url
 }
 
 // ============================================================
 // HWID — Windows MachineGuid from Registry (not cmd/powershell)
 // ============================================================
 fn get_hwid() -> String {
-    #[cfg(windows)]
-    {
-        use winreg::enums::HKEY_LOCAL_MACHINE;
-        use winreg::RegKey;
-        let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
-        if let Ok(sub) = hklm.open_subkey(r"SOFTWARE\Microsoft\Cryptography") {
-            if let Ok(guid) = sub.get_value::<String, _>("MachineGuid") {
-                return guid;
-            }
-        }
+  #[cfg(windows)]
+  {
+    use winreg::enums::HKEY_LOCAL_MACHINE;
+    use winreg::RegKey;
+    let hklm = RegKey::predef(HKEY_LOCAL_MACHINE);
+    if let Ok(sub) = hklm.open_subkey(r"SOFTWARE\Microsoft\Cryptography") {
+      if let Ok(guid) = sub.get_value::<String, _>("MachineGuid") {
+        return guid;
+      }
     }
-    // Fallback: hash of environment identifiers
-    let raw = [
-        std::env::var("COMPUTERNAME").unwrap_or_default(),
-        std::env::var("USERNAME").unwrap_or_default(),
-    ]
-    .join("-");
-    use sha2::{Digest, Sha256 as S2};
-    let hash = S2::digest(raw.as_bytes());
-    let mut hex = String::new();
-    for b in &hash {
-        let _ = write!(hex, "{:02x}", b);
-    }
-    hex
+  }
+  // Fallback: hash of environment identifiers
+  let raw = [
+    std::env::var("COMPUTERNAME").unwrap_or_default(),
+    std::env::var("USERNAME").unwrap_or_default(),
+  ]
+  .join("-");
+  use sha2::{Digest, Sha256 as S2};
+  let hash = S2::digest(raw.as_bytes());
+  let mut hex = String::new();
+  for b in &hash {
+    let _ = write!(hex, "{:02x}", b);
+  }
+  hex
 }
 
 // ============================================================
 // HMAC-SHA256 Signature Verification
 // ============================================================
 fn verify_hmac(secret: &str, data_json: &str, received: &str) -> bool {
-    let Ok(mut mac) = HmacSha256::new_from_slice(secret.as_bytes()) else {
-        return false;
-    };
-    mac.update(data_json.as_bytes());
-    let result = mac.finalize().into_bytes();
-    let mut computed = String::new();
-    for b in result.iter() {
-        let _ = write!(computed, "{:02x}", b);
-    }
-    computed == received
+  let Ok(mut mac) = HmacSha256::new_from_slice(secret.as_bytes()) else {
+    return false;
+  };
+  mac.update(data_json.as_bytes());
+  let result = mac.finalize().into_bytes();
+  let mut computed = String::new();
+  for b in result.iter() {
+    let _ = write!(computed, "{:02x}", b);
+  }
+  computed == received
 }
 
 // ============================================================
 // URL-encode a string value (query param safe)
 // ============================================================
 fn url_encode(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for byte in s.bytes() {
-        match byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(byte as char);
-            }
-            _ => {
-                let _ = write!(out, "%{:02X}", byte);
-            }
-        }
+  let mut out = String::with_capacity(s.len());
+  for byte in s.bytes() {
+    match byte {
+      b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+        out.push(byte as char);
+      }
+      _ => {
+        let _ = write!(out, "%{:02X}", byte);
+      }
     }
-    out
+  }
+  out
 }
 
 // ============================================================
@@ -234,13 +236,13 @@ fn url_encode(s: &str) -> String {
 // ============================================================
 #[derive(Serialize, Debug, Clone)]
 pub struct LicenseResult {
-    pub success: bool,
-    pub status: String,
-    pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub days_left: Option<f64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub expired_at: Option<String>,
+  pub success: bool,
+  pub status: String,
+  pub message: String,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub days_left: Option<f64>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub expired_at: Option<String>,
 }
 
 // ============================================================
@@ -248,183 +250,180 @@ pub struct LicenseResult {
 // ============================================================
 #[tauri::command]
 fn verify_license(key: String) -> LicenseResult {
-    // Anti-debug check on every verify attempt
-    anti_debug();
+  // Anti-debug check on every verify attempt
+  anti_debug();
 
-    let mut trimmed = key.trim().to_string();
-    if trimmed.is_empty() {
-        return LicenseResult {
-            success: false,
-            status: "missing_key".into(),
-            message: "Vui lòng nhập mã key bản quyền!".into(),
-            days_left: None,
-            expired_at: None,
-        };
-    }
-
-    // Get HWID and build full request URL
-    let hwid = get_hwid();
-    // obfstr!() — decrypted on stack with compile-time random key, not plain text in binary
-    let app_slug = obfstr!("lunexpc").to_string();
-    let mut api_url = build_api_url();
-
-    let full_url = format!(
-        "{}?key={}&app={}&hwid={}",
-        api_url,
-        url_encode(&trimmed),
-        url_encode(&app_slug),
-        url_encode(&hwid)
-    );
-
-    // Zeroize after building full_url so they don't linger in heap
-    api_url.zeroize();
-
-    // Call API via curl (no HTTP library dependency, no reqwest)
-    #[cfg(windows)]
-    let mut cmd = std::process::Command::new("curl.exe");
-    #[cfg(not(windows))]
-    let mut cmd = std::process::Command::new("curl");
-
-    cmd.arg("-s")
-        .arg("--connect-timeout")
-        .arg("10")
-        .arg("--max-time")
-        .arg("15")
-        .arg(&full_url);
-
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-    }
-
-    let raw = match cmd.output() {
-        Ok(o) => String::from_utf8_lossy(&o.stdout).to_string(),
-        Err(_) => String::new(),
+  let mut trimmed = key.trim().to_string();
+  if trimmed.is_empty() {
+    return LicenseResult {
+      success: false,
+      status: "missing_key".into(),
+      message: "Vui lòng nhập mã key bản quyền!".into(),
+      days_left: None,
+      expired_at: None,
     };
+  }
 
-    if raw.trim().is_empty() {
-        // Network error — check if this exact key was valid in the current session
-        if gate_verify() {
-            if let Ok(lock) = LICENSE_KEY_STORE.lock() {
-                if lock.as_deref() == Some(trimmed.as_str()) {
-                    trimmed.zeroize();
-                    return LicenseResult {
-                        success: true,
-                        status: "valid".into(),
-                        message: "Chế độ offline – đã xác thực trước đó.".into(),
-                        days_left: None,
-                        expired_at: None,
-                    };
-                }
-            }
-        }
-        trimmed.zeroize();
-        return LicenseResult {
-            success: false,
-            status: "network_error".into(),
-            message: "Không thể kết nối đến máy chủ xác thực. Vui lòng kiểm tra mạng!".into(),
-            days_left: None,
-            expired_at: None,
-        };
-    }
+  // Get HWID and build full request URL
+  let hwid = get_hwid();
+  // obfstr!() — decrypted on stack with compile-time random key, not plain text in binary
+  let app_slug = obfstr!("lunexpc").to_string();
+  let mut api_url = build_api_url();
 
-    // Parse JSON
-    let parsed: serde_json::Value = match serde_json::from_str(raw.trim()) {
-        Ok(v) => v,
-        Err(_) => {
-            trimmed.zeroize();
-            return LicenseResult {
-                success: false,
-                status: "parse_error".into(),
-                message: "Phản hồi từ máy chủ không hợp lệ!".into(),
-                days_left: None,
-                expired_at: None,
-            };
-        }
-    };
+  let full_url = format!(
+    "{}?key={}&app={}&hwid={}",
+    api_url,
+    url_encode(&trimmed),
+    url_encode(&app_slug),
+    url_encode(&hwid)
+  );
 
-    let success = parsed["success"].as_bool().unwrap_or(false);
-    let status = parsed["status"].as_str().unwrap_or("unknown").to_string();
-    let srv_msg = parsed["message"].as_str().unwrap_or("").to_string();
+  // Zeroize after building full_url so they don't linger in heap
+  api_url.zeroize();
 
-    // ── ANTI-BYPASS: HMAC-SHA256 signature verification ───────────
-    // Server signs the data payload. If hacker redirects to a fake
-    // server via hosts/Fiddler, the signature won't match → exit.
-    if let (Some(data_val), Some(sig)) = (parsed.get("data"), parsed["signature"].as_str()) {
-        if !sig.is_empty() {
-            // obfstr!() — HMAC secret decrypted to stack, never in static memory
-            let mut hmac_secret = obfstr!("LUNEX_SECURE_HMAC_SECRET_2026_x99aBq").to_string();
-            let data_json = serde_json::to_string(data_val).unwrap_or_default();
-            let ok = verify_hmac(&hmac_secret, &data_json, sig);
-            hmac_secret.zeroize(); // immediate wipe after use
-            if !ok {
-                lic_set(false);
-                trimmed.zeroize();
-                return LicenseResult {
-                    success: false,
-                    status: "signature_invalid".into(),
-                    message: "Phát hiện giả mạo máy chủ! Kết nối bị chặn vì lý do bảo mật."
-                        .into(),
-                    days_left: None,
-                    expired_at: None,
-                };
-            }
-        }
-    }
+  // Call API via curl (no HTTP library dependency, no reqwest)
+  #[cfg(windows)]
+  let mut cmd = std::process::Command::new("curl.exe");
+  #[cfg(not(windows))]
+  let mut cmd = std::process::Command::new("curl");
 
-    if success && status == "valid" {
-        lic_set(true);
-        if let Ok(mut lock) = LICENSE_KEY_STORE.lock() {
-            *lock = Some(trimmed.clone());
-        }
-        trimmed.zeroize();
+  cmd
+    .arg("-s")
+    .arg("--connect-timeout")
+    .arg("10")
+    .arg("--max-time")
+    .arg("15")
+    .arg(&full_url);
 
-        let days_left = parsed["data"]["days_left"].as_f64();
-        let expired_at = parsed["data"]["expired_at"]
-            .as_str()
-            .filter(|s| !s.is_empty())
-            .map(str::to_string);
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+  }
 
-        LicenseResult {
+  let raw = match cmd.output() {
+    Ok(o) => String::from_utf8_lossy(&o.stdout).to_string(),
+    Err(_) => String::new(),
+  };
+
+  if raw.trim().is_empty() {
+    // Network error — check if this exact key was valid in the current session
+    if gate_verify() {
+      if let Ok(lock) = LICENSE_KEY_STORE.lock() {
+        if lock.as_deref() == Some(trimmed.as_str()) {
+          trimmed.zeroize();
+          return LicenseResult {
             success: true,
-            status,
-            message: srv_msg,
-            days_left,
-            expired_at,
-        }
-    } else {
-        lic_set(false);
-        if let Ok(mut lock) = LICENSE_KEY_STORE.lock() {
-            *lock = None;
-        }
-        trimmed.zeroize();
-
-        let friendly = match status.as_str() {
-            "wrong_device" => {
-                "Key này đang chạy trên máy khác! Vui lòng vào web Lunex để Reset thiết bị."
-                    .to_string()
-            }
-            "app_mismatch" => "Mã key này không thuộc về ứng dụng này!".to_string(),
-            "key_expired" => "Bản quyền của bạn đã hết hạn! Vui lòng gia hạn thêm.".to_string(),
-            "invalid_key" => "Mã key không hợp lệ hoặc chưa được mua!".to_string(),
-            "key_revoked" => {
-                "Bản quyền này đã bị thu hồi do vi phạm điều khoản!".to_string()
-            }
-            "rate_limited" => {
-                "Bạn đã gửi quá nhiều yêu cầu xác thực. Vui lòng thử lại sau 1 phút!".to_string()
-            }
-            _ => srv_msg,
-        };
-
-        LicenseResult {
-            success: false,
-            status,
-            message: friendly,
+            status: "valid".into(),
+            message: "Chế độ offline – đã xác thực trước đó.".into(),
             days_left: None,
             expired_at: None,
+          };
         }
+      }
     }
+    trimmed.zeroize();
+    return LicenseResult {
+      success: false,
+      status: "network_error".into(),
+      message: "Không thể kết nối đến máy chủ xác thực. Vui lòng kiểm tra mạng!".into(),
+      days_left: None,
+      expired_at: None,
+    };
+  }
+
+  // Parse JSON
+  let parsed: serde_json::Value = match serde_json::from_str(raw.trim()) {
+    Ok(v) => v,
+    Err(_) => {
+      trimmed.zeroize();
+      return LicenseResult {
+        success: false,
+        status: "parse_error".into(),
+        message: "Phản hồi từ máy chủ không hợp lệ!".into(),
+        days_left: None,
+        expired_at: None,
+      };
+    }
+  };
+
+  let success = parsed["success"].as_bool().unwrap_or(false);
+  let status = parsed["status"].as_str().unwrap_or("unknown").to_string();
+  let srv_msg = parsed["message"].as_str().unwrap_or("").to_string();
+
+  // ── ANTI-BYPASS: HMAC-SHA256 signature verification ───────────
+  // Server signs the data payload. If hacker redirects to a fake
+  // server via hosts/Fiddler, the signature won't match → exit.
+  if let (Some(data_val), Some(sig)) = (parsed.get("data"), parsed["signature"].as_str()) {
+    if !sig.is_empty() {
+      // obfstr!() — HMAC secret decrypted to stack, never in static memory
+      let mut hmac_secret = obfstr!("LUNEX_SECURE_HMAC_SECRET_2026_x99aBq").to_string();
+      let data_json = serde_json::to_string(data_val).unwrap_or_default();
+      let ok = verify_hmac(&hmac_secret, &data_json, sig);
+      hmac_secret.zeroize(); // immediate wipe after use
+      if !ok {
+        lic_set(false);
+        trimmed.zeroize();
+        return LicenseResult {
+          success: false,
+          status: "signature_invalid".into(),
+          message: "Phát hiện giả mạo máy chủ! Kết nối bị chặn vì lý do bảo mật.".into(),
+          days_left: None,
+          expired_at: None,
+        };
+      }
+    }
+  }
+
+  if success && status == "valid" {
+    lic_set(true);
+    if let Ok(mut lock) = LICENSE_KEY_STORE.lock() {
+      *lock = Some(trimmed.clone());
+    }
+    trimmed.zeroize();
+
+    let days_left = parsed["data"]["days_left"].as_f64();
+    let expired_at = parsed["data"]["expired_at"]
+      .as_str()
+      .filter(|s| !s.is_empty())
+      .map(str::to_string);
+
+    LicenseResult {
+      success: true,
+      status,
+      message: srv_msg,
+      days_left,
+      expired_at,
+    }
+  } else {
+    lic_set(false);
+    if let Ok(mut lock) = LICENSE_KEY_STORE.lock() {
+      *lock = None;
+    }
+    trimmed.zeroize();
+
+    let friendly = match status.as_str() {
+      "wrong_device" => {
+        "Key này đang chạy trên máy khác! Vui lòng vào web Lunex để Reset thiết bị.".to_string()
+      }
+      "app_mismatch" => "Mã key này không thuộc về ứng dụng này!".to_string(),
+      "key_expired" => "Bản quyền của bạn đã hết hạn! Vui lòng gia hạn thêm.".to_string(),
+      "invalid_key" => "Mã key không hợp lệ hoặc chưa được mua!".to_string(),
+      "key_revoked" => "Bản quyền này đã bị thu hồi do vi phạm điều khoản!".to_string(),
+      "rate_limited" => {
+        "Bạn đã gửi quá nhiều yêu cầu xác thực. Vui lòng thử lại sau 1 phút!".to_string()
+      }
+      _ => srv_msg,
+    };
+
+    LicenseResult {
+      success: false,
+      status,
+      message: friendly,
+      days_left: None,
+      expired_at: None,
+    }
+  }
 }
 
 // ============================================================
@@ -432,25 +431,25 @@ fn verify_license(key: String) -> LicenseResult {
 // ============================================================
 #[derive(Serialize)]
 pub struct SystemInfo {
-    pub app_version: String,
-    pub os: String,
-    pub arch: String,
-    pub portable: bool,
+  pub app_version: String,
+  pub os: String,
+  pub arch: String,
+  pub portable: bool,
 }
 
 #[tauri::command]
 fn get_system_info() -> SystemInfo {
-    SystemInfo {
-        app_version: env!("CARGO_PKG_VERSION").to_string(),
-        os: std::env::consts::OS.to_string(),
-        arch: std::env::consts::ARCH.to_string(),
-        portable: false,
-    }
+  SystemInfo {
+    app_version: env!("CARGO_PKG_VERSION").to_string(),
+    os: std::env::consts::OS.to_string(),
+    arch: std::env::consts::ARCH.to_string(),
+    portable: false,
+  }
 }
 
 #[tauri::command]
 fn confirm_quit(app: AppHandle) {
-    app.exit(0);
+  app.exit(0);
 }
 
 // ============================================================
@@ -458,56 +457,57 @@ fn confirm_quit(app: AppHandle) {
 // ============================================================
 #[tauri::command]
 fn xsmm_request(
-    url: String,
-    method: String,
-    token: String,
-    body: Option<String>,
+  url: String,
+  method: String,
+  token: String,
+  body: Option<String>,
 ) -> Result<String, String> {
-    // Gate A — checks checksummed state
-    if !gate_xsmm() {
-        return Err("E_UNLICENSED".to_string());
-    }
+  // Gate A — checks checksummed state
+  if !gate_xsmm() {
+    return Err("E_UNLICENSED".to_string());
+  }
 
-    #[cfg(windows)]
-    let mut cmd = std::process::Command::new("curl.exe");
-    #[cfg(not(windows))]
-    let mut cmd = std::process::Command::new("curl");
+  #[cfg(windows)]
+  let mut cmd = std::process::Command::new("curl.exe");
+  #[cfg(not(windows))]
+  let mut cmd = std::process::Command::new("curl");
 
-    cmd.arg("-s")
-        .arg("-X")
-        .arg(&method)
-        .arg("-H")
-        .arg(format!("Authorization: Bearer {}", token.trim()))
-        .arg("-H")
-        .arg("Content-Type: application/json");
+  cmd
+    .arg("-s")
+    .arg("-X")
+    .arg(&method)
+    .arg("-H")
+    .arg(format!("Authorization: Bearer {}", token.trim()))
+    .arg("-H")
+    .arg("Content-Type: application/json");
 
-    if let Some(ref b) = body {
-        cmd.arg("-d").arg(b);
-    }
-    cmd.arg(&url);
+  if let Some(ref b) = body {
+    cmd.arg("-d").arg(b);
+  }
+  cmd.arg(&url);
 
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x0800_0000);
-    }
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x0800_0000);
+  }
 
-    let output = cmd
-        .output()
-        .map_err(|e| format!("Failed to execute curl: {}", e))?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
+  let output = cmd
+    .output()
+    .map_err(|e| format!("Failed to execute curl: {}", e))?;
+  let stdout = String::from_utf8_lossy(&output.stdout);
 
-    if !output.status.success() && stdout.trim().is_empty() {
-        let err = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("XSMM server connection error: {}", err));
-    }
+  if !output.status.success() && stdout.trim().is_empty() {
+    let err = String::from_utf8_lossy(&output.stderr);
+    return Err(format!("XSMM server connection error: {}", err));
+  }
 
-    // Gate B — second canary deep in function body
-    if !gate_xsmm() {
-        return Err("E_UNLICENSED".to_string());
-    }
+  // Gate B — second canary deep in function body
+  if !gate_xsmm() {
+    return Err("E_UNLICENSED".to_string());
+  }
 
-    Ok(stdout.into_owned())
+  Ok(stdout.into_owned())
 }
 
 // ============================================================
@@ -515,65 +515,65 @@ fn xsmm_request(
 // ============================================================
 #[tauri::command]
 fn curl_request(
-    url: String,
-    method: Option<String>,
-    headers: Option<Vec<String>>,
-    body: Option<String>,
-    cookie: Option<String>,
-    proxy: Option<String>,
-    include_headers: Option<bool>,
+  url: String,
+  method: Option<String>,
+  headers: Option<Vec<String>>,
+  body: Option<String>,
+  cookie: Option<String>,
+  proxy: Option<String>,
+  include_headers: Option<bool>,
 ) -> Result<String, String> {
-    // Gate A
-    if !gate_network() {
-        return Err("E_UNLICENSED".to_string());
-    }
+  // Gate A
+  if !gate_network() {
+    return Err("E_UNLICENSED".to_string());
+  }
 
-    #[cfg(windows)]
-    let mut cmd = std::process::Command::new("curl.exe");
-    #[cfg(not(windows))]
-    let mut cmd = std::process::Command::new("curl");
+  #[cfg(windows)]
+  let mut cmd = std::process::Command::new("curl.exe");
+  #[cfg(not(windows))]
+  let mut cmd = std::process::Command::new("curl");
 
-    let m = method.unwrap_or_else(|| "GET".to_string());
-    cmd.arg("-s").arg("-L").arg("-X").arg(&m);
+  let m = method.unwrap_or_else(|| "GET".to_string());
+  cmd.arg("-s").arg("-L").arg("-X").arg(&m);
 
-    if include_headers.unwrap_or(false) {
-        cmd.arg("-i");
+  if include_headers.unwrap_or(false) {
+    cmd.arg("-i");
+  }
+  if let Some(hdrs) = headers {
+    for h in hdrs {
+      cmd.arg("-H").arg(h);
     }
-    if let Some(hdrs) = headers {
-        for h in hdrs {
-            cmd.arg("-H").arg(h);
-        }
+  }
+  if let Some(c) = cookie {
+    cmd.arg("-b").arg(c);
+  }
+  if let Some(p) = proxy {
+    if !p.trim().is_empty() {
+      cmd.arg("-x").arg(p.trim());
     }
-    if let Some(c) = cookie {
-        cmd.arg("-b").arg(c);
-    }
-    if let Some(p) = proxy {
-        if !p.trim().is_empty() {
-            cmd.arg("-x").arg(p.trim());
-        }
-    }
-    if let Some(ref b) = body {
-        cmd.arg("-d").arg(b);
-    }
-    cmd.arg(&url);
+  }
+  if let Some(ref b) = body {
+    cmd.arg("-d").arg(b);
+  }
+  cmd.arg(&url);
 
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x0800_0000);
-    }
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    cmd.creation_flags(0x0800_0000);
+  }
 
-    let output = cmd
-        .output()
-        .map_err(|e| format!("Failed to execute curl: {}", e))?;
+  let output = cmd
+    .output()
+    .map_err(|e| format!("Failed to execute curl: {}", e))?;
 
-    // Gate B — second canary at output stage
-    if !gate_network() {
-        return Err("E_UNLICENSED".to_string());
-    }
+  // Gate B — second canary at output stage
+  if !gate_network() {
+    return Err("E_UNLICENSED".to_string());
+  }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    Ok(stdout.into_owned())
+  let stdout = String::from_utf8_lossy(&output.stdout);
+  Ok(stdout.into_owned())
 }
 
 // ============================================================
@@ -581,29 +581,29 @@ fn curl_request(
 // ============================================================
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Anti-debug check at startup before UI loads
-    anti_debug();
+  // Anti-debug check at startup before UI loads
+  anti_debug();
 
-    // Activate deception matrix — 15 exotic-language fake secrets loaded into
-    // memory at startup. Different every build. Confuses reverse engineers
-    // who dump strings: they see Mongolian, Tibetan, Cherokee, etc.
-    decoy_matrix::activate();
+  // Activate deception matrix — 15 exotic-language fake secrets loaded into
+  // memory at startup. Different every build. Confuses reverse engineers
+  // who dump strings: they see Mongolian, Tibetan, Cherokee, etc.
+  decoy_matrix::activate();
 
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_fs::init())
-        .plugin(tauri_plugin_shell::init())
-        .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_clipboard_manager::init())
-        // tauri_plugin_window_state removed — creates files on disk
-        // tauri_plugin_log removed — creates log files on disk
-        .invoke_handler(tauri::generate_handler![
-            get_system_info,
-            confirm_quit,
-            xsmm_request,
-            curl_request,
-            verify_license,
-        ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+  tauri::Builder::default()
+    .plugin(tauri_plugin_opener::init())
+    .plugin(tauri_plugin_fs::init())
+    .plugin(tauri_plugin_shell::init())
+    .plugin(tauri_plugin_dialog::init())
+    .plugin(tauri_plugin_clipboard_manager::init())
+    // tauri_plugin_window_state removed — creates files on disk
+    // tauri_plugin_log removed — creates log files on disk
+    .invoke_handler(tauri::generate_handler![
+      get_system_info,
+      confirm_quit,
+      xsmm_request,
+      curl_request,
+      verify_license,
+    ])
+    .run(tauri::generate_context!())
+    .expect("error while running tauri application");
 }
