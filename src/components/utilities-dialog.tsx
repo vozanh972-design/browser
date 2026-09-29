@@ -1,7 +1,7 @@
 "use client";
 
+import { ArrowRight, Boxes, Flag, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { LuArrowRight, LuBoxes, LuFlag, LuUsers } from "react-icons/lu";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,7 @@ export function UtilitiesDialog({
         <DialogHeader>
           <div className="flex items-center gap-3 mb-1">
             <div className="flex size-9 min-w-9 min-h-9 shrink-0 aspect-square items-center justify-center rounded-lg bg-primary/10 text-primary border border-primary/20">
-              <LuBoxes className="size-5 shrink-0" />
+              <Boxes className="size-5 shrink-0" />
             </div>
             <div>
               <DialogTitle className="text-base font-bold text-foreground">
@@ -58,7 +58,7 @@ export function UtilitiesDialog({
           >
             <div className="flex items-center gap-3.5 min-w-0 flex-1">
               <div className="flex size-11 min-w-11 min-h-11 shrink-0 aspect-square items-center justify-center rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:scale-105 transition-transform">
-                <LuFlag className="size-5 shrink-0" />
+                <Flag className="size-5 shrink-0" />
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -77,7 +77,7 @@ export function UtilitiesDialog({
                 </span>
               </div>
             </div>
-            <LuArrowRight className="size-4 text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+            <ArrowRight className="size-4 text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
           </button>
 
           {/* Option 2: Nuôi Acc */}
@@ -91,7 +91,7 @@ export function UtilitiesDialog({
           >
             <div className="flex items-center gap-3.5 min-w-0 flex-1">
               <div className="flex size-11 min-w-11 min-h-11 shrink-0 aspect-square items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 group-hover:scale-105 transition-transform">
-                <LuUsers className="size-5 shrink-0" />
+                <Users className="size-5 shrink-0" />
               </div>
               <div className="flex flex-col min-w-0 flex-1">
                 <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export function UtilitiesDialog({
                 </span>
               </div>
             </div>
-            <LuArrowRight className="size-4 text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+            <ArrowRight className="size-4 text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
           </button>
         </div>
       </DialogContent>

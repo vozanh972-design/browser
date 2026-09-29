@@ -2,28 +2,21 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import {
+  Check,
+  ChevronRight,
+  Coins,
+  ExternalLink,
+  LogOut,
+  Moon,
+  Search,
+  Sparkles,
+  Sun,
+  SunMedium,
+  User,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  LuCheck,
-  LuChevronRight,
-  LuCoins,
-  LuCpu,
-  LuExternalLink,
-  LuGlobe,
-  LuInfo,
-  LuLogOut,
-  LuMonitor,
-  LuMoon,
-  LuPalette,
-  LuRefreshCw,
-  LuSearch,
-  LuShieldCheck,
-  LuSparkles,
-  LuSun,
-  LuSunMedium,
-  LuUser,
-} from "react-icons/lu";
 import { AnimatedSwitch } from "@/components/ui/animated-switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -446,7 +439,7 @@ export function AppSettingsDialog({
           <aside className="w-64 sm:w-72 shrink-0 border-r border-border/50 bg-muted/20 flex flex-col p-3 gap-2 overflow-y-auto">
             {/* Search Input */}
             <div className="relative">
-              <LuSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -470,7 +463,7 @@ export function AppSettingsDialog({
                 {xsmmAccount?.isLoggedIn ? (
                   xsmmAccount.username.slice(0, 2).toUpperCase()
                 ) : (
-                  <LuUser className="size-5" />
+                  <User className="size-5" />
                 )}
                 {xsmmAccount?.isLoggedIn && (
                   <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
@@ -488,7 +481,7 @@ export function AppSettingsDialog({
                     : tr("Đăng nhập XSMM", "Sign in to XSMM")}
                 </span>
               </div>
-              <LuChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
             </button>
 
             <div className="h-px bg-border/40 my-1" />
@@ -557,7 +550,7 @@ export function AppSettingsDialog({
                     {xsmmAccount?.isLoggedIn ? (
                       xsmmAccount.username.slice(0, 2).toUpperCase()
                     ) : (
-                      <LuUser className="size-7" />
+                      <User className="size-7" />
                     )}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -585,7 +578,7 @@ export function AppSettingsDialog({
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1.5">
-                        <LuCoins className="size-3.5 text-amber-500" />
+                        <Coins className="size-3.5 text-amber-500" />
                         <span className="font-semibold text-foreground">
                           {xsmmAccount?.isLoggedIn ? xsmmAccount.balance : "0"}
                         </span>{" "}
@@ -605,7 +598,7 @@ export function AppSettingsDialog({
                         onClick={onXsmmLogoutClick}
                         className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
                       >
-                        <LuLogOut className="size-3.5" />
+                        <LogOut className="size-3.5" />
                         {tr("Đăng xuất", "Sign out")}
                       </Button>
                     ) : (
@@ -614,7 +607,7 @@ export function AppSettingsDialog({
                         onClick={onXsmmLoginClick}
                         className="gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium"
                       >
-                        <LuUser className="size-3.5" />
+                        <User className="size-3.5" />
                         {tr("Đăng nhập XSMM", "Sign in to XSMM")}
                       </Button>
                     )}
@@ -778,7 +771,7 @@ export function AppSettingsDialog({
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                        <LuSun className="size-3.5 text-amber-500" />
+                        <Sun className="size-3.5 text-amber-500" />
                         {tr("Sáng", "Light")}
                       </div>
                     </button>
@@ -806,7 +799,7 @@ export function AppSettingsDialog({
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                        <LuMoon className="size-3.5 text-indigo-400" />
+                        <Moon className="size-3.5 text-indigo-400" />
                         {tr("Tối", "Dark")}
                       </div>
                     </button>
@@ -837,7 +830,7 @@ export function AppSettingsDialog({
                         </div>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                        <LuSparkles className="size-3.5 text-purple-400" />
+                        <Sparkles className="size-3.5 text-purple-400" />
                         {tr("Tự động", "Auto")}
                       </div>
                     </button>
@@ -878,7 +871,7 @@ export function AppSettingsDialog({
                             style={{ backgroundColor: item.color }}
                           >
                             {accentColor === item.id && (
-                              <LuCheck className="size-3 text-white stroke-[3]" />
+                              <Check className="size-3 text-white stroke-[3]" />
                             )}
                           </button>
                         ))}
@@ -960,7 +953,7 @@ export function AppSettingsDialog({
                       </span>
                     </div>
                     <div className="flex items-center gap-3">
-                      <LuSunMedium className="size-4 text-muted-foreground shrink-0" />
+                      <SunMedium className="size-4 text-muted-foreground shrink-0" />
                       <input
                         type="range"
                         min="70"
@@ -971,7 +964,7 @@ export function AppSettingsDialog({
                         }
                         className="w-full accent-primary h-2 bg-muted rounded-lg cursor-pointer"
                       />
-                      <LuSun className="size-5 text-amber-500 shrink-0" />
+                      <Sun className="size-5 text-amber-500 shrink-0" />
                     </div>
                     <div className="flex justify-between items-center text-[11px] text-muted-foreground pt-1">
                       <span>{tr("Dịu mắt (70%)", "Dim (70%)")}</span>
@@ -1455,7 +1448,7 @@ export function AppSettingsDialog({
                     onClick={() => handleOpenUrl("https://lunex.io.vn")}
                     className="gap-1.5 text-xs h-8 cursor-pointer"
                   >
-                    <LuExternalLink className="size-3.5" />
+                    <ExternalLink className="size-3.5" />
                     {tr("Trang chủ lunex.io.vn", "Website lunex.io.vn")}
                   </Button>
                 </div>

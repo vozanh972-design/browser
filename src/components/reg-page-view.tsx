@@ -1,22 +1,22 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import {
-  LuChevronDown,
-  LuChevronRight,
-  LuCopy,
-  LuExternalLink,
-  LuFlag,
-  LuInfo,
-  LuPause,
-  LuPlay,
-  LuRotateCcw,
-  LuSearch,
-  LuSettings,
-  LuTrash2,
-  LuUser,
-  LuUsers,
-} from "react-icons/lu";
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  ExternalLink,
+  Flag,
+  Info,
+  Pause,
+  Play,
+  RotateCcw,
+  Search,
+  Settings,
+  Trash2,
+  User,
+  Users,
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import {
   type AccountDetailData,
   AccountDetailDialog,
@@ -430,14 +430,14 @@ export function RegPageView({
             onClick={onNavigateToNuoiAcc}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
           >
-            <LuUsers className="size-3.5 shrink-0" />
+            <Users className="size-3.5 shrink-0" />
             <span>Nuôi Acc</span>
           </button>
           <button
             type="button"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-background text-foreground shadow-2xs border border-border/80 cursor-pointer"
           >
-            <LuFlag className="size-3.5 text-indigo-400 shrink-0" />
+            <Flag className="size-3.5 text-indigo-400 shrink-0" />
             <span>Reg Page</span>
             <span className="ml-1 size-1.5 rounded-full bg-indigo-500 shrink-0" />
           </button>
@@ -465,7 +465,7 @@ export function RegPageView({
         <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-background p-3.5 shadow-2xs overflow-y-auto">
           <div className="flex items-center justify-between border-b border-border/40 pb-2">
             <div className="flex items-center gap-2">
-              <LuSettings className="size-4 text-indigo-400" />
+              <Settings className="size-4 text-indigo-400" />
               <span className="text-xs font-bold text-foreground uppercase tracking-wider">
                 Cấu hình Reg Page
               </span>
@@ -588,12 +588,12 @@ export function RegPageView({
             >
               {isRunning ? (
                 <>
-                  <LuPause className="size-3.5" />
+                  <Pause className="size-3.5" />
                   <span>Tạm dừng tiến trình</span>
                 </>
               ) : (
                 <>
-                  <LuPlay className="size-3.5 fill-current" />
+                  <Play className="size-3.5 fill-current" />
                   <span>
                     Bắt đầu Reg Page ({selectedAccountUids.length} Acc)
                   </span>
@@ -614,7 +614,7 @@ export function RegPageView({
               }}
               className="h-7 text-xs text-muted-foreground hover:text-foreground cursor-pointer gap-1"
             >
-              <LuRotateCcw className="size-3" />
+              <RotateCcw className="size-3" />
               <span>Làm mới cấu hình</span>
             </Button>
           </div>
@@ -635,7 +635,7 @@ export function RegPageView({
 
             <div className="flex items-center gap-1.5">
               <div className="relative">
-                <LuSearch className="size-3 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <Search className="size-3 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -678,7 +678,7 @@ export function RegPageView({
                   className="h-7 text-[11px] text-muted-foreground hover:text-destructive px-2"
                   title="Xóa toàn bộ lịch sử Fanpage đã tạo"
                 >
-                  <LuTrash2 className="size-3.5" />
+                  <Trash2 className="size-3.5" />
                 </Button>
               )}
             </div>
@@ -709,7 +709,7 @@ export function RegPageView({
           {filteredAccounts.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center py-24 text-center select-none">
               <div className="flex size-12 items-center justify-center rounded-xl bg-muted/30 text-muted-foreground border border-border/60 mb-2.5">
-                <LuUsers className="size-6" />
+                <Users className="size-6" />
               </div>
               <p className="text-xs font-semibold text-foreground">
                 Chưa có tài khoản Facebook nào
@@ -768,9 +768,9 @@ export function RegPageView({
                             }
                           >
                             {isExpanded ? (
-                              <LuChevronDown className="size-3.5 text-primary" />
+                              <ChevronDown className="size-3.5 text-primary" />
                             ) : (
-                              <LuChevronRight className="size-3.5" />
+                              <ChevronRight className="size-3.5" />
                             )}
                           </button>
                         ) : (
@@ -791,7 +791,7 @@ export function RegPageView({
                               className="size-full object-cover"
                             />
                           ) : (
-                            <LuUser className="size-3.5 text-primary" />
+                            <User className="size-3.5 text-primary" />
                           )}
                         </div>
 
@@ -828,9 +828,9 @@ export function RegPageView({
                                   : `Xem ${accPages.length} Page`}
                               </span>
                               {isExpanded ? (
-                                <LuChevronDown className="size-2.5" />
+                                <ChevronDown className="size-2.5" />
                               ) : (
-                                <LuChevronRight className="size-2.5" />
+                                <ChevronRight className="size-2.5" />
                               )}
                             </button>
                           ) : (
@@ -896,7 +896,7 @@ export function RegPageView({
                           title="Xem chi tiết Profile chủ"
                           className="size-7 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer border border-border/60 shadow-2xs"
                         >
-                          <LuInfo className="size-3.5" />
+                          <Info className="size-3.5" />
                         </button>
                       </div>
                     </div>
@@ -917,7 +917,7 @@ export function RegPageView({
                           {/* Tên Fanpage: Luôn có chữ "Page : " ở trước */}
                           <div className="flex items-center gap-2 min-w-0 pl-3 pr-2">
                             <div className="size-5 rounded-md bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
-                              <LuFlag className="size-3" />
+                              <Flag className="size-3" />
                             </div>
                             <div className="flex flex-col min-w-0">
                               <span className="font-medium text-foreground truncate">
@@ -939,7 +939,7 @@ export function RegPageView({
                           {/* Phân loại: Page reg ra */}
                           <div>
                             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              <LuFlag className="size-2.5" />
+                              <Flag className="size-2.5" />
                               <span>Fanpage</span>
                             </span>
                           </div>
@@ -959,7 +959,7 @@ export function RegPageView({
                               title="Xem chi tiết Fanpage (Avatar, Bìa, UID)"
                               className="size-6 flex items-center justify-center text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10 rounded-full transition-colors cursor-pointer border border-border/50 shadow-2xs"
                             >
-                              <LuInfo className="size-3" />
+                              <Info className="size-3" />
                             </button>
                           </div>
                         </div>
@@ -1030,7 +1030,7 @@ export function RegPageView({
                     }}
                   />
                   <div className="size-full flex items-center justify-center bg-indigo-600 text-white font-bold text-lg">
-                    <LuFlag className="size-7" />
+                    <Flag className="size-7" />
                   </div>
                 </div>
 
@@ -1046,7 +1046,7 @@ export function RegPageView({
                   }
                   className="h-8 text-xs gap-1 cursor-pointer"
                 >
-                  <LuExternalLink className="size-3.5" />
+                  <ExternalLink className="size-3.5" />
                   <span>Mở Facebook</span>
                 </Button>
               </div>
@@ -1057,7 +1057,7 @@ export function RegPageView({
                   {selectedPageForDetail.name}
                 </h3>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <LuFlag className="size-3" />
+                  <Flag className="size-3" />
                   Profile Plus
                 </span>
               </div>
@@ -1079,7 +1079,7 @@ export function RegPageView({
                   onClick={() => handleCopy(selectedPageForDetail.pageId)}
                   className="h-7 px-2 text-xs gap-1 cursor-pointer"
                 >
-                  <LuCopy className="size-3" />
+                  <Copy className="size-3" />
                   <span>Sao chép</span>
                 </Button>
               </div>

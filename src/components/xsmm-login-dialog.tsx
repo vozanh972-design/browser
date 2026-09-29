@@ -1,7 +1,7 @@
 "use client";
 
+import { Key, ShieldCheck } from "lucide-react";
 import { useState } from "react";
-import { LuKey, LuShieldCheck } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -75,7 +75,7 @@ export function XsmmLoginDialog({
         <DialogHeader>
           <div className="flex items-center gap-2.5">
             <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
-              <LuShieldCheck className="size-5" />
+              <ShieldCheck className="size-5" />
             </div>
             <div>
               <DialogTitle className="text-base font-semibold">
@@ -111,7 +111,7 @@ export function XsmmLoginDialog({
                 }}
                 className="pr-8 text-xs font-mono"
               />
-              <LuKey className="absolute right-2.5 top-2.5 size-4 text-muted-foreground/60 pointer-events-none" />
+              <Key className="absolute right-2.5 top-2.5 size-4 text-muted-foreground/60 pointer-events-none" />
             </div>
             {error && (
               <span className="text-[11px] text-destructive font-medium">

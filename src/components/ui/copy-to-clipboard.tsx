@@ -2,7 +2,6 @@
 
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuCheck, LuCopy } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { showSuccessToast } from "@/lib/toast-utils";
 

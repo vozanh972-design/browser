@@ -1,17 +1,9 @@
 "use client";
 
+import { Check, Copy, Eye, EyeOff, Key, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
-import {
-  LuCheck,
-  LuCopy,
-  LuEye,
-  LuEyeOff,
-  LuKey,
-  LuRefreshCw,
-  LuShieldCheck,
-} from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -164,7 +156,7 @@ export function AccountDetailDialog({
                   </h3>
                   {account.status === "live" ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
-                      <LuShieldCheck className="size-3" />
+                      <ShieldCheck className="size-3" />
                       Live
                     </span>
                   ) : account.status === "die" ? (
@@ -190,9 +182,9 @@ export function AccountDetailDialog({
                     title={tr("Sao chép UID", "Copy UID")}
                   >
                     {copiedKey === "uid" ? (
-                      <LuCheck className="size-3 text-emerald-500" />
+                      <Check className="size-3 text-emerald-500" />
                     ) : (
-                      <LuCopy className="size-3" />
+                      <Copy className="size-3" />
                     )}
                   </button>
                 </div>
@@ -239,9 +231,9 @@ export function AccountDetailDialog({
                         className="hover:text-foreground cursor-pointer p-0.5"
                       >
                         {showPassword ? (
-                          <LuEyeOff className="size-3" />
+                          <EyeOff className="size-3" />
                         ) : (
-                          <LuEye className="size-3" />
+                          <Eye className="size-3" />
                         )}
                       </button>
                       <button
@@ -256,9 +248,9 @@ export function AccountDetailDialog({
                         className="hover:text-foreground cursor-pointer p-0.5"
                       >
                         {copiedKey === "pass" ? (
-                          <LuCheck className="size-3 text-emerald-500" />
+                          <Check className="size-3 text-emerald-500" />
                         ) : (
-                          <LuCopy className="size-3" />
+                          <Copy className="size-3" />
                         )}
                       </button>
                     </div>
@@ -290,9 +282,9 @@ export function AccountDetailDialog({
                       className="hover:text-foreground cursor-pointer p-0.5"
                     >
                       {copiedKey === "2fa" ? (
-                        <LuCheck className="size-3 text-emerald-500" />
+                        <Check className="size-3 text-emerald-500" />
                       ) : (
-                        <LuCopy className="size-3" />
+                        <Copy className="size-3" />
                       )}
                     </button>
                   )}
@@ -318,9 +310,9 @@ export function AccountDetailDialog({
                       className="hover:text-foreground cursor-pointer p-0.5"
                     >
                       {copiedKey === "mail" ? (
-                        <LuCheck className="size-3 text-emerald-500" />
+                        <Check className="size-3 text-emerald-500" />
                       ) : (
-                        <LuCopy className="size-3" />
+                        <Copy className="size-3" />
                       )}
                     </button>
                   )}
@@ -343,9 +335,9 @@ export function AccountDetailDialog({
                       className="hover:text-foreground cursor-pointer p-0.5"
                     >
                       {copiedKey === "proxy" ? (
-                        <LuCheck className="size-3 text-emerald-500" />
+                        <Check className="size-3 text-emerald-500" />
                       ) : (
-                        <LuCopy className="size-3" />
+                        <Copy className="size-3" />
                       )}
                     </button>
                   )}
@@ -360,7 +352,7 @@ export function AccountDetailDialog({
             <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                  <LuKey className="size-3.5 text-blue-500" />
+                  <Key className="size-3.5 text-blue-500" />
                   <span>Access Token (EAAAA)</span>
                 </span>
                 {account.token && (
@@ -372,9 +364,9 @@ export function AccountDetailDialog({
                     className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
                   >
                     {copiedKey === "token" ? (
-                      <LuCheck className="size-3 text-emerald-500" />
+                      <Check className="size-3 text-emerald-500" />
                     ) : (
-                      <LuCopy className="size-3" />
+                      <Copy className="size-3" />
                     )}
                     <span>
                       {copiedKey === "token"
@@ -408,9 +400,9 @@ export function AccountDetailDialog({
                     className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
                   >
                     {copiedKey === "cookie" ? (
-                      <LuCheck className="size-3 text-emerald-500" />
+                      <Check className="size-3 text-emerald-500" />
                     ) : (
-                      <LuCopy className="size-3" />
+                      <Copy className="size-3" />
                     )}
                     <span>
                       {copiedKey === "cookie"
@@ -443,9 +435,9 @@ export function AccountDetailDialog({
                   className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
                 >
                   {copiedKey === "raw" ? (
-                    <LuCheck className="size-3 text-emerald-500" />
+                    <Check className="size-3 text-emerald-500" />
                   ) : (
-                    <LuCopy className="size-3" />
+                    <Copy className="size-3" />
                   )}
                   <span>
                     {copiedKey === "raw" ? tr("Đã chép", "Copied") : "Copy Raw"}

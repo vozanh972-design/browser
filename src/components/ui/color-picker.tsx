@@ -1,6 +1,7 @@
 "use client";
 
 import Color from "color";
+import { Pipette } from "lucide-react";
 import { Slider } from "radix-ui";
 import {
   type ComponentProps,
@@ -15,7 +16,6 @@ import {
   useState,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { LuPipette } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -354,7 +354,7 @@ export const ColorPickerEyeDropper = ({
       type="button"
       {...props}
     >
-      <LuPipette size={16} />
+      <Pipette size={16} />
     </Button>
   );
 };

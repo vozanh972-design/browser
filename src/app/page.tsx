@@ -1,21 +1,21 @@
 "use client";
 
+import {
+  CircleAlert,
+  Flag,
+  Key,
+  Play,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
+  Square,
+  Trash2,
+  Users,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
-import {
-  LuCircleAlert,
-  LuFlag,
-  LuKey,
-  LuPlay,
-  LuPlus,
-  LuRefreshCw,
-  LuShieldCheck,
-  LuSquare,
-  LuTrash2,
-  LuUsers,
-} from "react-icons/lu";
 import { AboutDialog } from "@/components/about-dialog";
 import { AccountDetailDialog } from "@/components/account-detail-dialog";
 import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dialog";
@@ -272,6 +272,10 @@ export default function HomePage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [checkingIds, setCheckingIds] = useState<string[]>([]);
 
+  // Ref để track UIDs đã được resolve — mỗi UID chỉ gọi API 1 lần, tránh loop vô tận
+  // khi setAccounts() trigger lại effect này.
+  const resolvedIgUidsRef = useRef<Set<string>>(new Set());
+
   // Tự động phân giải username thật (akg1sa6tw5nd) và avatar thật cho tài khoản Instagram
   useEffect(() => {
     const igAccountsNeedingResolution = accounts.filter(
@@ -281,10 +285,16 @@ export default function HomePage() {
           a.name === a.uid ||
           /^\d+$/.test(a.name.replace(/^@/, ""))) &&
         a.uid &&
-        /^\d+$/.test(a.uid),
+        /^\d+$/.test(a.uid) &&
+        !resolvedIgUidsRef.current.has(a.uid), // bỏ qua những uid đã xử lý rồi
     );
 
     if (igAccountsNeedingResolution.length === 0) return;
+
+    // Đánh dấu ngay lập tức để các lần trigger tiếp theo bỏ qua
+    for (const acc of igAccountsNeedingResolution) {
+      resolvedIgUidsRef.current.add(acc.uid);
+    }
 
     let isMounted = true;
     void (async () => {
@@ -305,7 +315,7 @@ export default function HomePage() {
             hasChanges = true;
           }
         } catch {
-          // ignore
+          // ignore — uid vẫn giữ trong resolvedIgUidsRef, sẽ không retry vô tận
         }
       }
 
@@ -338,7 +348,7 @@ export default function HomePage() {
     return () => {
       isMounted = false;
     };
-  }, [accounts]);
+  }, [accounts, resolvedIgUidsRef.current.has, resolvedIgUidsRef.current.add]);
 
   const handleCheckAccount = async (targetAccount: FacebookAccount) => {
     if (targetAccount.platform === "instagram") {
@@ -978,7 +988,7 @@ export default function HomePage() {
                       type="button"
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-background text-foreground shadow-2xs border border-border/80 cursor-pointer"
                     >
-                      <LuUsers className="size-3.5 text-emerald-400 shrink-0" />
+                      <Users className="size-3.5 text-emerald-400 shrink-0" />
                       <span>{tr("Nuôi Acc", "Account Farm")}</span>
                       <span className="ml-1 size-1.5 rounded-full bg-emerald-500 shrink-0" />
                     </button>
@@ -987,7 +997,7 @@ export default function HomePage() {
                       onClick={() => setCurrentPage("reg-page")}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors cursor-pointer"
                     >
-                      <LuFlag className="size-3.5 text-indigo-400 shrink-0" />
+                      <Flag className="size-3.5 text-indigo-400 shrink-0" />
                       <span>Reg Page</span>
                     </button>
                   </div>
@@ -1030,7 +1040,7 @@ export default function HomePage() {
                       }}
                       className="h-7 text-[11px] gap-1 cursor-pointer"
                     >
-                      <LuRefreshCw className="size-3" />
+                      <RefreshCw className="size-3" />
                       <span>
                         {tr("Kiểm tra lại", "Re-check")} ({selectedIds.length})
                       </span>
@@ -1063,7 +1073,7 @@ export default function HomePage() {
                       }}
                       className="h-7 text-[11px] gap-1 cursor-pointer"
                     >
-                      <LuTrash2 className="size-3" />
+                      <Trash2 className="size-3" />
                       <span>{tr("Xóa vĩnh viễn", "Delete permanently")}</span>
                     </Button>
                     <Button
@@ -1071,7 +1081,7 @@ export default function HomePage() {
                       onClick={handleRunSelected}
                       className="h-7 text-[11px] gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
                     >
-                      <LuPlay className="size-3 fill-current" />
+                      <Play className="size-3 fill-current" />
                       <span>
                         {tr("Chạy", "Run")} ({selectedIds.length})
                       </span>
@@ -1112,7 +1122,7 @@ export default function HomePage() {
                     {currentPage === "profiles" && !xsmmAccount.isLoggedIn ? (
                       <div className="flex flex-col items-center gap-2.5">
                         <div className="flex size-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
-                          <LuShieldCheck className="size-6" />
+                          <ShieldCheck className="size-6" />
                         </div>
                         <p className="text-xs font-semibold text-foreground">
                           {tr(
@@ -1131,7 +1141,7 @@ export default function HomePage() {
                           onClick={() => setIsXsmmLoginOpen(true)}
                           className="mt-2 h-7.5 text-xs bg-amber-500 hover:bg-amber-600 text-black font-semibold cursor-pointer gap-1.5"
                         >
-                          <LuKey className="size-3.5" />
+                          <Key className="size-3.5" />
                           <span>
                             {tr(
                               "Đăng nhập tài khoản XSMM",
@@ -1178,7 +1188,7 @@ export default function HomePage() {
                           onClick={() => setIsAddFacebookOpen(true)}
                           className="mt-2 h-7.5 text-xs cursor-pointer gap-1.5"
                         >
-                          <LuPlus className="size-3.5" />
+                          <Plus className="size-3.5" />
                           <span>
                             {currentPlatform === "instagram"
                               ? tr(
@@ -1318,7 +1328,7 @@ export default function HomePage() {
                           <div className="flex items-center min-w-[95px]">
                             {isChecking ? (
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground whitespace-nowrap">
-                                <LuRefreshCw className="size-2.5 animate-spin shrink-0" />
+                                <RefreshCw className="size-2.5 animate-spin shrink-0" />
                                 {tr("Đang kiểm tra", "Checking")}
                               </span>
                             ) : runState &&
@@ -1404,7 +1414,7 @@ export default function HomePage() {
                               )}
                               className="p-1 text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
                             >
-                              <LuCircleAlert className="size-3.5" />
+                              <CircleAlert className="size-3.5" />
                             </button>
 
                             {/* Nút kiểm tra lại trạng thái Live/Die/Checkpoint */}
@@ -1460,9 +1470,9 @@ export default function HomePage() {
                               )}
                             >
                               {isRunning ? (
-                                <LuSquare className="size-3.5 fill-current" />
+                                <Square className="size-3.5 fill-current" />
                               ) : (
-                                <LuPlay className="size-3.5 fill-current" />
+                                <Play className="size-3.5 fill-current" />
                               )}
                             </button>
 
@@ -1476,7 +1486,7 @@ export default function HomePage() {
                               title={tr("Xóa tài khoản", "Delete account")}
                               className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
                             >
-                              <LuTrash2 className="size-3.5" />
+                              <Trash2 className="size-3.5" />
                             </button>
                           </div>
                         </div>

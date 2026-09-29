@@ -2,10 +2,10 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { ArrowLeft } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { LuArrowLeft, LuSearch } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -282,7 +282,7 @@ export function AboutDialog({ isOpen, onClose }: AboutDialogProps) {
                   aria-label={t("common.buttons.back")}
                   onClick={handleBackToAbout}
                 >
-                  <LuArrowLeft aria-hidden="true" />
+                  <ArrowLeft aria-hidden="true" />
                 </Button>
                 <DialogTitle>{t("about.licenses")}</DialogTitle>
               </DialogHeader>

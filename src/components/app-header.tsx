@@ -1,9 +1,9 @@
 "use client";
 
+import { Coins, Key, LogOut, Plus, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
-import { LuCoins, LuKey, LuLogOut, LuPlus, LuUser } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import { getCurrentOS, type OperatingSystem } from "@/lib/platform";
 import { cn } from "@/lib/utils";
@@ -101,7 +101,7 @@ export function AppHeader({
             <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
               {/* User */}
               <div className="flex items-center gap-1.5 font-medium text-foreground">
-                <LuUser className="size-3.5 text-primary" />
+                <User className="size-3.5 text-primary" />
                 <span className="max-w-[120px] truncate">
                   {xsmmAccount.username}
                 </span>
@@ -111,7 +111,7 @@ export function AppHeader({
 
               {/* Balance */}
               <div className="flex items-center gap-1 font-semibold text-emerald-400">
-                <LuCoins className="size-3.5 text-amber-400" />
+                <Coins className="size-3.5 text-amber-400" />
                 <span>{xsmmAccount.balance}</span>
               </div>
 
@@ -123,7 +123,7 @@ export function AppHeader({
                   title={isVi ? "Đăng xuất XSMM" : "Sign out XSMM"}
                   className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
                 >
-                  <LuLogOut className="size-3.5" />
+                  <LogOut className="size-3.5" />
                 </button>
               )}
             </div>
@@ -134,7 +134,7 @@ export function AppHeader({
                 onClick={onXsmmLoginClick}
                 className="flex h-7 items-center gap-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2.5 text-xs font-medium text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
               >
-                <LuKey className="size-3" />
+                <Key className="size-3" />
                 <span>{isVi ? "Đăng nhập XSMM" : "Sign in XSMM"}</span>
               </button>
             )
@@ -146,7 +146,7 @@ export function AppHeader({
             onClick={onNewClick}
             className="flex h-7 items-center gap-1 px-2.5 text-xs cursor-pointer shadow-xs font-medium"
           >
-            <LuPlus className="size-3.5" />
+            <Plus className="size-3.5" />
             <span>{isVi ? "+ Mới" : "+ New"}</span>
           </Button>
         )}

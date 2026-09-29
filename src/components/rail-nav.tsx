@@ -1,10 +1,10 @@
 "use client";
 
+import { Boxes } from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
-import { LuBoxes, LuUser } from "react-icons/lu";
 import { launchLogoClone } from "@/lib/logo-physics";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
@@ -413,7 +413,7 @@ export function RailNav({
               }}
               className="flex w-full cursor-pointer items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors hover:bg-accent"
             >
-              <LuBoxes className="size-4 shrink-0 text-muted-foreground" />
+              <Boxes className="size-4 shrink-0 text-muted-foreground" />
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-xs font-medium text-foreground">
                   {isVi ? "Tiện ích" : "Utilities"}

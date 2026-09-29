@@ -1,8 +1,8 @@
 "use client";
 
+import { Check, Key, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
-import { LuCheck, LuKey, LuRotateCcw } from "react-icons/lu";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -175,7 +175,7 @@ export function AddFacebookAccountDialog({
                   onClick={resetFormat}
                   className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
                 >
-                  <LuRotateCcw className="size-3" />
+                  <RotateCcw className="size-3" />
                   <span>Chọn lại</span>
                 </button>
               )}
@@ -254,7 +254,7 @@ export function AddFacebookAccountDialog({
           <div className="rounded-xl border border-border/80 bg-muted/30 p-3.5 flex flex-col gap-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <LuKey className="size-4 text-primary" />
+                <Key className="size-4 text-primary" />
                 <span className="text-xs font-medium text-foreground">
                   {isAuthedXsmm
                     ? "Đã đăng nhập XSMM"
@@ -273,7 +273,7 @@ export function AddFacebookAccountDialog({
                 </Button>
               ) : (
                 <span className="flex items-center gap-1 text-xs text-success font-medium">
-                  <LuCheck className="size-3.5" />
+                  <Check className="size-3.5" />
                   Đã xác thực
                 </span>
               )}

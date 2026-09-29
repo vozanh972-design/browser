@@ -1,10 +1,10 @@
 "use client";
 
+import { X } from "lucide-react";
 import { type HTMLMotionProps, motion } from "motion/react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import type * as React from "react";
 import { useTranslation } from "react-i18next";
-import { RxCross2 } from "react-icons/rx";
 
 import { useControlledState } from "@/hooks/use-controlled-state";
 import { getStrictContext } from "@/lib/get-strict-context";
@@ -271,7 +271,7 @@ function DialogContent({
           {children}
           {!hideClose && dismissible && (
             <DialogPrimitive.Close className="absolute top-4 right-4 cursor-pointer rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4">
-              <RxCross2 />
+              <X />
               <span className="sr-only">{t("common.buttons.close")}</span>
             </DialogPrimitive.Close>
           )}
