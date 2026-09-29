@@ -21,6 +21,7 @@ import { AccountDetailDialog } from "@/components/account-detail-dialog";
 import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dialog";
 import { AppHeader } from "@/components/app-header";
 import { AppSettingsDialog } from "@/components/app-settings-dialog";
+import { KeyLoginScreen } from "@/components/key-login-screen";
 import { type AppPage, RailNav } from "@/components/rail-nav";
 import { RegPageView } from "@/components/reg-page-view";
 import { Button } from "@/components/ui/button";
@@ -92,6 +93,10 @@ export default function HomePage() {
   const { t, i18n } = useTranslation();
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
   const tr = (vi: string, en: string) => (isVi ? vi : en);
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return !!localStorage.getItem("app_license_key");
+  });
   const [currentPage, setCurrentPage] = useState<AppPage>("profiles");
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -939,6 +944,15 @@ export default function HomePage() {
 
   return (
     <div className="flex h-dvh flex-col bg-background text-foreground font-(family-name:--font-geist-sans) overflow-hidden select-none">
+      {/* Key login screen — shown if not yet unlocked */}
+      {!isUnlocked && (
+        <KeyLoginScreen
+          onUnlock={(key) => {
+            localStorage.setItem("app_license_key", key);
+            setIsUnlocked(true);
+          }}
+        />
+      )}
       {/* Top titlebar với drag region & thông tin XSMM */}
       <AppHeader
         activePlatform={currentPlatform}
