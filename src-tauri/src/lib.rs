@@ -89,7 +89,7 @@ fn curl_request(
   let mut cmd = std::process::Command::new("curl");
 
   let m = method.unwrap_or_else(|| "GET".to_string());
-  cmd.arg("-s").arg("-X").arg(&m);
+  cmd.arg("-s").arg("-L").arg("-X").arg(&m);
 
   if include_headers.unwrap_or(false) {
     cmd.arg("-i");

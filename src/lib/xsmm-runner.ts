@@ -212,7 +212,20 @@ class XsmmRunnerManager {
     signal: AbortSignal,
   ) {
     const accountId = account.id;
-    const cookie = account.cookie?.trim() || "";
+    let cookie = account.cookie?.trim() || "";
+    if (!cookie) {
+      if (
+        account.rawText?.includes("ds_user_id=") ||
+        account.rawText?.includes("sessionid=")
+      ) {
+        cookie = account.rawText.split("|")[0].trim();
+      } else if (
+        account.uid?.includes("ds_user_id=") ||
+        account.uid?.includes("sessionid=")
+      ) {
+        cookie = account.uid.split("|")[0].trim();
+      }
+    }
     const proxy =
       account.proxy && account.proxy !== "Chưa chọn"
         ? account.proxy

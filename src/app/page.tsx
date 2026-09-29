@@ -115,7 +115,40 @@ export default function HomePage() {
       const saved = localStorage.getItem("autolunex_facebook_accounts_v1");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map((acc: FacebookAccount) => {
+            const cleanAcc = { ...acc };
+            // Tự động chuẩn hóa nếu tài khoản cũ bị lưu nhầm chuỗi cookie vào UID hoặc Name
+            if (
+              cleanAcc.uid &&
+              (cleanAcc.uid.includes(";") ||
+                cleanAcc.uid.includes("=") ||
+                cleanAcc.uid.includes("ds_user_id="))
+            ) {
+              const fullCookie =
+                cleanAcc.cookie || cleanAcc.rawText || cleanAcc.uid;
+              cleanAcc.cookie = fullCookie;
+              cleanAcc.platform = "instagram";
+              const dsMatch = fullCookie.match(/ds_user_id=(\d+)/);
+              if (dsMatch) {
+                cleanAcc.uid = dsMatch[1];
+                cleanAcc.name = `@${dsMatch[1]}`;
+              } else {
+                cleanAcc.uid = `acc_ig_${cleanAcc.id.slice(-6)}`;
+                cleanAcc.name = cleanAcc.uid;
+              }
+            }
+            if (
+              cleanAcc.name &&
+              (cleanAcc.name.includes(";") || cleanAcc.name.includes("="))
+            ) {
+              cleanAcc.name = cleanAcc.uid.startsWith("@")
+                ? cleanAcc.uid
+                : `@${cleanAcc.uid}`;
+            }
+            return cleanAcc;
+          });
+        }
       }
     } catch {
       // ignore
@@ -235,16 +268,39 @@ export default function HomePage() {
           targetAccount.proxy && targetAccount.proxy !== "Chưa chọn"
             ? targetAccount.proxy
             : undefined;
-        const cookie = targetAccount.cookie?.trim() || "";
+        let cookie = targetAccount.cookie?.trim() || "";
+        if (!cookie) {
+          if (
+            targetAccount.rawText?.includes("ds_user_id=") ||
+            targetAccount.rawText?.includes("sessionid=")
+          ) {
+            cookie = targetAccount.rawText.split("|")[0].trim();
+          } else if (
+            targetAccount.uid?.includes("ds_user_id=") ||
+            targetAccount.uid?.includes("sessionid=")
+          ) {
+            cookie = targetAccount.uid.split("|")[0].trim();
+          }
+        }
+
+        const dsMatch = cookie.match(/ds_user_id=(\d+)/);
+        const realUid = dsMatch?.[1] || targetAccount.uid;
+
         if (cookie) {
           const info = await checkCookieIg(cookie, proxyParam);
-          const updated = {
+          const updated: Partial<FacebookAccount> = {
+            cookie,
             status: (info.isLive ? "live" : "checkpoint") as
               | "live"
               | "checkpoint"
               | "die",
-            name: info.username || targetAccount.name,
-            uid: info.userId || targetAccount.uid,
+            name: info.username
+              ? `@${info.username.replace(/^@/, "")}`
+              : realUid
+                ? `@${realUid}`
+                : targetAccount.name,
+            uid: info.userId || realUid,
+            avatar: info.avatar || targetAccount.avatar,
           };
           setAccounts((prev) => {
             const updatedList = prev.map((item) =>
@@ -494,6 +550,39 @@ export default function HomePage() {
   const handleAddAccounts = (lines: string[], format: string) => {
     const formatKeys = format.split("|").map((f) => f.trim().toLowerCase());
     const newAccounts: FacebookAccount[] = lines.map((line, idx) => {
+      // 1. Tự động nhận diện tài khoản Instagram (từ tab Instagram hoặc chuỗi cookie có ds_user_id/sessionid/csrftoken)
+      const isIg =
+        currentPlatform === "instagram" ||
+        line.includes("ds_user_id=") ||
+        line.includes("sessionid=") ||
+        line.includes("csrftoken=");
+
+      if (isIg) {
+        let rawCookie = line.trim();
+        let proxyStr = "Chưa chọn";
+        if (line.includes("|")) {
+          const lastPipeIndex = line.lastIndexOf("|");
+          rawCookie = line.substring(0, lastPipeIndex).trim();
+          proxyStr = line.substring(lastPipeIndex + 1).trim() || "Chưa chọn";
+        }
+        const dsMatch = rawCookie.match(/ds_user_id=(\d+)/);
+        const uid = dsMatch ? dsMatch[1] : `acc_ig_${Date.now()}_${idx + 1}`;
+        const account: FacebookAccount = {
+          id: `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+          uid,
+          name: `@${uid}`,
+          cookie: rawCookie,
+          tag: "Không có thẻ",
+          note: "Sẵn sàng",
+          proxy: proxyStr,
+          platform: "instagram",
+          status: "unverified",
+          rawText: line,
+        };
+        return account;
+      }
+
+      // 2. Nhận diện tài khoản Facebook
       const parts = line.split("|").map((p) => p.trim());
       const account: FacebookAccount = {
         id: `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
@@ -501,7 +590,7 @@ export default function HomePage() {
         tag: "Không có thẻ",
         note: "Sẵn sàng",
         proxy: "Chưa chọn",
-        platform: currentPlatform,
+        platform: "facebook",
         status: "unverified",
         rawText: line,
       };
@@ -595,16 +684,14 @@ export default function HomePage() {
       `Đã thêm ${newAccounts.length} tài khoản ${currentPlatform === "instagram" ? "Instagram" : "Facebook"}!`,
     );
 
-    if (currentPlatform === "facebook") {
-      // Chạy kiểm tra ngầm tuần tự với delay an toàn để tránh bị Facebook hạn chế rate-limit
-      void (async () => {
-        for (const acc of newAccounts) {
-          await handleCheckAccount(acc);
-          const safeDelay = 1200 + Math.floor(Math.random() * 800);
-          await new Promise((r) => setTimeout(r, safeDelay));
-        }
-      })();
-    }
+    // Tự động kiểm tra tài khoản ngầm tuần tự cho cả Facebook và Instagram
+    void (async () => {
+      for (const acc of newAccounts) {
+        await handleCheckAccount(acc);
+        const safeDelay = 1200 + Math.floor(Math.random() * 800);
+        await new Promise((r) => setTimeout(r, safeDelay));
+      }
+    })();
   };
 
   const handleRunAccount = (acc: FacebookAccount) => {

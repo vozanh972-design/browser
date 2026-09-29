@@ -11,6 +11,7 @@ export interface IgCookieInfo {
   isLive: boolean;
   username: string;
   userId: string;
+  avatar?: string;
 }
 
 export interface IgPageTokens {
@@ -85,17 +86,20 @@ export function extractShortcode(url: string): string | null {
 }
 
 /**
- * 1. KIỂM TRA TÌNH TRẠNG COOKIE INSTAGRAM (chuẩn TA Tool - check_cookie_ig)
+ * 1. KIỂM TRA TÌNH TRẠNG COOKIE INSTAGRAM (chuẩn TA Tool - check_cookie_ig kết hợp fallback)
  */
 export async function checkCookieIg(
   cookie: string,
   proxy?: string,
 ): Promise<IgCookieInfo> {
   const cleanCookie = cookie.replace(/[\r\n]+/g, "").trim();
-  const url = "https://www.instagram.com/api/v1/accounts/edit/web_form_data/";
+  const dsMatch = cleanCookie.match(/ds_user_id=(\d+)/);
+  const fallbackUid = dsMatch?.[1] || "";
+
+  // 1. Thử qua endpoint web_form_data (TA Tool - chuẩn)
   try {
     const raw = await executeCurlRequest({
-      url,
+      url: "https://www.instagram.com/api/v1/accounts/edit/web_form_data/",
       method: "GET",
       cookie: cleanCookie,
       proxy,
@@ -108,19 +112,112 @@ export async function checkCookieIg(
       ],
     });
 
-    const json = JSON.parse(raw);
-    const formData = json.form_data;
-    if (formData?.username) {
-      const username = String(formData.username).trim();
-      const dsMatch = cleanCookie.match(/ds_user_id=(\d+)/);
-      const uid = dsMatch?.[1] || String(formData.id || "");
-      return { isLive: true, username, userId: uid };
+    if (raw?.trim()) {
+      try {
+        const json = JSON.parse(raw);
+        const formData = json.form_data;
+        if (formData?.username) {
+          const username = String(formData.username).trim();
+          const uid = fallbackUid || String(formData.id || "");
+          return { isLive: true, username, userId: uid };
+        }
+      } catch {
+        // Tiếp tục thử fallback bên dưới
+      }
     }
   } catch {
-    // Ignore error and return not live
+    // Tiếp tục thử fallback
   }
 
-  return { isLive: false, username: "", userId: "" };
+  // 2. Thử qua endpoint current_user/?edit=true
+  try {
+    const raw = await executeCurlRequest({
+      url: "https://www.instagram.com/api/v1/accounts/current_user/?edit=true",
+      method: "GET",
+      cookie: cleanCookie,
+      proxy,
+      headers: [
+        "x-ig-app-id: 936619743392459",
+        "x-requested-with: XMLHttpRequest",
+        `User-Agent: ${USER_AGENT}`,
+        `sec-ch-ua: ${SEC_CH_UA}`,
+      ],
+    });
+
+    if (raw?.trim()) {
+      try {
+        const json = JSON.parse(raw);
+        const user = json.user;
+        if (user?.username) {
+          const username = String(user.username).trim();
+          const uid = String(user.pk || fallbackUid || "");
+          const avatar = user.profile_pic_url || "";
+          return { isLive: true, username, userId: uid, avatar };
+        }
+      } catch {
+        // Tiếp tục thử fallback
+      }
+    }
+  } catch {
+    // Tiếp tục thử fallback
+  }
+
+  // 3. Thử qua trang chủ https://www.instagram.com/
+  try {
+    const html = await executeCurlRequest({
+      url: "https://www.instagram.com/",
+      method: "GET",
+      cookie: cleanCookie,
+      proxy,
+      headers: [
+        `User-Agent: ${USER_AGENT}`,
+        `sec-ch-ua: ${SEC_CH_UA}`,
+        "sec-ch-ua-mobile: ?0",
+        'sec-ch-ua-platform: "Windows"',
+        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      ],
+    });
+
+    if (html?.trim()) {
+      const lower = html.toLowerCase();
+      const isDead =
+        lower.includes("login_required") ||
+        lower.includes("checkpoint_required") ||
+        lower.includes("challenge_required") ||
+        lower.includes('"is_logged_in":false') ||
+        lower.includes("accounts/suspended") ||
+        lower.includes("1357031");
+
+      if (isDead) {
+        return { isLive: false, username: "", userId: fallbackUid };
+      }
+
+      const uMatch =
+        html.match(/"username"\s*:\s*"([^"]+)"/) ||
+        html.match(/username":"([^"]+)"/) ||
+        html.match(/"viewer"\s*:\s*\{"username"\s*:\s*"([^"]+)"/);
+      if (uMatch?.[1]) {
+        return {
+          isLive: true,
+          username: uMatch[1],
+          userId: fallbackUid,
+        };
+      }
+    }
+  } catch {
+    // Tiếp tục
+  }
+
+  // 4. Nếu có sessionid và ds_user_id trong cookie và không bị phát hiện checkpoint
+  if (cleanCookie.includes("sessionid=") && fallbackUid) {
+    return {
+      isLive: true,
+      username: fallbackUid,
+      userId: fallbackUid,
+    };
+  }
+
+  return { isLive: false, username: "", userId: fallbackUid };
 }
 
 /**
