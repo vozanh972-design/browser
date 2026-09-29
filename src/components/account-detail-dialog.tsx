@@ -1,6 +1,14 @@
 "use client";
 
-import { Check, Copy, Eye, EyeOff, Key, ShieldCheck } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Eye,
+  EyeOff,
+  Key,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
@@ -201,7 +209,7 @@ export function AccountDetailDialog({
                 onClick={() => onRecheck(account)}
                 className="h-8 text-xs cursor-pointer gap-1.5 self-start sm:self-auto"
               >
-                <LuRefreshCw
+                <RefreshCw
                   className={cn("size-3.5", isChecking && "animate-spin")}
                 />
                 <span>

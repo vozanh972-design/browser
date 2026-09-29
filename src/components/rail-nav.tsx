@@ -1,6 +1,6 @@
 "use client";
 
-import { Boxes } from "lucide-react";
+import { Boxes, User } from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -159,7 +159,7 @@ interface RailItem {
 }
 
 const TOP_ITEMS: RailItem[] = [
-  { page: "profiles", Icon: LuUser, labelKey: "XSMM" },
+  { page: "profiles", Icon: User, labelKey: "XSMM" },
   { page: "ttc", textLabel: "TTC", labelKey: "TTC" },
   { page: "nvc", textLabel: "NVC", labelKey: "NVC" },
   { page: "gl", textLabel: "GL", labelKey: "GL" },

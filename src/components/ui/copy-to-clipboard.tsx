@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Copy } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
@@ -53,12 +54,12 @@ export function CopyToClipboard({
       <span className="sr-only">
         {copied ? t("common.srOnly.copied") : t("common.srOnly.copy")}
       </span>
-      <LuCopy
+      <Copy
         className={`size-4 transition-all duration-150 ${
           copied ? "scale-0" : "scale-100"
         }`}
       />
-      <LuCheck
+      <Check
         className={`absolute inset-0 m-auto size-4 text-foreground transition-all duration-150 ${
           copied ? "scale-100" : "scale-0"
         }`}

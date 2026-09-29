@@ -13,7 +13,7 @@ import {
   Users,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { AboutDialog } from "@/components/about-dialog";
@@ -348,7 +348,7 @@ export default function HomePage() {
     return () => {
       isMounted = false;
     };
-  }, [accounts, resolvedIgUidsRef.current.has, resolvedIgUidsRef.current.add]);
+  }, [accounts]);
 
   const handleCheckAccount = async (targetAccount: FacebookAccount) => {
     if (targetAccount.platform === "instagram") {
@@ -1430,7 +1430,7 @@ export default function HomePage() {
                               )}
                               className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
                             >
-                              <LuRefreshCw
+                              <RefreshCw
                                 className={cn(
                                   "size-3.5",
                                   isChecking && "animate-spin text-primary",

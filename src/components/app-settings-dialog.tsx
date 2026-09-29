@@ -6,10 +6,17 @@ import {
   Check,
   ChevronRight,
   Coins,
+  Cpu,
   ExternalLink,
+  Globe,
+  Info,
   LogOut,
+  Monitor,
   Moon,
+  Palette,
+  RefreshCw,
   Search,
+  ShieldCheck,
   Sparkles,
   Sun,
   SunMedium,
@@ -317,7 +324,7 @@ export function AppSettingsDialog({
         subLabel: xsmmAccount?.isLoggedIn
           ? xsmmAccount.username
           : tr("XSMM & Dữ liệu", "XSMM & Data"),
-        icon: LuUser,
+        icon: User,
         color: "bg-blue-500",
       },
       {
@@ -327,7 +334,7 @@ export function AppSettingsDialog({
           "Sáng, Tối, Màu nhấn & Chủ đề",
           "Light, Dark, Accent & Themes",
         ),
-        icon: LuPalette,
+        icon: Palette,
         color: "bg-purple-500",
       },
       {
@@ -337,7 +344,7 @@ export function AppSettingsDialog({
           "Độ sáng, Thu phóng & Hiệu ứng",
           "Brightness, Scaling & Effects",
         ),
-        icon: LuMonitor,
+        icon: Monitor,
         color: "bg-cyan-500",
       },
       {
@@ -347,7 +354,7 @@ export function AppSettingsDialog({
           "Tiếng Việt, English & Định dạng",
           "Vietnamese, English & Formats",
         ),
-        icon: LuGlobe,
+        icon: Globe,
         color: "bg-emerald-500",
       },
       {
@@ -357,14 +364,14 @@ export function AppSettingsDialog({
           "Cấu hình luồng & Độ trễ an toàn",
           "Threads & Safe Request Delays",
         ),
-        icon: LuCpu,
+        icon: Cpu,
         color: "bg-orange-500",
       },
       {
         id: "privacy" as const,
         label: tr("Bảo mật & Dữ liệu", "Privacy & Data"),
         subLabel: tr("Bộ nhớ đệm & Mã hóa", "Cache & Storage Encryption"),
-        icon: LuShieldCheck,
+        icon: ShieldCheck,
         color: "bg-rose-500",
       },
       {
@@ -374,7 +381,7 @@ export function AppSettingsDialog({
           "Phiên bản, Cập nhật & Bản quyền",
           "Version, Updates & License",
         ),
-        icon: LuInfo,
+        icon: Info,
         color: "bg-slate-500",
       },
     ],
@@ -1432,7 +1439,7 @@ export function AppSettingsDialog({
                     disabled={isCheckingUpdate}
                     className="gap-1.5 text-xs bg-primary text-primary-foreground h-8 cursor-pointer"
                   >
-                    <LuRefreshCw
+                    <RefreshCw
                       className={cn(
                         "size-3.5",
                         isCheckingUpdate && "animate-spin",
