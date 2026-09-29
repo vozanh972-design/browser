@@ -26,10 +26,14 @@ tauri-plugin-fs = "2"
 tauri-plugin-shell = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
-tauri-plugin-window-state = "2"
 log = "0.4"
 hmac = "0.12"
 sha2 = "0.10"
+obfstr = "0.4"
+zeroize = "1"
+
+# tauri-plugin-window-state removed: saves state files to disk (violates no-file policy)
+# tauri-plugin-log removed: writes log files to disk (violates no-file policy)
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"

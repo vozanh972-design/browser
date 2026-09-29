@@ -9,11 +9,10 @@ import { CustomThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { WindowDragArea } from "@/components/window-drag-area";
-import { setupLogging } from "@/lib/logger";
+// setupLogging / @tauri-apps/plugin-log removed: writes log files to disk
 
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    void setupLogging();
     try {
       void getCurrentWindow()
         .center()

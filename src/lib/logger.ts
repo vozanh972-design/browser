@@ -1,17 +1,4 @@
-import { attachConsole } from "@tauri-apps/plugin-log";
-
-let consoleAttached = false;
-
+// Logging helper — console only (no disk log files created)
 export async function setupLogging() {
-  if (consoleAttached) {
-    return;
-  }
-
-  try {
-    await attachConsole();
-    consoleAttached = true;
-  } catch (err) {
-    // If attachConsole fails, log to regular console as fallback
-    console.error("Failed to attach console to logging plugin:", err);
-  }
+  // Pure in-memory/console logging; no files or folders created on disk.
 }
