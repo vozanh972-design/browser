@@ -12,6 +12,7 @@ import {
   LuPlus,
   LuRefreshCw,
   LuShieldCheck,
+  LuSquare,
   LuTrash2,
   LuUsers,
 } from "react-icons/lu";
@@ -33,12 +34,14 @@ import {
   fetchAccountDetailsWithToken,
   getTokenAndInfoFromCookie,
 } from "@/lib/facebook-api";
+import { checkCookieIg } from "@/lib/instagram-api";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
 import { getXsmmUser } from "@/lib/xsmm-api";
+import { type AccountRunState, xsmmRunner } from "@/lib/xsmm-runner";
 
-interface FacebookAccount {
+export interface FacebookAccount {
   id: string;
   uid: string;
   name?: string;
@@ -136,6 +139,31 @@ export default function HomePage() {
     }
   }, [accounts]);
 
+  const [runnerStates, setRunnerStates] = useState<
+    Map<string, AccountRunState>
+  >(new Map());
+
+  // Đăng ký nhận cập nhật trạng thái tác vụ từ XSMM Task Runner
+  useEffect(() => {
+    const unsub = xsmmRunner.subscribe((states) => {
+      setRunnerStates(new Map(states));
+    });
+    xsmmRunner.setOnPointsEarned((pts) => {
+      setXsmmAccount((prev) => {
+        const curPts = Number.parseInt(
+          prev.balance.replace(/\D/g, "") || "0",
+          10,
+        );
+        const newPts = curPts + pts;
+        return {
+          ...prev,
+          balance: `${newPts.toLocaleString("vi-VN")} xu`,
+        };
+      });
+    });
+    return () => unsub();
+  }, []);
+
   // Khôi phục phiên đăng nhập XSMM nếu đã lưu token
   useEffect(() => {
     try {
@@ -201,6 +229,48 @@ export default function HomePage() {
 
   const handleCheckAccount = async (targetAccount: FacebookAccount) => {
     if (targetAccount.platform === "instagram") {
+      setCheckingIds((prev) => [...prev, targetAccount.id]);
+      try {
+        const proxyParam =
+          targetAccount.proxy && targetAccount.proxy !== "Chưa chọn"
+            ? targetAccount.proxy
+            : undefined;
+        const cookie = targetAccount.cookie?.trim() || "";
+        if (cookie) {
+          const info = await checkCookieIg(cookie, proxyParam);
+          const updated = {
+            status: (info.isLive ? "live" : "checkpoint") as
+              | "live"
+              | "checkpoint"
+              | "die",
+            name: info.username || targetAccount.name,
+            uid: info.userId || targetAccount.uid,
+          };
+          setAccounts((prev) => {
+            const updatedList = prev.map((item) =>
+              item.id === targetAccount.id ? { ...item, ...updated } : item,
+            );
+            try {
+              localStorage.setItem(
+                "autolunex_facebook_accounts_v1",
+                JSON.stringify(updatedList),
+              );
+            } catch {
+              // ignore
+            }
+            return updatedList;
+          });
+          setDetailAccount((prev) =>
+            prev && prev.id === targetAccount.id
+              ? { ...prev, ...updated }
+              : prev,
+          );
+        }
+      } catch {
+        // ignore
+      } finally {
+        setCheckingIds((prev) => prev.filter((id) => id !== targetAccount.id));
+      }
       return;
     }
 
@@ -540,34 +610,44 @@ export default function HomePage() {
   const handleRunAccount = (acc: FacebookAccount) => {
     if (acc.status === "checkpoint" || acc.status === "die") {
       showSuccessToast(
-        `Tài khoản ${acc.name || acc.uid} đang bị ${acc.status === "checkpoint" ? "Checkpoint" : "Die"}, không thể chạy!`,
+        tr(
+          `Tài khoản ${acc.name || acc.uid} đang bị ${acc.status === "checkpoint" ? "Checkpoint" : "Die"}, không thể chạy!`,
+          `Account ${acc.name || acc.uid} is ${acc.status === "checkpoint" ? "Checkpoint" : "Die"}, cannot run!`,
+        ),
       );
       return;
     }
-    setAccounts((prev) => {
-      const updated = prev.map((item) =>
-        item.id === acc.id
-          ? {
-              ...item,
-              note: item.note === "Đang chạy..." ? "Sẵn sàng" : "Đang chạy...",
-            }
-          : item,
+
+    const savedToken =
+      xsmmAccount.token || localStorage.getItem("xsmm_token") || "";
+    if (!savedToken) {
+      setIsXsmmLoginOpen(true);
+      showSuccessToast(
+        tr(
+          "Vui lòng đăng nhập tài khoản XSMM trước khi chạy nhiệm vụ!",
+          "Please log in to XSMM account before running tasks!",
+        ),
       );
-      try {
-        localStorage.setItem(
-          "autolunex_facebook_accounts_v1",
-          JSON.stringify(updated),
-        );
-      } catch {
-        // ignore
-      }
-      return updated;
-    });
-    showSuccessToast(
-      acc.note === "Đang chạy..."
-        ? `Đã dừng tài khoản: ${acc.name || acc.uid}`
-        : `Bắt đầu chạy tài khoản: ${acc.name || acc.uid}`,
-    );
+      return;
+    }
+
+    if (xsmmRunner.isRunning(acc.id)) {
+      xsmmRunner.stopAccount(acc.id);
+      showSuccessToast(
+        tr(
+          `Đã dừng chạy tài khoản: ${acc.name || acc.uid}`,
+          `Stopped running account: ${acc.name || acc.uid}`,
+        ),
+      );
+    } else {
+      xsmmRunner.startAccount(acc, savedToken);
+      showSuccessToast(
+        tr(
+          `Bắt đầu chạy nhiệm vụ XSMM: ${acc.name || acc.uid}`,
+          `Started running XSMM tasks: ${acc.name || acc.uid}`,
+        ),
+      );
+    }
   };
 
   const handleRunSelected = () => {
@@ -580,31 +660,32 @@ export default function HomePage() {
     );
     if (runnableAccounts.length === 0) {
       showSuccessToast(
-        "Các tài khoản được chọn đều bị Checkpoint/Die, không thể chạy!",
+        tr(
+          "Các tài khoản được chọn đều bị Checkpoint/Die, không thể chạy!",
+          "Selected accounts are Checkpoint/Die, cannot run!",
+        ),
       );
       return;
     }
-    const runnableIds = runnableAccounts.map((a) => a.id);
-    setAccounts((prev) => {
-      const updated = prev.map((item) =>
-        runnableIds.includes(item.id)
-          ? { ...item, note: "Đang chạy..." }
-          : item,
+
+    const savedToken =
+      xsmmAccount.token || localStorage.getItem("xsmm_token") || "";
+    if (!savedToken) {
+      setIsXsmmLoginOpen(true);
+      showSuccessToast(
+        tr(
+          "Vui lòng đăng nhập tài khoản XSMM trước khi chạy nhiệm vụ!",
+          "Please log in to XSMM account before running tasks!",
+        ),
       );
-      try {
-        localStorage.setItem(
-          "autolunex_facebook_accounts_v1",
-          JSON.stringify(updated),
-        );
-      } catch {
-        // ignore
-      }
-      return updated;
-    });
+      return;
+    }
+
+    xsmmRunner.startAccounts(runnableAccounts, savedToken);
     showSuccessToast(
       tr(
-        `Bắt đầu chạy ${runnableAccounts.length} tài khoản hợp lệ!`,
-        `Started running ${runnableAccounts.length} valid accounts!`,
+        `Bắt đầu chạy ${runnableAccounts.length} tài khoản hợp lệ trên XSMM!`,
+        `Started running ${runnableAccounts.length} valid accounts on XSMM!`,
       ),
     );
   };
@@ -925,7 +1006,8 @@ export default function HomePage() {
                       const isSelected = selectedIds.includes(acc.id);
                       const isCheckpointOrDie =
                         acc.status === "checkpoint" || acc.status === "die";
-                      const isRunning = acc.note === "Đang chạy...";
+                      const runState = runnerStates.get(acc.id);
+                      const isRunning = runState?.isRunning ?? false;
                       const avatarSrc =
                         acc.avatar ||
                         (acc.uid && !acc.uid.startsWith("acc_")
@@ -1039,6 +1121,18 @@ export default function HomePage() {
                                 <LuRefreshCw className="size-2.5 animate-spin shrink-0" />
                                 {tr("Đang kiểm tra", "Checking")}
                               </span>
+                            ) : runState &&
+                              (runState.successCount > 0 ||
+                                runState.earnedPoints > 0) ? (
+                              <span
+                                className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
+                                title={`${runState.successCount} thành công, ${runState.errorCount} lỗi`}
+                              >
+                                ✓ {runState.successCount}{" "}
+                                {runState.earnedPoints > 0
+                                  ? `(+${runState.earnedPoints})`
+                                  : ""}
+                              </span>
                             ) : acc.status === "live" ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
                                 Live
@@ -1067,12 +1161,25 @@ export default function HomePage() {
                                   : tr("Đã Die", "Died")}
                               </span>
                             ) : isRunning ? (
-                              <span className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold">
-                                <span className="relative flex size-2">
+                              <span
+                                className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold truncate"
+                                title={runState?.status}
+                              >
+                                <span className="relative flex size-2 shrink-0">
                                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                                   <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
                                 </span>
-                                {tr("Đang chạy...", "Running...")}
+                                <span className="truncate">
+                                  {runState?.status ||
+                                    tr("Đang chạy...", "Running...")}
+                                </span>
+                              </span>
+                            ) : runState?.lastError ? (
+                              <span
+                                className="text-amber-500 truncate"
+                                title={runState.lastError}
+                              >
+                                {runState.lastError}
                               </span>
                             ) : acc.note && acc.note !== "Không có ghi chú" ? (
                               acc.note
@@ -1121,7 +1228,7 @@ export default function HomePage() {
                               />
                             </button>
 
-                            {/* Nút tam giác: Chạy tài khoản (Vô hiệu khi checkpoint/die) */}
+                            {/* Nút Chạy/Dừng tài khoản */}
                             <button
                               type="button"
                               disabled={isCheckpointOrDie}
@@ -1148,11 +1255,15 @@ export default function HomePage() {
                                 isCheckpointOrDie
                                   ? "text-muted-foreground/30 opacity-40 cursor-not-allowed"
                                   : isRunning
-                                    ? "text-emerald-500 bg-emerald-500/15 hover:bg-emerald-500/25 cursor-pointer"
+                                    ? "text-rose-500 bg-rose-500/15 hover:bg-rose-500/25 cursor-pointer"
                                     : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 cursor-pointer",
                               )}
                             >
-                              <LuPlay className="size-3.5 fill-current" />
+                              {isRunning ? (
+                                <LuSquare className="size-3.5 fill-current" />
+                              ) : (
+                                <LuPlay className="size-3.5 fill-current" />
+                              )}
                             </button>
 
                             {/* Nút xóa */}
