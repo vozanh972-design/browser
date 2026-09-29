@@ -527,7 +527,7 @@ export function AppSettingsDialog({
 
             {/* Bottom Footer Info - Synchronized Version */}
             <div className="mt-auto pt-3 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground/80 px-1">
-              <span>AutoLunex Pro</span>
+              <span>AutoLunex MMO</span>
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
                 v{appVersion}
               </Badge>
@@ -1297,8 +1297,8 @@ export function AppSettingsDialog({
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {tr(
-                      "Quản lý lưu trữ cục bộ, cookie trình duyệt và làm sạch bộ nhớ tạm.",
-                      "Manage local storage, browser cookies, and cache cleaning.",
+                      "Quản lý lưu trữ cục bộ, cookie tài khoản và làm sạch bộ nhớ tạm.",
+                      "Manage local storage, account cookies, and cache cleaning.",
                     )}
                   </p>
                 </div>
@@ -1335,8 +1335,8 @@ export function AppSettingsDialog({
                         </div>
                         <div className="text-[11px] text-muted-foreground">
                           {tr(
-                            "Giải phóng bộ nhớ tạm trình duyệt",
-                            "Free temporary browser cache memory",
+                            "Giải phóng bộ nhớ tạm ứng dụng",
+                            "Free temporary cache memory",
                           )}
                         </div>
                       </div>
@@ -1374,7 +1374,10 @@ export function AppSettingsDialog({
                       AutoLunex
                     </h3>
                     <p className="text-xs font-medium text-primary mt-0.5">
-                      Professional Automation & Multi-Profile Browser
+                      {tr(
+                        "MMO kiếm tiền online cùng Lunex",
+                        "MMO Make Money Online with Lunex",
+                      )}
                     </p>
                   </div>
                 </div>
@@ -1386,7 +1389,7 @@ export function AppSettingsDialog({
                       {tr("Phiên bản", "Version")}
                     </span>
                     <span className="font-semibold text-foreground">
-                      {appVersion} (Sonoma Edition)
+                      v{appVersion}
                     </span>
                   </div>
                   <div className="flex justify-between p-3">
@@ -1403,7 +1406,7 @@ export function AppSettingsDialog({
                       {tr("Lõi phần mềm", "Software Core")}
                     </span>
                     <span className="font-semibold text-foreground">
-                      Tauri v2 • Chromium WebKit • React 19
+                      Tauri v2 • Lunex Engine • React 19
                     </span>
                   </div>
                   <div className="flex justify-between p-3">
