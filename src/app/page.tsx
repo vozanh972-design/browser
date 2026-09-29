@@ -93,10 +93,12 @@ export default function HomePage() {
   const { t, i18n } = useTranslation();
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
   const tr = (vi: string, en: string) => (isVi ? vi : en);
-  const [isUnlocked, setIsUnlocked] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return !!localStorage.getItem("app_license_key");
+  // License: always start locked, recheck saved key silently on mount
+  const [savedLicenseKey] = useState<string>(() => {
+    if (typeof window === "undefined") return "";
+    return localStorage.getItem("app_license_key") ?? "";
   });
+  const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
   const [currentPage, setCurrentPage] = useState<AppPage>("profiles");
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -954,9 +956,10 @@ export default function HomePage() {
 
   return (
     <div className="flex h-dvh flex-col bg-background text-foreground font-(family-name:--font-geist-sans) overflow-hidden select-none">
-      {/* Key login screen — shown if not yet unlocked */}
+      {/* Key login screen — shown when not unlocked; passes savedKey for auto-recheck */}
       {!isUnlocked && (
         <KeyLoginScreen
+          autoCheckKey={savedLicenseKey || undefined}
           onUnlock={(key) => {
             localStorage.setItem("app_license_key", key);
             setIsUnlocked(true);
