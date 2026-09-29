@@ -1,5 +1,6 @@
 "use client";
 
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { MotionConfig } from "motion/react";
 import { useEffect } from "react";
 import { CloseConfirmDialog } from "@/components/close-confirm-dialog";
@@ -13,6 +14,13 @@ import { setupLogging } from "@/lib/logger";
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     void setupLogging();
+    try {
+      void getCurrentWindow()
+        .center()
+        .catch(() => {});
+    } catch {
+      // ignore in non-Tauri preview environments
+    }
   }, []);
 
   return (
