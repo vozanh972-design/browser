@@ -19,6 +19,8 @@ Bloks = "Bloks"
 bloks = "bloks"
 thay = "thay"
 thi = "thi"
+tham = "tham"
+THAM = "THAM"
 
 [default.extend-identifiers]
 # Chrome Web Store extension name in the known-VPN list.

@@ -582,7 +582,7 @@ export async function executeFacebookLikePage(options: {
 }
 
 /**
- * 5. THỰC HIỆN THAM GIA GROUP FACEBOOK
+ * 5. THỰC HIỆN GIA NHẬP GROUP FACEBOOK
  */
 export async function executeFacebookJoinGroup(options: {
   targetId: string;
