@@ -14,6 +14,7 @@ import {
   doLike,
   extractPageTokens,
   extractTokensFromCookie,
+  fetchIgUserInfo,
   type IgActionResult,
 } from "./instagram-api";
 import {

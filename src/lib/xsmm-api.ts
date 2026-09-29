@@ -31,6 +31,8 @@ export interface XsmmTaskItem {
   idorlink?: string;
   target_url: string;
   points: number;
+  comment?: string;
+  noi_dung?: string;
 }
 
 export interface XsmmCompleteResponse {
