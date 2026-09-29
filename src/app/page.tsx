@@ -34,7 +34,7 @@ import {
   fetchAccountDetailsWithToken,
   getTokenAndInfoFromCookie,
 } from "@/lib/facebook-api";
-import { checkCookieIg } from "@/lib/instagram-api";
+import { checkCookieIg, fetchIgUserInfo } from "@/lib/instagram-api";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
@@ -132,19 +132,26 @@ export default function HomePage() {
               const dsMatch = fullCookie.match(/ds_user_id=(\d+)/);
               if (dsMatch) {
                 cleanAcc.uid = dsMatch[1];
-                cleanAcc.name = `@${dsMatch[1]}`;
+                cleanAcc.name = "";
               } else {
                 cleanAcc.uid = `acc_ig_${cleanAcc.id.slice(-6)}`;
-                cleanAcc.name = cleanAcc.uid;
+                cleanAcc.name = "";
               }
             }
             if (
               cleanAcc.name &&
               (cleanAcc.name.includes(";") || cleanAcc.name.includes("="))
             ) {
-              cleanAcc.name = cleanAcc.uid.startsWith("@")
-                ? cleanAcc.uid
-                : `@${cleanAcc.uid}`;
+              cleanAcc.name = "";
+            }
+            // Nếu là Instagram và name là UID số hoặc @UID số thì xóa để tự động phân giải lại
+            if (
+              cleanAcc.platform === "instagram" &&
+              cleanAcc.name &&
+              (/^\d+$/.test(cleanAcc.name.replace(/^@/, "")) ||
+                cleanAcc.name === cleanAcc.uid)
+            ) {
+              cleanAcc.name = "";
             }
             return cleanAcc;
           });
@@ -260,6 +267,74 @@ export default function HomePage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [checkingIds, setCheckingIds] = useState<string[]>([]);
 
+  // Tự động phân giải username thật (akg1sa6tw5nd) và avatar thật cho tài khoản Instagram
+  useEffect(() => {
+    const igAccountsNeedingResolution = accounts.filter(
+      (a) =>
+        a.platform === "instagram" &&
+        (!a.name ||
+          a.name === a.uid ||
+          /^\d+$/.test(a.name.replace(/^@/, ""))) &&
+        a.uid &&
+        /^\d+$/.test(a.uid),
+    );
+
+    if (igAccountsNeedingResolution.length === 0) return;
+
+    let isMounted = true;
+    void (async () => {
+      let hasChanges = false;
+      const updates = new Map<string, { username: string; avatar?: string }>();
+
+      for (const acc of igAccountsNeedingResolution) {
+        if (!isMounted) break;
+        const proxyParam =
+          acc.proxy && acc.proxy !== "Chưa chọn" ? acc.proxy : undefined;
+        try {
+          const info = await fetchIgUserInfo(acc.uid, proxyParam);
+          if (info.isLive && info.username && !/^\d+$/.test(info.username)) {
+            updates.set(acc.id, {
+              username: `@${info.username.replace(/^@/, "")}`,
+              avatar: info.avatar,
+            });
+            hasChanges = true;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (isMounted && hasChanges) {
+        setAccounts((prev) => {
+          const updatedList = prev.map((item) => {
+            const up = updates.get(item.id);
+            if (up) {
+              return {
+                ...item,
+                name: up.username,
+                avatar: up.avatar || item.avatar,
+              };
+            }
+            return item;
+          });
+          try {
+            localStorage.setItem(
+              "autolunex_facebook_accounts_v1",
+              JSON.stringify(updatedList),
+            );
+          } catch {
+            // ignore
+          }
+          return updatedList;
+        });
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [accounts]);
+
   const handleCheckAccount = async (targetAccount: FacebookAccount) => {
     if (targetAccount.platform === "instagram") {
       setCheckingIds((prev) => [...prev, targetAccount.id]);
@@ -288,19 +363,38 @@ export default function HomePage() {
 
         if (cookie) {
           const info = await checkCookieIg(cookie, proxyParam);
+          let finalUsername = info.username?.replace(/^@/, "").trim() || "";
+          let finalAvatar = info.avatar || targetAccount.avatar;
+
+          // Nếu chưa có username chuẩn (hoặc bị số), tra cứu trực tiếp qua endpoint User Info chuẩn Android
+          if (!finalUsername || /^\d+$/.test(finalUsername)) {
+            const uInfo = await fetchIgUserInfo(realUid, proxyParam);
+            if (
+              uInfo.isLive &&
+              uInfo.username &&
+              !/^\d+$/.test(uInfo.username)
+            ) {
+              finalUsername = uInfo.username.replace(/^@/, "").trim();
+              if (uInfo.avatar) finalAvatar = uInfo.avatar;
+            }
+          }
+          if (
+            !finalUsername &&
+            targetAccount.name &&
+            !/^\d+$/.test(targetAccount.name.replace(/^@/, ""))
+          ) {
+            finalUsername = targetAccount.name.replace(/^@/, "").trim();
+          }
+
           const updated: Partial<FacebookAccount> = {
             cookie,
             status: (info.isLive ? "live" : "checkpoint") as
               | "live"
               | "checkpoint"
               | "die",
-            name: info.username
-              ? `@${info.username.replace(/^@/, "")}`
-              : realUid
-                ? `@${realUid}`
-                : targetAccount.name,
+            name: finalUsername ? `@${finalUsername}` : "",
             uid: info.userId || realUid,
-            avatar: info.avatar || targetAccount.avatar,
+            avatar: finalAvatar,
           };
           setAccounts((prev) => {
             const updatedList = prev.map((item) =>
@@ -570,7 +664,7 @@ export default function HomePage() {
         const account: FacebookAccount = {
           id: `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
           uid,
-          name: `@${uid}`,
+          name: "",
           cookie: rawCookie,
           tag: "Không có thẻ",
           note: "Sẵn sàng",
@@ -1160,12 +1254,17 @@ export default function HomePage() {
                                     : "text-foreground",
                                 )}
                               >
-                                {acc.name || acc.uid}
+                                {acc.name ||
+                                  (acc.platform === "instagram"
+                                    ? "Đang đồng bộ..."
+                                    : acc.uid)}
                               </span>
                               <span className="text-[10px] font-mono text-muted-foreground truncate leading-tight">
-                                {acc.name && acc.name !== acc.uid
-                                  ? acc.uid
-                                  : `UID: ${acc.uid}`}
+                                {acc.platform === "instagram"
+                                  ? `UID: ${acc.uid}`
+                                  : acc.name && acc.name !== acc.uid
+                                    ? acc.uid
+                                    : `UID: ${acc.uid}`}
                               </span>
                             </div>
                           </div>

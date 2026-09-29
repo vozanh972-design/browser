@@ -96,7 +96,7 @@ export async function checkCookieIg(
   const dsMatch = cleanCookie.match(/ds_user_id=(\d+)/);
   const fallbackUid = dsMatch?.[1] || "";
 
-  // 1. Thử qua endpoint web_form_data (TA Tool - chuẩn)
+  // 1. Thử qua endpoint web_form_data (Chuẩn TA Tool - check_cookie_ig)
   try {
     const raw = await executeCurlRequest({
       url: "https://www.instagram.com/api/v1/accounts/edit/web_form_data/",
@@ -116,7 +116,7 @@ export async function checkCookieIg(
       try {
         const json = JSON.parse(raw);
         const formData = json.form_data;
-        if (formData?.username) {
+        if (formData?.username && !/^\d+$/.test(formData.username)) {
           const username = String(formData.username).trim();
           const uid = fallbackUid || String(formData.id || "");
           return { isLive: true, username, userId: uid };
@@ -129,7 +129,24 @@ export async function checkCookieIg(
     // Tiếp tục thử fallback
   }
 
-  // 2. Thử qua endpoint current_user/?edit=true
+  // 2. Lấy username thật và avatar thật qua endpoint i.instagram.com/api/v1/users/{uid}/info/
+  if (fallbackUid) {
+    const userInfo = await fetchIgUserInfo(fallbackUid, proxy);
+    if (
+      userInfo.isLive &&
+      userInfo.username &&
+      !/^\d+$/.test(userInfo.username)
+    ) {
+      return {
+        isLive: true,
+        username: userInfo.username,
+        userId: fallbackUid,
+        avatar: userInfo.avatar,
+      };
+    }
+  }
+
+  // 3. Thử qua endpoint current_user/?edit=true
   try {
     const raw = await executeCurlRequest({
       url: "https://www.instagram.com/api/v1/accounts/current_user/?edit=true",
@@ -148,7 +165,7 @@ export async function checkCookieIg(
       try {
         const json = JSON.parse(raw);
         const user = json.user;
-        if (user?.username) {
+        if (user?.username && !/^\d+$/.test(user.username)) {
           const username = String(user.username).trim();
           const uid = String(user.pk || fallbackUid || "");
           const avatar = user.profile_pic_url || "";
@@ -162,7 +179,7 @@ export async function checkCookieIg(
     // Tiếp tục thử fallback
   }
 
-  // 3. Thử qua trang chủ https://www.instagram.com/
+  // 4. Thử qua trang chủ https://www.instagram.com/
   try {
     const html = await executeCurlRequest({
       url: "https://www.instagram.com/",
@@ -196,7 +213,7 @@ export async function checkCookieIg(
         html.match(/"username"\s*:\s*"([^"]+)"/) ||
         html.match(/username":"([^"]+)"/) ||
         html.match(/"viewer"\s*:\s*\{"username"\s*:\s*"([^"]+)"/);
-      if (uMatch?.[1]) {
+      if (uMatch?.[1] && !/^\d+$/.test(uMatch[1])) {
         return {
           isLive: true,
           username: uMatch[1],
@@ -208,16 +225,53 @@ export async function checkCookieIg(
     // Tiếp tục
   }
 
-  // 4. Nếu có sessionid và ds_user_id trong cookie và không bị phát hiện checkpoint
+  // 5. Nếu có sessionid và ds_user_id trong cookie và không bị phát hiện checkpoint
   if (cleanCookie.includes("sessionid=") && fallbackUid) {
     return {
       isLive: true,
-      username: fallbackUid,
+      username: "",
       userId: fallbackUid,
     };
   }
 
   return { isLive: false, username: "", userId: fallbackUid };
+}
+
+/**
+ * Lấy thông tin tài khoản Instagram (username thật, avatar thật) qua Endpoint User Info
+ * Chuẩn endpoint Android client i.instagram.com/api/v1/users/{uid}/info/
+ */
+export async function fetchIgUserInfo(
+  uid: string,
+  proxy?: string,
+): Promise<{ isLive: boolean; username: string; avatar?: string }> {
+  const cleanUid = uid.trim().replace(/^@/, "");
+  if (!cleanUid || !/^\d+$/.test(cleanUid)) {
+    return { isLive: false, username: "" };
+  }
+  try {
+    const raw = await executeCurlRequest({
+      url: `https://i.instagram.com/api/v1/users/${cleanUid}/info/`,
+      method: "GET",
+      proxy,
+      headers: [
+        "User-Agent: Instagram 275.0.0.27.98 Android (31/12; 420dpi; 1080x2400; samsung; SM-G998B; p3s; exynos2100; en_US; 455485458)",
+      ],
+    });
+    if (raw?.trim()) {
+      const json = JSON.parse(raw);
+      if (json.status === "ok" && json.user?.username) {
+        return {
+          isLive: true,
+          username: String(json.user.username).trim(),
+          avatar: json.user.profile_pic_url,
+        };
+      }
+    }
+  } catch {
+    // ignore
+  }
+  return { isLive: false, username: "" };
 }
 
 /**
@@ -390,24 +444,34 @@ export async function doFollow(options: {
 
   const csrftoken = getCsrfToken(cookie);
   const actorId = userId?.trim() || getActorId(cookie);
-  const avId =
-    actorId && actorId !== "0"
-      ? !actorId.startsWith("178414")
-        ? `178414${actorId}`
-        : actorId
-      : actorId;
 
-  const docIds = ["9740159112729312", "9663809173698092", "26508036048874888"];
+  const docIds = ["26508036048874888", "9740159112729312", "9663809173698092"];
   let lastResult = "";
 
   for (const docId of docIds) {
-    const variables = JSON.stringify({ target_user_id: targetId });
+    const variables = JSON.stringify({
+      target_user_id: String(targetId),
+      container_module: "profile",
+      nav_chain:
+        "PolarisFeedRoot:feedPage:5:topnav-link,PolarisProfileRoot:profilePage:6:unexpected",
+    });
     const bodyParams = new URLSearchParams({
-      av: avId,
-      __user: actorId,
+      av: actorId,
+      __d: "www",
+      __user: "0",
+      __a: "1",
+      __req: "s",
+      __hs: "20702.HYP:instagram_web_pkg.2.1...0",
+      dpr: "1",
+      __ccg: "EXCELLENT",
+      __rev: "1046917461",
+      __comet_req: "7",
       fb_dtsg: tokens.dtsg,
-      jazoest: tokens.jazoest,
-      lsd: tokens.lsd,
+      jazoest: tokens.jazoest || "26328",
+      lsd: tokens.lsd || "Jfq8VQNmkkkJufHSbEE9bf",
+      fb_api_caller_class: "RelayModern",
+      fb_api_req_friendly_name: "usePolarisFollowMutation",
+      server_timestamps: "true",
       doc_id: docId,
       variables,
     });
@@ -416,7 +480,7 @@ export async function doFollow(options: {
       ...buildIgHeaders(
         cookie,
         csrftoken,
-        tokens.lsd,
+        tokens.lsd || "Jfq8VQNmkkkJufHSbEE9bf",
         targetUrl || "https://www.instagram.com/",
       ),
       "x-fb-friendly-name: usePolarisFollowMutation",
@@ -533,7 +597,27 @@ export async function doLike(options: {
     // fallback sang GraphQL
   }
 
-  // 2. Fallback sang GraphQL Like (doc_id 9595477160535898 hoặc 27182485238052618)
+  // 2. Trích xuất tracking_token nếu có link_job (chuẩn TA Tool)
+  let trackingToken = "";
+  if (linkJob) {
+    try {
+      const resGet = await executeCurlRequest({
+        url: linkJob,
+        method: "GET",
+        cookie,
+        proxy,
+        headers: [`User-Agent: ${USER_AGENT}`, `sec-ch-ua: ${SEC_CH_UA}`],
+      });
+      const ttMatch = resGet.match(/"tracking_token":"([^"]+)"/);
+      if (ttMatch?.[1]) {
+        trackingToken = ttMatch[1];
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // 3. Thực hiện GraphQL Like (Chuẩn TA Tool - usePolarisLikeMediaXIGLikeMutation)
   const tokens =
     inputTokens?.dtsg && inputTokens.lsd
       ? inputTokens
@@ -545,100 +629,77 @@ export async function doLike(options: {
           inputTokens?.lsd,
         );
 
-  if (!tokens.dtsg || !tokens.lsd) {
-    return {
-      isSuccess: false,
-      httpCode: 400,
-      rawBody: "",
-      errorMessage: "Không lấy được fb_dtsg/lsd của Instagram",
+  const actorId = userId?.trim() || getActorId(cookie);
+
+  const variablesObj: {
+    input: {
+      actor_id: string;
+      client_mutation_id: string;
+      container_module: string;
+      media_id: string;
+      tracking_token?: string;
     };
+  } = {
+    input: {
+      actor_id: actorId,
+      client_mutation_id: String(Math.floor(1000000 + Math.random() * 9000000)),
+      container_module: "single_post",
+      media_id: String(mediaId),
+    },
+  };
+  if (trackingToken) {
+    variablesObj.input.tracking_token = trackingToken;
   }
 
-  const actorId = userId?.trim() || getActorId(cookie);
-  const avId =
-    actorId && actorId !== "0"
-      ? !actorId.startsWith("178414")
-        ? `178414${actorId}`
-        : actorId
-      : actorId;
+  const bodyParams = new URLSearchParams({
+    av: actorId,
+    __d: "www",
+    __user: "0",
+    __a: "1",
+    __req: "h",
+    __hs: "20702.HYP:instagram_web_pkg.2.1...0",
+    dpr: "1",
+    __ccg: "EXCELLENT",
+    __rev: "1046913831",
+    __comet_req: "7",
+    fb_dtsg: tokens.dtsg,
+    jazoest: tokens.jazoest || "26492",
+    lsd: tokens.lsd || "GyeZl-huflHZ0K5L3-pzBi",
+    fb_api_caller_class: "RelayModern",
+    fb_api_req_friendly_name: "usePolarisLikeMediaXIGLikeMutation",
+    server_timestamps: "true",
+    doc_id: "27182485238052618",
+    variables: JSON.stringify(variablesObj),
+  });
 
-  const graphConfigs = [
-    {
-      docId: "9595477160535898",
-      variables: JSON.stringify({
-        media_id: mediaId,
-        container_module: "feed_timeline",
-      }),
-    },
-    {
-      docId: "27182485238052618",
-      variables: JSON.stringify({
-        input: {
-          actor_id: actorId,
-          client_mutation_id: String(
-            Math.floor(1000000 + Math.random() * 9000000),
-          ),
-          container_module: "single_post",
-          media_id: mediaId,
-        },
-      }),
-    },
+  const headers = [
+    ...buildIgHeaders(
+      cookie,
+      csrftoken,
+      tokens.lsd || "GyeZl-huflHZ0K5L3-pzBi",
+      linkJob || "https://www.instagram.com/",
+    ),
+    "x-fb-friendly-name: usePolarisLikeMediaXIGLikeMutation",
   ];
 
-  let lastResult = "";
-  for (const { docId, variables } of graphConfigs) {
-    const bodyParams = new URLSearchParams({
-      av: avId,
-      __d: "www",
-      __user: actorId,
-      __a: "1",
-      __req: "h",
-      __hs: "20702.HYP:instagram_web_pkg.2.1...0",
-      dpr: "1",
-      __ccg: "EXCELLENT",
-      __rev: "1046913831",
-      __comet_req: "7",
-      fb_dtsg: tokens.dtsg,
-      jazoest: tokens.jazoest,
-      lsd: tokens.lsd,
-      fb_api_caller_class: "RelayModern",
-      fb_api_req_friendly_name: "usePolarisLikeMediaXIGLikeMutation",
-      server_timestamps: "true",
-      doc_id: docId,
-      variables,
+  try {
+    const resBody = await executeCurlRequest({
+      url: "https://www.instagram.com/api/graphql",
+      method: "POST",
+      body: bodyParams.toString(),
+      cookie,
+      headers,
+      proxy,
     });
-
-    const headers = [
-      ...buildIgHeaders(
-        cookie,
-        csrftoken,
-        tokens.lsd,
-        linkJob || "https://www.instagram.com/",
-      ),
-      "x-fb-friendly-name: usePolarisLikeMediaXIGLikeMutation",
-    ];
-
-    try {
-      const resBody = await executeCurlRequest({
-        url: "https://www.instagram.com/graphql/query",
-        method: "POST",
-        body: bodyParams.toString(),
-        cookie,
-        headers,
-        proxy,
-      });
-      lastResult = resBody.trim();
-      const parsed = parseIgResult(lastResult, "Tym");
-      if (parsed.isSuccess) return parsed;
-    } catch (e: unknown) {
-      lastResult = JSON.stringify({
-        status: "error",
-        message: e instanceof Error ? e.message : String(e),
-      });
-    }
+    return parseIgResult(resBody.trim(), "Tym");
+  } catch (e: unknown) {
+    return {
+      isSuccess: false,
+      httpCode: 0,
+      rawBody: "",
+      errorMessage: e instanceof Error ? e.message : String(e),
+    };
   }
-
-  return parseIgResult(lastResult, "Tym");
 }
 
 /**
@@ -711,12 +772,6 @@ export async function doComment(options: {
 
   const csrftoken = getCsrfToken(cookie);
   const actorId = userId?.trim() || getActorId(cookie);
-  const avId =
-    actorId && actorId !== "0"
-      ? !actorId.startsWith("178414")
-        ? `178414${actorId}`
-        : actorId
-      : actorId;
 
   const variables = JSON.stringify({
     connections: [
@@ -729,9 +784,9 @@ export async function doComment(options: {
   });
 
   const bodyParams = new URLSearchParams({
-    av: avId,
+    av: actorId,
     __d: "www",
-    __user: actorId,
+    __user: "0",
     __a: "1",
     __req: "10",
     __hs: "20702.HYP:instagram_web_pkg.2.1...0",
@@ -740,8 +795,8 @@ export async function doComment(options: {
     __rev: "1046917461",
     __comet_req: "7",
     fb_dtsg: tokens.dtsg,
-    jazoest: tokens.jazoest,
-    lsd: tokens.lsd,
+    jazoest: tokens.jazoest || "26312",
+    lsd: tokens.lsd || "9zei3OjvTBQ-9YG6E0OMzm",
     fb_api_caller_class: "RelayModern",
     fb_api_req_friendly_name: "PolarisPostCommentInputRevampedMutation",
     server_timestamps: "true",
@@ -753,15 +808,15 @@ export async function doComment(options: {
     ...buildIgHeaders(
       cookie,
       csrftoken,
-      tokens.lsd,
+      tokens.lsd || "9zei3OjvTBQ-9YG6E0OMzm",
       linkJob || "https://www.instagram.com/",
     ),
     "x-fb-friendly-name: PolarisPostCommentInputRevampedMutation",
   ];
 
   const endpoints = [
-    "https://www.instagram.com/graphql/query",
     "https://www.instagram.com/api/graphql",
+    "https://www.instagram.com/graphql/query",
   ];
   let lastResult = "";
   for (const ep of endpoints) {

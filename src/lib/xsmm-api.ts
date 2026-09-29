@@ -1,4 +1,4 @@
-﻿import { invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 
 export interface XsmmUser {
   username: string;
@@ -145,9 +145,12 @@ export async function getXsmmAccounts(
       };
     }
 
+    const list = Array.isArray(data)
+      ? data
+      : (data as { accounts?: XsmmAccountItem[] })?.accounts || [];
     return {
       success: true,
-      accounts: Array.isArray(data) ? data : [],
+      accounts: list,
     };
   } catch (err: unknown) {
     const message =
@@ -240,37 +243,58 @@ export async function getXsmmTasks(
 
 export async function completeXsmmTask(
   token: string,
-  payload: { type: string; task_id: string[]; uid: string },
+  payload: {
+    type: string;
+    task_id: string[];
+    uid: string;
+    cookie_check?: string;
+  },
+  maxRetries = 3,
 ): Promise<{
   success: boolean;
   result?: XsmmCompleteResponse;
   error?: string;
 }> {
-  try {
-    const data = await xsmmFetch<XsmmCompleteResponse>(
-      `${XSMM_BASE_URL}/tasks2/complete`,
-      "POST",
-      token,
-      payload,
-    );
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      const data = await xsmmFetch<XsmmCompleteResponse>(
+        `${XSMM_BASE_URL}/tasks2/complete`,
+        "POST",
+        token,
+        payload,
+      );
 
-    if (data?.error) {
+      if (data?.retry === true) {
+        const waitSec = Math.floor(10 + Math.random() * 6);
+        await new Promise((r) => setTimeout(r, waitSec * 1000));
+        attempt++;
+        continue;
+      }
+
+      if (data?.error) {
+        return {
+          success: false,
+          error: data.error,
+        };
+      }
+
+      return {
+        success: true,
+        result: data,
+      };
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Lỗi kết nối máy chủ XSMM";
       return {
         success: false,
-        error: data.error,
+        error: message,
       };
     }
-
-    return {
-      success: true,
-      result: data,
-    };
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Lỗi kết nối máy chủ XSMM";
-    return {
-      success: false,
-      error: message,
-    };
   }
+
+  return {
+    success: false,
+    error: "Đã thử lại nhiều lần nhưng máy chủ XSMM không phản hồi",
+  };
 }
