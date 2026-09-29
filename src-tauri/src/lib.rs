@@ -33,12 +33,13 @@ type HmacSha256 = Hmac<Sha256>;
 // Hacker patches LIC_STATE byte → checksum mismatch → exit(0)
 // Cannot simply flip a bool — must know the magic formula
 // ============================================================
-static LIC_STATE: AtomicU64 = AtomicU64::new(0);
-static LIC_CHECK: AtomicU64 = AtomicU64::new(0);
-static LICENSE_KEY_STORE: Mutex<Option<String>> = Mutex::new(None);
-
 const LIC_MAGIC: u64 = 0xCAFE_BABE_DEAD_BEEF;
 const LIC_SALT: u64 = 0xF00D_C0DE_1337_FEED;
+const LIC_INIT_CHECK: u64 = 0u64.wrapping_mul(LIC_SALT) ^ LIC_SALT.rotate_right(13);
+
+static LIC_STATE: AtomicU64 = AtomicU64::new(0);
+static LIC_CHECK: AtomicU64 = AtomicU64::new(LIC_INIT_CHECK);
+static LICENSE_KEY_STORE: Mutex<Option<String>> = Mutex::new(None);
 
 fn lic_set(valid: bool) {
   let v: u64 = if valid { LIC_MAGIC } else { 0 };
@@ -53,8 +54,8 @@ fn lic_ok() -> bool {
   let c = LIC_CHECK.load(Ordering::SeqCst);
   let expected = v.wrapping_mul(LIC_SALT) ^ LIC_SALT.rotate_right(13);
   if c != expected {
-    // Tamper detected: checksum doesn't match → silent exit
-    std::process::exit(0);
+    // Tamper detected: checksum doesn't match -> block access safely
+    return false;
   }
   v == LIC_MAGIC
 }
@@ -83,30 +84,12 @@ fn gate_xsmm() -> bool {
 // ============================================================
 #[cfg(all(windows, not(debug_assertions)))]
 fn anti_debug() {
-  // Method 1: IsDebuggerPresent (kernel32, always linked on Windows)
+  #[link(name = "kernel32")]
   extern "system" {
-    fn IsDebuggerPresent() -> u32;
+    fn IsDebuggerPresent() -> i32;
   }
   #[allow(unsafe_code)]
   if unsafe { IsDebuggerPresent() } != 0 {
-    std::process::exit(0);
-  }
-
-  // Method 2: Timing check
-  // Normal execution completes the loop in < 30ms.
-  // A debugger stepping through slows it to > 200ms → detected.
-  let t0 = std::time::Instant::now();
-  let mut acc: u64 = 0xDEAD_BEEF;
-  for i in 0u64..50_000 {
-    acc = acc
-      .wrapping_mul(6_364_136_223_846_793_005)
-      .wrapping_add(i ^ 0x1337);
-  }
-  // `acc` must appear to be used (anti-optimization)
-  if acc == 0xCAFE_BABE_DEAD_BEEF {
-    std::process::exit(1);
-  }
-  if t0.elapsed().as_millis() > 200 {
     std::process::exit(0);
   }
 }
@@ -581,6 +564,9 @@ fn curl_request(
 // ============================================================
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+  // Initialize license state cleanly to locked
+  lic_set(false);
+
   // Anti-debug check at startup before UI loads
   anti_debug();
 
