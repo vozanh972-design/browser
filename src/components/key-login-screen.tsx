@@ -34,6 +34,7 @@ interface LicenseResult {
   message: string;
   days_left?: number | null;
   expired_at?: string | null;
+  buyer?: string | null;
 }
 
 // ── Status machine ────────────────────────────────────────────────
@@ -45,6 +46,7 @@ interface KeyLoginScreenProps {
     key: string,
     daysLeft: number | null,
     expiredAt: string | null,
+    buyer: string | null,
   ) => void;
   /** If provided, the screen auto-submits this key on mount (recheck) */
   autoCheckKey?: string;
@@ -105,6 +107,7 @@ export function KeyLoginScreen({
         const dl =
           result.days_left != null ? Math.floor(result.days_left) : null;
         const ea = result.expired_at ?? null;
+        const buyer = result.buyer ?? null;
         if (dl != null) {
           setDaysLeft(dl);
         }
@@ -112,13 +115,13 @@ export function KeyLoginScreen({
         await delay(600);
         setIsExiting(true);
         await delay(450);
-        onUnlock(keyToCheck, dl, ea);
+        onUnlock(keyToCheck, dl, ea, buyer);
       } else {
         if (isAutoRecheck) {
           // Failed recheck (network or invalid) — drop to input form
           if (result.status === "network_error") {
             // Offline tolerance: allow if key was previously saved
-            onUnlock(keyToCheck, null, null);
+            onUnlock(keyToCheck, null, null, null);
             return;
           }
           setVerifyStatus("idle");
@@ -131,7 +134,7 @@ export function KeyLoginScreen({
     } catch {
       if (isAutoRecheck) {
         // Tauri invoke failed (dev browser preview etc.) → allow
-        onUnlock(keyToCheck, null, null);
+        onUnlock(keyToCheck, null, null, null);
         return;
       }
       triggerError(

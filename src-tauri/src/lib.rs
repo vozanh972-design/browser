@@ -87,10 +87,47 @@ fn anti_debug() {
   #[link(name = "kernel32")]
   extern "system" {
     fn IsDebuggerPresent() -> i32;
+    fn CheckRemoteDebuggerPresent(hProcess: *mut std::ffi::c_void, pbDebuggerPresent: *mut i32) -> i32;
+    fn GetCurrentProcess() -> *mut std::ffi::c_void;
+    fn GetModuleHandleA(lpModuleName: *const u8) -> *mut std::ffi::c_void;
   }
+
   #[allow(unsafe_code)]
-  if unsafe { IsDebuggerPresent() } != 0 {
-    std::process::exit(0);
+  unsafe {
+    // 1. Kiểm tra debugger trực tiếp
+    if IsDebuggerPresent() != 0 {
+      std::process::exit(0);
+    }
+    let mut is_remote = 0i32;
+    if CheckRemoteDebuggerPresent(GetCurrentProcess(), &mut is_remote) != 0 && is_remote != 0 {
+      std::process::exit(0);
+    }
+
+    // 2. Chống Frida: Quét các DLL hook thường gặp (Frida, CheatEngine, MinHook, Cuckoo)
+    let bad_dlls: &[&[u8]] = &[
+      b"frida-agent.dll\0",
+      b"frida-gadget.dll\0",
+      b"frida.dll\0",
+      b"cuckoomon.dll\0",
+      b"hookdetector.dll\0",
+      b"scylla_hide.dll\0",
+    ];
+    for &dll in bad_dlls {
+      if !GetModuleHandleA(dll.as_ptr()).is_null() {
+        std::process::exit(0);
+      }
+    }
+
+    // 3. Chống Frida Named Pipes: Kiểm tra pipe mặc định của Frida server
+    let bad_pipes = [
+      r"\\.\pipe\frida",
+      r"\\.\pipe\linjector",
+    ];
+    for pipe in bad_pipes {
+      if std::path::Path::new(pipe).exists() {
+        std::process::exit(0);
+      }
+    }
   }
 }
 
@@ -196,9 +233,21 @@ fn verify_hmac(secret: &str, data_json: &str, received: &str) -> bool {
   computed == received
 }
 
-// ============================================================
-// URL-encode a string value (query param safe)
-// ============================================================
+fn compute_hmac(secret: &str, data: &str) -> String {
+  let Ok(mut mac) = HmacSha256::new_from_slice(secret.as_bytes()) else {
+    return String::new();
+  };
+  mac.update(data.as_bytes());
+  let result = mac.finalize().into_bytes();
+  let mut computed = String::new();
+  for b in result.iter() {
+    let _ = write!(computed, "{:02x}", b);
+  }
+  computed
+}
+
+
+#[allow(dead_code)]
 fn url_encode(s: &str) -> String {
   let mut out = String::with_capacity(s.len());
   for byte in s.bytes() {
@@ -226,7 +275,10 @@ pub struct LicenseResult {
   pub days_left: Option<f64>,
   #[serde(skip_serializing_if = "Option::is_none")]
   pub expired_at: Option<String>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub buyer: Option<String>,
 }
+
 
 // ============================================================
 // VERIFY_LICENSE — main Tauri command
@@ -244,27 +296,54 @@ fn verify_license(key: String) -> LicenseResult {
       message: "Vui lòng nhập mã key bản quyền!".into(),
       days_left: None,
       expired_at: None,
+      buyer: None,
     };
   }
 
-  // Get HWID and build full request URL
+  // Get HWID
   let hwid = get_hwid();
-  // obfstr!() — decrypted on stack with compile-time random key, not plain text in binary
   let app_slug = obfstr!("lunexpc").to_string();
   let mut api_url = build_api_url();
 
-  let full_url = format!(
-    "{}?key={}&app={}&hwid={}",
-    api_url,
-    url_encode(&trimmed),
-    url_encode(&app_slug),
-    url_encode(&hwid)
-  );
+  // ── Dynamic Cryptographic Handshake (t, nonce, sign) ──────────
+  let t = std::time::SystemTime::now()
+    .duration_since(std::time::UNIX_EPOCH)
+    .unwrap_or_default()
+    .as_secs();
 
-  // Zeroize after building full_url so they don't linger in heap
-  api_url.zeroize();
+  // Generate 16-hex nonce using OS timestamp and thread id
+  let nonce = {
+    use sha2::{Digest, Sha256};
+    let seed = format!("{}-{}-{}", t, std::process::id(), trimmed);
+    let hash = Sha256::digest(seed.as_bytes());
+    let mut s = String::with_capacity(32);
+    for b in hash.iter().take(16) {
+      let _ = write!(s, "{:02x}", b);
+    }
+    s
+  };
 
-  // Call API via curl (no HTTP library dependency, no reqwest)
+  // Sign request: hash_hmac('sha256', key + '|' + hwid + '|' + t + '|' + nonce, SECRET_KEY)
+  let sign = {
+    let mut secret = obfstr!("LUNEX_UNIVERSAL_KEY_SECRET_@2026#SECURE").to_string();
+    let payload = format!("{}|{}|{}|{}", trimmed, hwid, t, nonce);
+    let sig = compute_hmac(&secret, &payload);
+    secret.zeroize();
+    sig
+  };
+
+  // Build JSON body for POST request
+  let req_body = serde_json::json!({
+    "key": trimmed,
+    "hwid": hwid,
+    "app": app_slug,
+    "t": t,
+    "nonce": nonce,
+    "sign": sign,
+  })
+  .to_string();
+
+  // Call API via curl POST (no direct browser GET)
   #[cfg(windows)]
   let mut cmd = std::process::Command::new("curl.exe");
   #[cfg(not(windows))]
@@ -272,11 +351,26 @@ fn verify_license(key: String) -> LicenseResult {
 
   cmd
     .arg("-s")
+    .arg("-X")
+    .arg("POST")
+    .arg("-H")
+    .arg("Content-Type: application/json")
+    .arg("-H")
+    .arg("Accept: application/json")
+    .arg("-H")
+    .arg("User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
+    .arg("-d")
+    .arg("@-") // Read body from stdin pipe — hides payload from Process Monitor/CreateProcess hooks
     .arg("--connect-timeout")
     .arg("10")
     .arg("--max-time")
     .arg("15")
-    .arg(&full_url);
+    .arg(&api_url)
+    .stdin(std::process::Stdio::piped())
+    .stdout(std::process::Stdio::piped())
+    .stderr(std::process::Stdio::null());
+
+  api_url.zeroize();
 
   #[cfg(windows)]
   {
@@ -284,8 +378,17 @@ fn verify_license(key: String) -> LicenseResult {
     cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
   }
 
-  let raw = match cmd.output() {
-    Ok(o) => String::from_utf8_lossy(&o.stdout).to_string(),
+  let raw = match cmd.spawn() {
+    Ok(mut child) => {
+      if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        let _ = stdin.write_all(req_body.as_bytes());
+      }
+      match child.wait_with_output() {
+        Ok(o) => String::from_utf8_lossy(&o.stdout).to_string(),
+        Err(_) => String::new(),
+      }
+    }
     Err(_) => String::new(),
   };
 
@@ -301,6 +404,7 @@ fn verify_license(key: String) -> LicenseResult {
             message: "Chế độ offline – đã xác thực trước đó.".into(),
             days_left: None,
             expired_at: None,
+            buyer: None,
           };
         }
       }
@@ -312,6 +416,7 @@ fn verify_license(key: String) -> LicenseResult {
       message: "Không thể kết nối đến máy chủ xác thực. Vui lòng kiểm tra mạng!".into(),
       days_left: None,
       expired_at: None,
+      buyer: None,
     };
   }
 
@@ -326,6 +431,7 @@ fn verify_license(key: String) -> LicenseResult {
         message: "Phản hồi từ máy chủ không hợp lệ!".into(),
         days_left: None,
         expired_at: None,
+        buyer: None,
       };
     }
   };
@@ -334,15 +440,16 @@ fn verify_license(key: String) -> LicenseResult {
   let status = parsed["status"].as_str().unwrap_or("unknown").to_string();
   let srv_msg = parsed["message"].as_str().unwrap_or("").to_string();
 
-  // ── ANTI-BYPASS: HMAC-SHA256 signature verification ───────────
-  // Server signs the data payload. If hacker redirects to a fake
-  // server via hosts/Fiddler, the signature won't match → exit.
+  // ── ANTI-BYPASS: Bidirectional HMAC-SHA256 signature verification ──
+  // Server signs with: status + '|' + key + '|' + hwid + '|' + expired_at + '|' + nonce
   if let (Some(data_val), Some(sig)) = (parsed.get("data"), parsed["signature"].as_str()) {
     if !sig.is_empty() {
-      // obfstr!() — HMAC secret decrypted to stack, never in static memory
-      let mut hmac_secret = obfstr!("LUNEX_SECURE_HMAC_SECRET_2026_x99aBq").to_string();
-      let data_json = serde_json::to_string(data_val).unwrap_or_default();
-      let ok = verify_hmac(&hmac_secret, &data_json, sig);
+      let mut hmac_secret = obfstr!("LUNEX_UNIVERSAL_KEY_SECRET_@2026#SECURE").to_string();
+      let key_str = data_val["key"].as_str().unwrap_or("");
+      let hwid_str = data_val["hwid"].as_str().unwrap_or("");
+      let exp_str = data_val["expired_at"].as_str().unwrap_or("");
+      let sig_payload = format!("{}|{}|{}|{}|{}", status, key_str, hwid_str, exp_str, nonce);
+      let ok = verify_hmac(&hmac_secret, &sig_payload, sig);
       hmac_secret.zeroize(); // immediate wipe after use
       if !ok {
         lic_set(false);
@@ -353,6 +460,7 @@ fn verify_license(key: String) -> LicenseResult {
           message: "Phát hiện giả mạo máy chủ! Kết nối bị chặn vì lý do bảo mật.".into(),
           days_left: None,
           expired_at: None,
+          buyer: None,
         };
       }
     }
@@ -370,6 +478,12 @@ fn verify_license(key: String) -> LicenseResult {
       .as_str()
       .filter(|s| !s.is_empty())
       .map(str::to_string);
+    // Nhận username từ API mới (hoặc fallback buyer)
+    let buyer = parsed["data"]["username"]
+      .as_str()
+      .or_else(|| parsed["data"]["buyer"].as_str())
+      .filter(|s| !s.is_empty())
+      .map(str::to_string);
 
     LicenseResult {
       success: true,
@@ -377,6 +491,7 @@ fn verify_license(key: String) -> LicenseResult {
       message: srv_msg,
       days_left,
       expired_at,
+      buyer,
     }
   } else {
     lic_set(false);
@@ -405,6 +520,7 @@ fn verify_license(key: String) -> LicenseResult {
       message: friendly,
       days_left: None,
       expired_at: None,
+      buyer: None,
     }
   }
 }

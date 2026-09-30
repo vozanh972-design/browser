@@ -7,7 +7,6 @@ import {
   ChevronRight,
   Clock,
   Coins,
-  Cpu,
   ExternalLink,
   Eye,
   EyeOff,
@@ -63,6 +62,7 @@ export interface LicenseInfo {
   key: string;
   daysLeft: number | null;
   expiredAt: string | null;
+  buyer?: string | null;
 }
 
 interface AppSettingsDialogProps {
@@ -80,7 +80,6 @@ type SettingsSection =
   | "appearance"
   | "displays"
   | "language"
-  | "automation"
   | "privacy"
   | "about";
 
@@ -95,7 +94,7 @@ export function AppSettingsDialog({
   isOpen,
   onClose,
   xsmmAccount,
-  accounts = [],
+  accounts: _accounts = [],
   licenseInfo,
   onXsmmLoginClick,
   onXsmmLogoutClick,
@@ -182,26 +181,6 @@ export function AppSettingsDialog({
     }
   });
 
-  // Automation preferences
-  const [autoSkipCheckpoint, setAutoSkipCheckpoint] = useState<boolean>(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      const saved = localStorage.getItem("autolunex_auto_skip_checkpoint");
-      return saved === null ? true : saved === "true";
-    } catch {
-      return true;
-    }
-  });
-
-  const [safeRequestDelay, setSafeRequestDelay] = useState<string>(() => {
-    if (typeof window === "undefined") return "1.2";
-    try {
-      return localStorage.getItem("autolunex_safe_request_delay") || "1.2";
-    } catch {
-      return "1.2";
-    }
-  });
-
   // System & Update Info
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
@@ -279,15 +258,6 @@ export function AppSettingsDialog({
     }
   };
 
-  const handleAutoSkipCheckpointChange = (val: boolean) => {
-    setAutoSkipCheckpoint(val);
-    try {
-      localStorage.setItem("autolunex_auto_skip_checkpoint", String(val));
-    } catch {
-      // ignore
-    }
-  };
-
   const handleLanguageChange = (code: string) => {
     void i18n.changeLanguage(code);
     try {
@@ -319,15 +289,7 @@ export function AppSettingsDialog({
     });
   };
 
-  // Stats calculation
-  const stats = useMemo(() => {
-    const total = accounts.length;
-    const live = accounts.filter((a) => a.status === "live").length;
-    const checkpoint = accounts.filter((a) => a.status === "checkpoint").length;
-    const die = accounts.filter((a) => a.status === "die").length;
-    return { total, live, checkpoint, die };
-  }, [accounts]);
-
+  // Selected Accent color options
   const accentColors = useMemo(
     () => [
       { id: "blue", label: tr("Xanh dương (Blue)", "Blue"), color: "#007aff" },
@@ -387,16 +349,6 @@ export function AppSettingsDialog({
         ),
         icon: Globe,
         color: "bg-emerald-500",
-      },
-      {
-        id: "automation" as const,
-        label: tr("Tự động & Nuôi acc", "Automation & Farming"),
-        subLabel: tr(
-          "Cấu hình luồng & Độ trễ an toàn",
-          "Threads & Safe Request Delays",
-        ),
-        icon: Cpu,
-        color: "bg-orange-500",
       },
       {
         id: "privacy" as const,
@@ -497,26 +449,33 @@ export function AppSettingsDialog({
                   : "border-border/40 bg-background/50 hover:bg-background/80 hover:border-border/70",
               )}
             >
-              <div className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm shadow-sm">
-                {xsmmAccount?.isLoggedIn ? (
-                  xsmmAccount.username.slice(0, 2).toUpperCase()
+              <div className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm shadow-sm overflow-hidden">
+                {settingsAvatarUrl && !settingsAvatarError ? (
+                  // biome-ignore lint/performance/noImgElement: external avatar
+                  <img
+                    src={settingsAvatarUrl}
+                    alt="avatar"
+                    className="size-full object-cover"
+                    onError={() => setSettingsAvatarError(true)}
+                  />
                 ) : (
                   <User className="size-5" />
-                )}
-                {xsmmAccount?.isLoggedIn && (
-                  <span className="absolute bottom-0 right-0 size-2.5 rounded-full bg-emerald-500 ring-2 ring-background" />
                 )}
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-xs font-semibold text-foreground">
                   {xsmmAccount?.isLoggedIn
                     ? xsmmAccount.username
-                    : tr("Khách / Chưa kết nối", "Guest / Not connected")}
+                    : licenseInfo?.buyer
+                      ? licenseInfo.buyer
+                      : tr("Tài khoản cục bộ", "Local Account")}
                 </span>
                 <span className="truncate text-[11px] text-muted-foreground">
                   {xsmmAccount?.isLoggedIn
                     ? `${tr("Số dư", "Balance")}: ${xsmmAccount.balance} xu`
-                    : tr("Đăng nhập XSMM", "Sign in to XSMM")}
+                    : licenseInfo?.key
+                      ? tr("Đã xác thực bản quyền", "License Verified")
+                      : tr("Chưa kích hoạt", "Not activated")}
                 </span>
               </div>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
@@ -597,21 +556,17 @@ export function AppSettingsDialog({
                     ) : (
                       <User className="size-7" />
                     )}
-                    {xsmmAccount?.isLoggedIn && (
-                      <span className="absolute bottom-0.5 right-0.5 size-3 rounded-full bg-emerald-500 ring-2 ring-background" />
-                    )}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-center gap-2">
                       <span className="text-base font-bold text-foreground">
                         {xsmmAccount?.isLoggedIn
                           ? xsmmAccount.username
-                          : tr(
-                              "Tài khoản cục bộ (Chưa liên kết XSMM)",
-                              "Local Account (No XSMM link)",
-                            )}
+                          : licenseInfo?.buyer
+                            ? licenseInfo.buyer
+                            : tr("Tài khoản cục bộ", "Local Account")}
                       </span>
-                      {xsmmAccount?.isLoggedIn ? (
+                      {xsmmAccount?.isLoggedIn || licenseInfo?.buyer ? (
                         <Badge className="bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/20 text-[10px] px-2 py-0 border-emerald-500/30">
                           {tr("Đã kích hoạt", "Active")}
                         </Badge>
@@ -754,117 +709,31 @@ export function AppSettingsDialog({
                         )}
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Inset Group: Dịch vụ & Kết nối */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    {tr("Thông tin phiên làm việc", "Session Information")}
-                  </span>
-                  <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
-                    <div className="flex items-center justify-between p-3.5 text-xs">
-                      <div>
-                        <div className="font-medium text-foreground">
-                          {tr("Trạng thái API", "API Status")}
+                    {/* Owner / Buyer row */}
+                    {licenseInfo?.buyer && (
+                      <div className="flex items-center justify-between p-3.5 text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
+                            <User className="size-3.5 text-indigo-500" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-foreground">
+                              {tr("Chủ sở hữu key", "Key Owner")}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {tr(
+                                "Tài khoản mua bản quyền từ hệ thống Lunex",
+                                "Account registered on Lunex",
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {tr(
-                            "Hệ thống máy chủ dịch vụ tự động hóa XSMM",
-                            "XSMM Automation API Server",
-                          )}
-                        </div>
+                        <span className="font-semibold text-xs text-foreground bg-muted/60 px-2.5 py-1 rounded-md border border-border/50">
+                          {licenseInfo.buyer}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-1.5 text-emerald-500 font-medium">
-                        <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-                        {tr("Đang hoạt động", "Online")}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3.5 text-xs">
-                      <div>
-                        <div className="font-medium text-foreground">
-                          {tr("Token phiên làm việc", "Session Token")}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {tr(
-                            "Mã xác thực bảo mật cục bộ",
-                            "Local secure auth token",
-                          )}
-                        </div>
-                      </div>
-                      <span className="font-mono text-[11px] text-muted-foreground bg-muted/50 px-2 py-0.5 rounded border border-border/50">
-                        {xsmmAccount?.isLoggedIn
-                          ? `sk-xsmm-••••••••${xsmmAccount.username.slice(-2)}`
-                          : tr("Chưa thiết lập", "Not set")}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3.5 text-xs">
-                      <div>
-                        <div className="font-medium text-foreground">
-                          {tr("Đổi tài khoản", "Switch Account")}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {tr(
-                            "Đăng nhập bằng tài khoản hoặc mã token khác",
-                            "Sign in with a different account or token",
-                          )}
-                        </div>
-                      </div>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={onXsmmLoginClick}
-                        className="h-7 text-xs"
-                      >
-                        {tr("Đổi phiên", "Switch account")}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Inset Group: Dữ liệu Facebook trong máy */}
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    {tr(
-                      "Thống kê tài khoản lưu trong app",
-                      "Saved Accounts Statistics",
                     )}
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="rounded-xl border border-border/50 bg-card/60 p-3 flex flex-col">
-                      <span className="text-[11px] text-muted-foreground">
-                        {tr("Tổng số tài khoản", "Total Accounts")}
-                      </span>
-                      <span className="text-lg font-bold text-foreground mt-0.5">
-                        {stats.total}
-                      </span>
-                    </div>
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex flex-col">
-                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
-                        {tr("Đang Live", "Live")}
-                      </span>
-                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                        {stats.live}
-                      </span>
-                    </div>
-                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex flex-col">
-                      <span className="text-[11px] text-amber-600 dark:text-amber-400">
-                        Checkpoint
-                      </span>
-                      <span className="text-lg font-bold text-amber-600 dark:text-amber-400 mt-0.5">
-                        {stats.checkpoint}
-                      </span>
-                    </div>
-                    <div className="rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 flex flex-col">
-                      <span className="text-[11px] text-rose-600 dark:text-rose-400">
-                        {tr("Die / Khóa", "Dead / Locked")}
-                      </span>
-                      <span className="text-lg font-bold text-rose-600 dark:text-rose-400 mt-0.5">
-                        {stats.die}
-                      </span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1307,117 +1176,6 @@ export function AppSettingsDialog({
                       <Badge variant="outline" className="text-xs">
                         {isVi ? "Việt Nam (1.000.000)" : "Standard (1,000,000)"}
                       </Badge>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: AUTOMATION / TỰ ĐỘNG & NUÔI ACC */}
-            {activeSection === "automation" && (
-              <div className="flex flex-col gap-5 max-w-2xl">
-                <div>
-                  <h2 className="text-xl font-bold text-foreground">
-                    {tr("Tự động & Nuôi acc", "Automation & Farming")}
-                  </h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {tr(
-                      "Cấu hình an toàn luồng chạy job, khoảng cách giãn cách request và xử lý checkpoint.",
-                      "Configure job concurrency, request rate-limits, and checkpoint handling.",
-                    )}
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                    {tr(
-                      "Cơ chế an toàn Facebook",
-                      "Facebook Protection Mechanisms",
-                    )}
-                  </span>
-                  <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
-                    {/* Auto Skip Checkpoint */}
-                    <div className="flex items-center justify-between p-3.5 text-xs">
-                      <div className="max-w-md">
-                        <div className="font-medium text-foreground">
-                          {tr(
-                            "Tự động vô hiệu hóa nick Checkpoint",
-                            "Auto-disable Checkpoint Accounts",
-                          )}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {tr(
-                            "Làm mờ tài khoản checkpoint và ngăn không đưa vào luồng chạy job nuôi/reg page",
-                            "Dim checkpoint accounts and exclude from farm/reg jobs",
-                          )}
-                        </div>
-                      </div>
-                      <AnimatedSwitch
-                        checked={autoSkipCheckpoint}
-                        onCheckedChange={handleAutoSkipCheckpointChange}
-                      />
-                    </div>
-
-                    {/* Delay */}
-                    <div className="flex items-center justify-between p-3.5 text-xs">
-                      <div>
-                        <div className="font-medium text-foreground">
-                          {tr(
-                            "Giãn cách an toàn giữa các request",
-                            "Safe Delay Between Requests",
-                          )}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {tr(
-                            "Tránh bị Facebook chặn IP hoặc đánh spam",
-                            "Prevent Facebook rate-limits and spam blocks",
-                          )}
-                        </div>
-                      </div>
-                      <Select
-                        value={safeRequestDelay}
-                        onValueChange={setSafeRequestDelay}
-                      >
-                        <SelectTrigger className="w-36 h-8 text-xs">
-                          <SelectValue placeholder={tr("Độ trễ", "Delay")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="0.8">
-                            {tr("0.8 giây (Nhanh)", "0.8s (Fast)")}
-                          </SelectItem>
-                          <SelectItem value="1.2">
-                            {tr("1.2 giây (Khuyến nghị)", "1.2s (Recommended)")}
-                          </SelectItem>
-                          <SelectItem value="2.0">
-                            {tr("2.0 giây (An toàn)", "2.0s (Safe)")}
-                          </SelectItem>
-                          <SelectItem value="3.0">
-                            {tr(
-                              "3.0 giây (Siêu bảo vệ)",
-                              "3.0s (Ultra Protected)",
-                            )}
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Auto Save State */}
-                    <div className="flex items-center justify-between p-3.5 text-xs">
-                      <div>
-                        <div className="font-medium text-foreground">
-                          {tr(
-                            "Tự động lưu lịch sử thao tác",
-                            "Auto-save Execution History",
-                          )}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground">
-                          {tr(
-                            "Lưu nhật ký tương tác và kết quả job vào máy cục bộ",
-                            "Save interaction logs and job results locally",
-                          )}
-                        </div>
-                      </div>
-                      <AnimatedSwitch defaultChecked />
                     </div>
                   </div>
                 </div>

@@ -99,14 +99,15 @@ export default function HomePage() {
     return localStorage.getItem("app_license_key") ?? "";
   });
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
-  // License info shown in settings (key + expiry) — populated after successful verify
+  // License info shown in settings (key + expiry + buyer) — populated after successful verify
   const [licenseInfo, setLicenseInfo] = useState<{
     key: string;
     daysLeft: number | null;
     expiredAt: string | null;
+    buyer: string | null;
   }>(() => {
     if (typeof window === "undefined")
-      return { key: "", daysLeft: null, expiredAt: null };
+      return { key: "", daysLeft: null, expiredAt: null, buyer: null };
     return {
       key: localStorage.getItem("app_license_key") ?? "",
       daysLeft: (() => {
@@ -114,6 +115,7 @@ export default function HomePage() {
         return v ? Number(v) : null;
       })(),
       expiredAt: localStorage.getItem("app_license_expired_at"),
+      buyer: localStorage.getItem("app_license_buyer"),
     };
   });
   const [currentPage, setCurrentPage] = useState<AppPage>("profiles");
@@ -977,7 +979,7 @@ export default function HomePage() {
       {!isUnlocked && (
         <KeyLoginScreen
           autoCheckKey={savedLicenseKey || undefined}
-          onUnlock={(key, daysLeft, expiredAt) => {
+          onUnlock={(key, daysLeft, expiredAt, buyer) => {
             localStorage.setItem("app_license_key", key);
             if (daysLeft != null) {
               localStorage.setItem("app_license_days_left", String(daysLeft));
@@ -989,7 +991,12 @@ export default function HomePage() {
             } else {
               localStorage.removeItem("app_license_expired_at");
             }
-            setLicenseInfo({ key, daysLeft, expiredAt });
+            if (buyer) {
+              localStorage.setItem("app_license_buyer", buyer);
+            } else {
+              localStorage.removeItem("app_license_buyer");
+            }
+            setLicenseInfo({ key, daysLeft, expiredAt, buyer });
             setIsUnlocked(true);
           }}
         />
