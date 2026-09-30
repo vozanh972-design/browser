@@ -644,6 +644,7 @@ async fn xsmm_request(
 // Curl request — protected by license gates
 // ============================================================
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 async fn curl_request(
   url: String,
   method: Option<String>,
