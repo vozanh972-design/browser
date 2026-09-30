@@ -372,8 +372,10 @@ export default function HomePage() {
   }, [accounts]);
 
   const handleCheckAccount = async (targetAccount: FacebookAccount) => {
+    if (checkingIds.includes(targetAccount.id)) return;
+    setCheckingIds((prev) => [...prev, targetAccount.id]);
+
     if (targetAccount.platform === "instagram") {
-      setCheckingIds((prev) => [...prev, targetAccount.id]);
       try {
         const proxyParam =
           targetAccount.proxy && targetAccount.proxy !== "Chưa chọn"
@@ -403,8 +405,15 @@ export default function HomePage() {
           let finalAvatar = info.avatar || targetAccount.avatar;
 
           // Nếu chưa có username chuẩn (hoặc bị số), tra cứu trực tiếp qua endpoint User Info chuẩn Android
-          if (!finalUsername || /^\d+$/.test(finalUsername)) {
-            const uInfo = await fetchIgUserInfo(realUid, proxyParam);
+          if (
+            (!finalUsername || /^\d+$/.test(finalUsername)) &&
+            realUid &&
+            /^\d+$/.test(realUid.replace(/^@/, ""))
+          ) {
+            const uInfo = await fetchIgUserInfo(
+              realUid.replace(/^@/, ""),
+              proxyParam,
+            );
             if (
               uInfo.isLive &&
               uInfo.username &&
@@ -428,7 +437,7 @@ export default function HomePage() {
               | "live"
               | "checkpoint"
               | "die",
-            name: finalUsername ? `@${finalUsername}` : "",
+            name: finalUsername ? `@${finalUsername}` : targetAccount.name,
             uid: info.userId || realUid,
             avatar: finalAvatar,
           };
@@ -451,6 +460,40 @@ export default function HomePage() {
               ? { ...prev, ...updated }
               : prev,
           );
+        } else {
+          // Tài khoản Instagram không có cookie: kiểm tra xem UID / Username có tồn tại
+          const cleanId = realUid?.replace(/^@/, "").trim() || "";
+          if (cleanId && /^\d+$/.test(cleanId)) {
+            const uInfo = await fetchIgUserInfo(cleanId, proxyParam);
+            const finalUsername =
+              uInfo.username?.replace(/^@/, "").trim() ||
+              targetAccount.name?.replace(/^@/, "").trim() ||
+              "";
+            const updated: Partial<FacebookAccount> = {
+              status: uInfo.isLive ? "live" : "die",
+              name: finalUsername ? `@${finalUsername}` : targetAccount.name,
+              avatar: uInfo.avatar || targetAccount.avatar,
+            };
+            setAccounts((prev) => {
+              const updatedList = prev.map((item) =>
+                item.id === targetAccount.id ? { ...item, ...updated } : item,
+              );
+              try {
+                localStorage.setItem(
+                  "autolunex_facebook_accounts_v1",
+                  JSON.stringify(updatedList),
+                );
+              } catch {
+                // ignore
+              }
+              return updatedList;
+            });
+            setDetailAccount((prev) =>
+              prev && prev.id === targetAccount.id
+                ? { ...prev, ...updated }
+                : prev,
+            );
+          }
         }
       } catch {
         // ignore
@@ -459,8 +502,6 @@ export default function HomePage() {
       }
       return;
     }
-
-    setCheckingIds((prev) => [...prev, targetAccount.id]);
     try {
       const proxyParam =
         targetAccount.proxy && targetAccount.proxy !== "Chưa chọn"

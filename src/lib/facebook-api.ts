@@ -41,10 +41,14 @@ export async function executeCurlRequest(options: {
   cookie?: string;
   proxy?: string;
   includeHeaders?: boolean;
+  timeoutSecs?: number;
 }): Promise<string> {
   await throttleDirectFbRequest(options.url, options.proxy);
+  const timeoutLimit = options.timeoutSecs || 12;
+  const timeoutMs = timeoutLimit * 1000 + 3000;
+
   try {
-    return await invoke<string>("curl_request", {
+    const invokePromise = invoke<string>("curl_request", {
       url: options.url,
       method: options.method ?? "GET",
       headers: options.headers ?? null,
@@ -52,7 +56,15 @@ export async function executeCurlRequest(options: {
       cookie: options.cookie ?? null,
       proxy: options.proxy ?? null,
       includeHeaders: options.includeHeaders ?? false,
+      timeoutSecs: timeoutLimit,
     });
+
+    return await Promise.race([
+      invokePromise,
+      new Promise<string>((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out")), timeoutMs),
+      ),
+    ]);
   } catch {
     // Web fallback if outside Tauri
     const headersObj: Record<string, string> = {};
@@ -62,12 +74,19 @@ export async function executeCurlRequest(options: {
         if (k && v.length) headersObj[k.trim()] = v.join(":").trim();
       }
     }
-    const res = await fetch(options.url, {
-      method: options.method ?? "GET",
-      headers: headersObj,
-      body: options.body,
-    });
-    return await res.text();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const res = await fetch(options.url, {
+        method: options.method ?? "GET",
+        headers: headersObj,
+        body: options.body,
+        signal: controller.signal,
+      });
+      return await res.text();
+    } finally {
+      clearTimeout(timer);
+    }
   }
 }
 

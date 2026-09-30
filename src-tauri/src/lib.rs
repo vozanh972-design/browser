@@ -578,7 +578,7 @@ fn confirm_quit(app: AppHandle) {
 // XSMM request — protected by license gates
 // ============================================================
 #[tauri::command]
-fn xsmm_request(
+async fn xsmm_request(
   url: String,
   method: String,
   token: String,
@@ -589,54 +589,62 @@ fn xsmm_request(
     return Err("E_UNLICENSED".to_string());
   }
 
-  #[cfg(windows)]
-  let mut cmd = std::process::Command::new("curl.exe");
-  #[cfg(not(windows))]
-  let mut cmd = std::process::Command::new("curl");
+  tauri::async_runtime::spawn_blocking(move || {
+    #[cfg(windows)]
+    let mut cmd = std::process::Command::new("curl.exe");
+    #[cfg(not(windows))]
+    let mut cmd = std::process::Command::new("curl");
 
-  cmd
-    .arg("-s")
-    .arg("-X")
-    .arg(&method)
-    .arg("-H")
-    .arg(format!("Authorization: Bearer {}", token.trim()))
-    .arg("-H")
-    .arg("Content-Type: application/json");
+    cmd
+      .arg("-s")
+      .arg("-X")
+      .arg(&method)
+      .arg("-H")
+      .arg(format!("Authorization: Bearer {}", token.trim()))
+      .arg("-H")
+      .arg("Content-Type: application/json")
+      .arg("--connect-timeout")
+      .arg("5")
+      .arg("--max-time")
+      .arg("15");
 
-  if let Some(ref b) = body {
-    cmd.arg("-d").arg(b);
-  }
-  cmd.arg(&url);
+    if let Some(ref b) = body {
+      cmd.arg("-d").arg(b);
+    }
+    cmd.arg(&url);
 
-  #[cfg(windows)]
-  {
-    use std::os::windows::process::CommandExt;
-    cmd.creation_flags(0x0800_0000);
-  }
+    #[cfg(windows)]
+    {
+      use std::os::windows::process::CommandExt;
+      cmd.creation_flags(0x0800_0000);
+    }
 
-  let output = cmd
-    .output()
-    .map_err(|e| format!("Failed to execute curl: {}", e))?;
-  let stdout = String::from_utf8_lossy(&output.stdout);
+    let output = cmd
+      .output()
+      .map_err(|e| format!("Failed to execute curl: {}", e))?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
 
-  if !output.status.success() && stdout.trim().is_empty() {
-    let err = String::from_utf8_lossy(&output.stderr);
-    return Err(format!("XSMM server connection error: {}", err));
-  }
+    if !output.status.success() && stdout.trim().is_empty() {
+      let err = String::from_utf8_lossy(&output.stderr);
+      return Err(format!("XSMM server connection error: {}", err));
+    }
 
-  // Gate B — second canary deep in function body
-  if !gate_xsmm() {
-    return Err("E_UNLICENSED".to_string());
-  }
+    // Gate B — second canary deep in function body
+    if !gate_xsmm() {
+      return Err("E_UNLICENSED".to_string());
+    }
 
-  Ok(stdout.into_owned())
+    Ok(stdout.into_owned())
+  })
+  .await
+  .map_err(|e| format!("Task join error: {}", e))?
 }
 
 // ============================================================
 // Curl request — protected by license gates
 // ============================================================
 #[tauri::command]
-fn curl_request(
+async fn curl_request(
   url: String,
   method: Option<String>,
   headers: Option<Vec<String>>,
@@ -644,58 +652,75 @@ fn curl_request(
   cookie: Option<String>,
   proxy: Option<String>,
   include_headers: Option<bool>,
+  timeout_secs: Option<u64>,
 ) -> Result<String, String> {
   // Gate A
   if !gate_network() {
     return Err("E_UNLICENSED".to_string());
   }
 
-  #[cfg(windows)]
-  let mut cmd = std::process::Command::new("curl.exe");
-  #[cfg(not(windows))]
-  let mut cmd = std::process::Command::new("curl");
+  tauri::async_runtime::spawn_blocking(move || {
+    #[cfg(windows)]
+    let mut cmd = std::process::Command::new("curl.exe");
+    #[cfg(not(windows))]
+    let mut cmd = std::process::Command::new("curl");
 
-  let m = method.unwrap_or_else(|| "GET".to_string());
-  cmd.arg("-s").arg("-L").arg("-X").arg(&m);
+    let m = method.unwrap_or_else(|| "GET".to_string());
+    let t = timeout_secs.unwrap_or(12);
+    let max_time_str = t.to_string();
+    let conn_time_str = t.min(5).to_string();
 
-  if include_headers.unwrap_or(false) {
-    cmd.arg("-i");
-  }
-  if let Some(hdrs) = headers {
-    for h in hdrs {
-      cmd.arg("-H").arg(h);
+    cmd
+      .arg("-s")
+      .arg("-L")
+      .arg("-X")
+      .arg(&m)
+      .arg("--connect-timeout")
+      .arg(&conn_time_str)
+      .arg("--max-time")
+      .arg(&max_time_str);
+
+    if include_headers.unwrap_or(false) {
+      cmd.arg("-i");
     }
-  }
-  if let Some(c) = cookie {
-    cmd.arg("-b").arg(c);
-  }
-  if let Some(p) = proxy {
-    if !p.trim().is_empty() {
-      cmd.arg("-x").arg(p.trim());
+    if let Some(hdrs) = headers {
+      for h in hdrs {
+        cmd.arg("-H").arg(h);
+      }
     }
-  }
-  if let Some(ref b) = body {
-    cmd.arg("-d").arg(b);
-  }
-  cmd.arg(&url);
+    if let Some(c) = cookie {
+      cmd.arg("-b").arg(c);
+    }
+    if let Some(p) = proxy {
+      if !p.trim().is_empty() {
+        cmd.arg("-x").arg(p.trim());
+      }
+    }
+    if let Some(ref b) = body {
+      cmd.arg("-d").arg(b);
+    }
+    cmd.arg(&url);
 
-  #[cfg(windows)]
-  {
-    use std::os::windows::process::CommandExt;
-    cmd.creation_flags(0x0800_0000);
-  }
+    #[cfg(windows)]
+    {
+      use std::os::windows::process::CommandExt;
+      cmd.creation_flags(0x0800_0000);
+    }
 
-  let output = cmd
-    .output()
-    .map_err(|e| format!("Failed to execute curl: {}", e))?;
+    let output = cmd
+      .output()
+      .map_err(|e| format!("Failed to execute curl: {}", e))?;
 
-  // Gate B — second canary at output stage
-  if !gate_network() {
-    return Err("E_UNLICENSED".to_string());
-  }
+    // Gate B — second canary at output stage
+    if !gate_network() {
+      return Err("E_UNLICENSED".to_string());
+    }
 
-  let stdout = String::from_utf8_lossy(&output.stdout);
-  Ok(stdout.into_owned())
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.into_owned())
+  })
+  .await
+  .map_err(|e| format!("Task join error: {}", e))?
 }
 
 // ============================================================

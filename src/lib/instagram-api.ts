@@ -96,6 +96,10 @@ export async function checkCookieIg(
   const dsMatch = cleanCookie.match(/ds_user_id=(\d+)/);
   const fallbackUid = dsMatch?.[1] || "";
 
+  if (!cleanCookie || (!cleanCookie.includes("sessionid=") && !fallbackUid)) {
+    return { isLive: false, username: "", userId: fallbackUid };
+  }
+
   // 1. Thử qua endpoint web_form_data (Chuẩn TA Tool - check_cookie_ig)
   try {
     const raw = await executeCurlRequest({
@@ -110,9 +114,25 @@ export async function checkCookieIg(
         `User-Agent: ${USER_AGENT}`,
         `sec-ch-ua: ${SEC_CH_UA}`,
       ],
+      timeoutSecs: 7,
     });
 
     if (raw?.trim()) {
+      const lower = raw.toLowerCase();
+      // Nếu có dấu hiệu checkpoint hoặc bắt login rõ ràng -> Cookie DIE / Checkpoint ngay lập tức
+      if (
+        lower.includes("checkpoint_required") ||
+        lower.includes("challenge_required") ||
+        lower.includes("checkpoint_url") ||
+        lower.includes("accounts/suspended") ||
+        lower.includes("login_required") ||
+        lower.includes('"is_logged_in":false') ||
+        lower.includes("<title>login") ||
+        lower.includes("/accounts/login/")
+      ) {
+        return { isLive: false, username: "", userId: fallbackUid };
+      }
+
       try {
         const json = JSON.parse(raw);
         const formData = json.form_data;
@@ -129,24 +149,7 @@ export async function checkCookieIg(
     // Tiếp tục thử fallback
   }
 
-  // 2. Lấy username thật và avatar thật qua endpoint i.instagram.com/api/v1/users/{uid}/info/
-  if (fallbackUid) {
-    const userInfo = await fetchIgUserInfo(fallbackUid, proxy);
-    if (
-      userInfo.isLive &&
-      userInfo.username &&
-      !/^\d+$/.test(userInfo.username)
-    ) {
-      return {
-        isLive: true,
-        username: userInfo.username,
-        userId: fallbackUid,
-        avatar: userInfo.avatar,
-      };
-    }
-  }
-
-  // 3. Thử qua endpoint current_user/?edit=true
+  // 2. Thử qua endpoint current_user/?edit=true (Endpoint JSON nhanh)
   try {
     const raw = await executeCurlRequest({
       url: "https://www.instagram.com/api/v1/accounts/current_user/?edit=true",
@@ -159,9 +162,20 @@ export async function checkCookieIg(
         `User-Agent: ${USER_AGENT}`,
         `sec-ch-ua: ${SEC_CH_UA}`,
       ],
+      timeoutSecs: 7,
     });
 
     if (raw?.trim()) {
+      const lower = raw.toLowerCase();
+      if (
+        lower.includes("checkpoint_required") ||
+        lower.includes("challenge_required") ||
+        lower.includes("login_required") ||
+        lower.includes('"is_logged_in":false')
+      ) {
+        return { isLive: false, username: "", userId: fallbackUid };
+      }
+
       try {
         const json = JSON.parse(raw);
         const user = json.user;
@@ -179,54 +193,21 @@ export async function checkCookieIg(
     // Tiếp tục thử fallback
   }
 
-  // 4. Thử qua trang chủ https://www.instagram.com/
-  try {
-    const html = await executeCurlRequest({
-      url: "https://www.instagram.com/",
-      method: "GET",
-      cookie: cleanCookie,
-      proxy,
-      headers: [
-        `User-Agent: ${USER_AGENT}`,
-        `sec-ch-ua: ${SEC_CH_UA}`,
-        "sec-ch-ua-mobile: ?0",
-        'sec-ch-ua-platform: "Windows"',
-        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      ],
-    });
-
-    if (html?.trim()) {
-      const lower = html.toLowerCase();
-      const isDead =
-        lower.includes("login_required") ||
-        lower.includes("checkpoint_required") ||
-        lower.includes("challenge_required") ||
-        lower.includes('"is_logged_in":false') ||
-        lower.includes("accounts/suspended") ||
-        lower.includes("1357031");
-
-      if (isDead) {
-        return { isLive: false, username: "", userId: fallbackUid };
-      }
-
-      const uMatch =
-        html.match(/"username"\s*:\s*"([^"]+)"/) ||
-        html.match(/username":"([^"]+)"/) ||
-        html.match(/"viewer"\s*:\s*\{"username"\s*:\s*"([^"]+)"/);
-      if (uMatch?.[1] && !/^\d+$/.test(uMatch[1])) {
-        return {
-          isLive: true,
-          username: uMatch[1],
-          userId: fallbackUid,
-        };
-      }
-    }
-  } catch {
-    // Tiếp tục
-  }
-
-  // 5. Nếu có sessionid và ds_user_id trong cookie và không bị phát hiện checkpoint
+  // 3. Nếu cookie có sessionid hợp lệ và có fallbackUid, lấy avatar/username hiển thị
   if (cleanCookie.includes("sessionid=") && fallbackUid) {
+    const userInfo = await fetchIgUserInfo(fallbackUid, proxy);
+    if (
+      userInfo.isLive &&
+      userInfo.username &&
+      !/^\d+$/.test(userInfo.username)
+    ) {
+      return {
+        isLive: true,
+        username: userInfo.username,
+        userId: fallbackUid,
+        avatar: userInfo.avatar,
+      };
+    }
     return {
       isLive: true,
       username: "",
@@ -257,6 +238,7 @@ export async function fetchIgUserInfo(
       headers: [
         "User-Agent: Instagram 275.0.0.27.98 Android (31/12; 420dpi; 1080x2400; samsung; SM-G998B; p3s; exynos2100; en_US; 455485458)",
       ],
+      timeoutSecs: 6,
     });
     if (raw?.trim()) {
       const json = JSON.parse(raw);
