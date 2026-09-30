@@ -2,8 +2,9 @@ name: "CodeQL"
 
 on:
   workflow_call: {}
-  push:
-    branches: ["main"]
+  # Tạm tắt trigger push để không chạy phân tích CodeQL tốn thời gian mỗi lần commit
+  # push:
+  #   branches: ["main"]
   pull_request:
     branches: ["main"]
   schedule:
