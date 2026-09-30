@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCw,
   ShieldCheck,
+  SlidersHorizontal,
   Square,
   Trash2,
   Users,
@@ -27,6 +28,7 @@ import { RegPageView } from "@/components/reg-page-view";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UtilitiesDialog } from "@/components/utilities-dialog";
+import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import {
   checkCookieLive,
@@ -291,6 +293,7 @@ export default function HomePage() {
     null,
   );
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isJobConfigOpen, setIsJobConfigOpen] = useState(false);
   const [checkingIds, setCheckingIds] = useState<string[]>([]);
 
   // Ref để track UIDs đã được resolve — mỗi UID chỉ gọi API 1 lần, tránh loop vô tận
@@ -1101,6 +1104,21 @@ export default function HomePage() {
                     {tr("tài khoản", "accounts")}
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Nút Cài đặt / Setup Job */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsJobConfigOpen(true)}
+                      className="h-7 text-[11px] gap-1.5 cursor-pointer bg-background hover:bg-muted font-medium border-border/80 shadow-xs text-foreground"
+                      title={tr(
+                        "Cài đặt loại job, thời gian delay làm job, chờ nhận job...",
+                        "Setup job types, action delay, wait delay...",
+                      )}
+                    >
+                      <SlidersHorizontal className="size-3 text-primary" />
+                      <span>{tr("Cài đặt Job", "Job Settings")}</span>
+                    </Button>
+
                     <Button
                       size="sm"
                       variant="outline"
@@ -1720,6 +1738,14 @@ export default function HomePage() {
         isChecking={
           detailAccount ? checkingIds.includes(detailAccount.id) : false
         }
+      />
+
+      {/* Dialog Cài đặt cấu hình chạy Job XSMM */}
+      <XsmmJobConfigDialog
+        isOpen={isJobConfigOpen}
+        onClose={() => setIsJobConfigOpen(false)}
+        onRunNow={handleRunSelected}
+        selectedCount={selectedIds.length}
       />
     </div>
   );

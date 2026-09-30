@@ -37,6 +37,54 @@ export interface AccountRunState {
   lastError?: string;
 }
 
+export interface XsmmJobConfig {
+  enableFollow: boolean;
+  enableLike: boolean;
+  enableComment: boolean;
+  delayActionMin: number;
+  delayActionMax: number;
+  delayWaitJob: number;
+  delayBetweenAccounts: number;
+  maxJobsPerAccount: number;
+  maxConsecutiveErrors: number;
+  commentList: string;
+}
+
+export const DEFAULT_XSMM_JOB_CONFIG: XsmmJobConfig = {
+  enableFollow: true,
+  enableLike: true,
+  enableComment: false,
+  delayActionMin: 10,
+  delayActionMax: 20,
+  delayWaitJob: 8,
+  delayBetweenAccounts: 2.5,
+  maxJobsPerAccount: 0,
+  maxConsecutiveErrors: 5,
+  commentList: "Tuyệt vời quá\nQuá đỉnh\nFollow chéo nhé bạn\nThả tym nè",
+};
+
+const XSMM_JOB_CONFIG_KEY = "autolunex_xsmm_ig_job_config_v1";
+
+export function getStoredXsmmJobConfig(): XsmmJobConfig {
+  try {
+    const raw = localStorage.getItem(XSMM_JOB_CONFIG_KEY);
+    if (raw) {
+      return { ...DEFAULT_XSMM_JOB_CONFIG, ...JSON.parse(raw) };
+    }
+  } catch {
+    // ignore
+  }
+  return DEFAULT_XSMM_JOB_CONFIG;
+}
+
+export function saveXsmmJobConfig(config: XsmmJobConfig): void {
+  try {
+    localStorage.setItem(XSMM_JOB_CONFIG_KEY, JSON.stringify(config));
+  } catch {
+    // ignore
+  }
+}
+
 type StateListener = (states: Map<string, AccountRunState>) => void;
 
 class XsmmRunnerManager {
@@ -173,9 +221,14 @@ class XsmmRunnerManager {
   public startAccounts(accounts: FacebookAccount[], xsmmToken: string) {
     if (!xsmmToken.trim() || accounts.length === 0) return;
 
+    const config = getStoredXsmmJobConfig();
+    const delayPerAcc = Math.max(
+      500,
+      (config.delayBetweenAccounts || 2.5) * 1000,
+    );
     // Kiểm tra proxy: nếu có proxy riêng từng nick thì chạy song song, nếu chung proxy thì giãn cách
     accounts.forEach((acc, idx) => {
-      const delayMs = idx * 2500;
+      const delayMs = idx * delayPerAcc;
       this.startAccount(acc, xsmmToken, delayMs);
     });
   }
@@ -317,11 +370,19 @@ class XsmmRunnerManager {
       proxy,
     );
 
-    const taskTypes = [
-      "instagram_follow",
-      "instagram_like",
-      "instagram_comment",
-    ];
+    const config = getStoredXsmmJobConfig();
+
+    const taskTypes: string[] = [];
+    if (config.enableFollow) taskTypes.push("instagram_follow");
+    if (config.enableLike) taskTypes.push("instagram_like");
+    if (config.enableComment) taskTypes.push("instagram_comment");
+    if (taskTypes.length === 0) {
+      taskTypes.push("instagram_follow", "instagram_like");
+    }
+
+    const waitSec = Math.max(2, config.delayWaitJob || 8);
+    const maxConsecutive = Math.max(2, config.maxConsecutiveErrors || 5);
+
     let consecutiveErrors = 0;
     let completedCount = 0;
     let errorCount = 0;
@@ -330,6 +391,16 @@ class XsmmRunnerManager {
 
     // Vòng lặp nhận job & thực hiện
     while (!signal.aborted) {
+      if (
+        config.maxJobsPerAccount > 0 &&
+        completedCount >= config.maxJobsPerAccount
+      ) {
+        this.updateAccountState(accountId, {
+          status: `Đã hoàn thành ${completedCount} job (Đạt giới hạn)`,
+        });
+        break;
+      }
+
       const jobType = taskTypes[Math.floor(Math.random() * taskTypes.length)];
       this.updateAccountState(accountId, {
         status: `Lấy nhiệm vụ (${jobType.replace("instagram_", "")})...`,
@@ -341,7 +412,6 @@ class XsmmRunnerManager {
       });
 
       if (!taskRes.success || !taskRes.tasks || taskRes.tasks.length === 0) {
-        const waitSec = 8;
         for (let s = waitSec; s >= 1; s--) {
           if (signal.aborted) break;
           this.updateAccountState(accountId, {
@@ -355,6 +425,13 @@ class XsmmRunnerManager {
       for (const task of taskRes.tasks) {
         if (signal.aborted) break;
 
+        if (
+          config.maxJobsPerAccount > 0 &&
+          completedCount >= config.maxJobsPerAccount
+        ) {
+          break;
+        }
+
         const targetId = task.target_id || task.idorlink || "";
         const targetUrl = task.target_url || "";
         const taskId = task.id;
@@ -366,10 +443,11 @@ class XsmmRunnerManager {
           errorMessage: "Chưa hỗ trợ",
         };
 
-        let delaySec = 10;
+        const minD = Math.max(1, config.delayActionMin || 10);
+        const maxD = Math.max(minD, config.delayActionMax || 20);
+        const delaySec = Math.floor(Math.random() * (maxD - minD + 1)) + minD;
 
         if (jobType === "instagram_follow") {
-          delaySec = 15;
           const userFollow =
             targetUrl.replace(/\/+$/, "").split("/").pop() || targetId;
           this.updateAccountState(accountId, {
@@ -385,7 +463,6 @@ class XsmmRunnerManager {
             userId: realUid,
           });
         } else if (jobType === "instagram_like") {
-          delaySec = 10;
           this.updateAccountState(accountId, {
             status: `Đang thả tym bài viết ${targetId.substring(0, 15)}...`,
           });
@@ -398,13 +475,22 @@ class XsmmRunnerManager {
             userId: realUid,
           });
         } else if (jobType === "instagram_comment") {
-          delaySec = 20;
+          const customComments = config.commentList
+            ? config.commentList
+                .split("\n")
+                .map((c) => c.trim())
+                .filter(Boolean)
+            : [];
           const cmtText =
-            task.comment ||
-            (task as unknown as Record<string, string>).noi_dung ||
-            "❤️❤️❤️";
+            customComments.length > 0
+              ? customComments[
+                  Math.floor(Math.random() * customComments.length)
+                ]
+              : task.comment ||
+                (task as unknown as Record<string, string>).noi_dung ||
+                "❤️❤️❤️";
           this.updateAccountState(accountId, {
-            status: `Đang comment bài viết...`,
+            status: "Đang comment bài viết...",
           });
           actRes = await doComment({
             cookie,
@@ -427,7 +513,7 @@ class XsmmRunnerManager {
             lastError: errDetail,
           });
 
-          if (consecutiveErrors >= 5) {
+          if (consecutiveErrors >= maxConsecutive) {
             this.updateAccountState(accountId, {
               status: `Dừng: Gặp lỗi liên tiếp ${consecutiveErrors} lần`,
               lastError: "Quá giới hạn lỗi liên tiếp",
