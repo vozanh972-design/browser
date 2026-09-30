@@ -87,7 +87,10 @@ fn anti_debug() {
   #[link(name = "kernel32")]
   extern "system" {
     fn IsDebuggerPresent() -> i32;
-    fn CheckRemoteDebuggerPresent(hProcess: *mut std::ffi::c_void, pbDebuggerPresent: *mut i32) -> i32;
+    fn CheckRemoteDebuggerPresent(
+      hProcess: *mut std::ffi::c_void,
+      pbDebuggerPresent: *mut i32,
+    ) -> i32;
     fn GetCurrentProcess() -> *mut std::ffi::c_void;
     fn GetModuleHandleA(lpModuleName: *const u8) -> *mut std::ffi::c_void;
   }
@@ -127,10 +130,7 @@ fn anti_debug() {
     }
 
     // 3. Chống Frida Named Pipes: Kiểm tra pipe mặc định của Frida server
-    let bad_pipes = [
-      r"\\.\pipe\frida",
-      r"\\.\pipe\linjector",
-    ];
+    let bad_pipes = [r"\\.\pipe\frida", r"\\.\pipe\linjector"];
     for pipe in bad_pipes {
       if std::path::Path::new(pipe).exists() {
         std::process::exit(0);
@@ -271,7 +271,6 @@ fn compute_hmac(secret: &str, data: &str) -> String {
   computed
 }
 
-
 #[allow(dead_code)]
 fn url_encode(s: &str) -> String {
   let mut out = String::with_capacity(s.len());
@@ -303,7 +302,6 @@ pub struct LicenseResult {
   #[serde(skip_serializing_if = "Option::is_none")]
   pub buyer: Option<String>,
 }
-
 
 // ============================================================
 // VERIFY_LICENSE — main Tauri command
