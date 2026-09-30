@@ -1,8 +1,8 @@
 "use client";
 
 import { invoke } from "@tauri-apps/api/core";
-import { Headset, Key, Loader2 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
+import { ArrowRight, Headset, Key, Loader2 } from "lucide-react";
+import { motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/icons/logo";
 
@@ -60,8 +60,6 @@ export function KeyLoginScreen({
   const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>(
     autoCheckKey ? "loading" : "idle",
   );
-  const [errorMsg, setErrorMsg] = useState("");
-  const [daysLeft, setDaysLeft] = useState<number | null>(null);
   const [shakeCounter, setShakeCounter] = useState(0); // increment → re-trigger shake
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [avatarError, setAvatarError] = useState(false);
@@ -94,7 +92,6 @@ export function KeyLoginScreen({
   // ── Core verify logic ─────────────────────────────────────────
   async function runVerify(keyToCheck: string, isAutoRecheck = false) {
     setVerifyStatus("loading");
-    setErrorMsg("");
 
     try {
       const result = await invoke<LicenseResult>("verify_license", {
@@ -102,62 +99,51 @@ export function KeyLoginScreen({
       });
 
       if (result.success && result.status === "valid") {
-        // ── SUCCESS animation ──
         setVerifyStatus("success");
         const dl =
           result.days_left != null ? Math.floor(result.days_left) : null;
         const ea = result.expired_at ?? null;
         const buyer = result.buyer ?? null;
-        if (dl != null) {
-          setDaysLeft(dl);
-        }
-        // macOS-style: brief success state → dissolve out → unlock
-        await delay(600);
+        // brief success animation with spinning circle → dissolve out → unlock
+        await delay(500);
         setIsExiting(true);
         await delay(450);
         onUnlock(keyToCheck, dl, ea, buyer);
       } else {
         if (isAutoRecheck) {
-          // Failed recheck (network or invalid) — drop to input form
           if (result.status === "network_error") {
-            // Offline tolerance: allow if key was previously saved
             onUnlock(keyToCheck, null, null, null);
             return;
           }
           setVerifyStatus("idle");
-          setErrorMsg(result.message);
           inputRef.current?.focus();
           return;
         }
-        triggerError(result.message);
+        triggerError();
       }
     } catch {
       if (isAutoRecheck) {
-        // Tauri invoke failed (dev browser preview etc.) → allow
         onUnlock(keyToCheck, null, null, null);
         return;
       }
-      triggerError(
-        "Không thể kết nối đến máy chủ xác thực. Vui lòng kiểm tra mạng!",
-      );
+      triggerError();
     }
   }
 
-  function triggerError(msg: string) {
+  function triggerError() {
     setVerifyStatus("error");
-    setErrorMsg(msg);
     setShakeCounter((n) => n + 1);
     setTimeout(() => {
       setVerifyStatus("idle");
       inputRef.current?.focus();
-    }, 600);
+    }, 650);
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = key.trim();
     if (!trimmed) {
-      triggerError("Vui lòng nhập mã key bản quyền!");
+      triggerError();
       return;
     }
     void runVerify(trimmed);
@@ -167,7 +153,6 @@ export function KeyLoginScreen({
     setKey(v);
     if (verifyStatus === "error") {
       setVerifyStatus("idle");
-      setErrorMsg("");
     }
   }
 
@@ -211,7 +196,7 @@ export function KeyLoginScreen({
         initial={{ opacity: 0, y: 24 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-        className="flex flex-col items-center gap-4"
+        className="flex flex-col items-center gap-5"
       >
         {/* Avatar circle */}
         <motion.div
@@ -256,29 +241,24 @@ export function KeyLoginScreen({
           )}
         </motion.div>
 
-        {/* Description */}
-        <p className="text-[12px] text-muted-foreground -mt-1">
-          {isLoading && autoCheckKey
-            ? "Đang xác minh bản quyền…"
-            : isSuccess && daysLeft != null
-              ? `Còn ${daysLeft} ngày sử dụng`
-              : "Nhập key kích hoạt để tiếp tục"}
-        </p>
-
         {/* Form — hidden when auto-rechecking */}
         {!(isLoading && autoCheckKey) && (
           <form
             onSubmit={handleSubmit}
-            className="flex flex-col items-center gap-2.5 w-[280px]"
+            className="flex flex-col items-center w-[270px]"
           >
-            {/* Input with macOS-style shake on error */}
+            {/* Input with arrow button inside & shake animation */}
             <motion.div
               key={shakeCounter}
-              className="relative w-full"
+              className={`relative flex items-center w-full rounded-full border transition-all duration-200 ${
+                isError
+                  ? "border-rose-500/80 bg-rose-500/10 ring-2 ring-rose-500/30 text-rose-500"
+                  : "border-border/60 bg-muted/40 backdrop-blur-sm focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15"
+              }`}
               animate={
                 isError
                   ? {
-                      x: [0, -8, 8, -6, 6, -4, 4, -2, 2, 0],
+                      x: [0, -10, 10, -8, 8, -5, 5, -2, 2, 0],
                     }
                   : { x: 0 }
               }
@@ -293,59 +273,24 @@ export function KeyLoginScreen({
                 autoComplete="off"
                 spellCheck={false}
                 disabled={isLoading || isSuccess}
-                className={`w-full rounded-full border px-5 py-2 text-[13px] text-center placeholder:text-muted-foreground/40 placeholder:font-sans outline-none transition-all bg-muted/40 backdrop-blur-sm disabled:opacity-50 ${
-                  isError
-                    ? "border-destructive/70 ring-2 ring-destructive/25 bg-destructive/5"
-                    : "border-border/50 focus:border-primary/30 focus:ring-2 focus:ring-primary/10 dark:focus:border-white/20"
+                className={`w-full bg-transparent pl-4 pr-10 py-2 text-[13px] placeholder:text-muted-foreground/40 outline-none disabled:opacity-50 ${
+                  isError ? "text-rose-500" : "text-foreground"
                 }`}
               />
+
+              <button
+                type="submit"
+                disabled={isLoading || isSuccess || !key.trim()}
+                className="absolute right-1.5 size-7 rounded-full flex items-center justify-center bg-foreground/10 hover:bg-foreground/20 text-foreground transition-all duration-200 disabled:opacity-30 disabled:hover:bg-foreground/10 cursor-pointer disabled:cursor-not-allowed"
+                aria-label="Xác nhận"
+              >
+                {isLoading || isSuccess ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <ArrowRight className="size-3.5" />
+                )}
+              </button>
             </motion.div>
-
-            {/* Error message */}
-            <AnimatePresence>
-              {errorMsg && (
-                <motion.p
-                  key="errmsg"
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-[11px] text-destructive text-center px-2 -mt-1 leading-tight"
-                >
-                  {errorMsg}
-                </motion.p>
-              )}
-            </AnimatePresence>
-
-            {/* Confirm button — macOS-style: loading spinner → success green */}
-            <motion.button
-              type="submit"
-              disabled={isLoading || isSuccess}
-              className={`w-full rounded-full border border-border/40 text-[13px] font-medium py-2 transition-colors duration-300 cursor-pointer flex items-center justify-center gap-2 ${
-                isSuccess
-                  ? "bg-green-500/20 border-green-500/40 text-green-400"
-                  : "bg-foreground/10 hover:bg-foreground/15 active:scale-[0.97] text-foreground"
-              } disabled:cursor-not-allowed`}
-              animate={isSuccess ? { scale: [1, 0.97, 1.02, 1] } : { scale: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              {isLoading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : isSuccess ? (
-                <>
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="text-green-400"
-                  >
-                    ✓
-                  </motion.span>
-                  <span>Đã xác thực</span>
-                </>
-              ) : (
-                "Xác nhận"
-              )}
-            </motion.button>
           </form>
         )}
 
@@ -354,7 +299,7 @@ export function KeyLoginScreen({
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2 text-muted-foreground/60"
+            className="flex items-center gap-2 text-muted-foreground/60 py-2"
           >
             <Loader2 className="size-4 animate-spin" />
             <span className="text-[12px]">Vui lòng chờ…</span>
