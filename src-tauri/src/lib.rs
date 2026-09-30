@@ -91,6 +91,10 @@ fn anti_debug() {
     fn GetCurrentProcess() -> *mut std::ffi::c_void;
     fn GetModuleHandleA(lpModuleName: *const u8) -> *mut std::ffi::c_void;
   }
+  #[link(name = "user32")]
+  extern "system" {
+    fn FindWindowA(lpClassName: *const u8, lpWindowName: *const u8) -> *mut std::ffi::c_void;
+  }
 
   #[allow(unsafe_code)]
   unsafe {
@@ -103,7 +107,7 @@ fn anti_debug() {
       std::process::exit(0);
     }
 
-    // 2. Chống Frida: Quét các DLL hook thường gặp (Frida, CheatEngine, MinHook, Cuckoo)
+    // 2. Chống Hook / Sniffer: Quét các DLL hook thường gặp (Frida, Detours, MinHook, Cuckoo...)
     let bad_dlls: &[&[u8]] = &[
       b"frida-agent.dll\0",
       b"frida-gadget.dll\0",
@@ -111,6 +115,10 @@ fn anti_debug() {
       b"cuckoomon.dll\0",
       b"hookdetector.dll\0",
       b"scylla_hide.dll\0",
+      b"detours.dll\0",
+      b"minhook.dll\0",
+      b"httpdebugger.dll\0",
+      b"fiddler.dll\0",
     ];
     for &dll in bad_dlls {
       if !GetModuleHandleA(dll.as_ptr()).is_null() {
@@ -125,6 +133,23 @@ fn anti_debug() {
     ];
     for pipe in bad_pipes {
       if std::path::Path::new(pipe).exists() {
+        std::process::exit(0);
+      }
+    }
+
+    // 4. Quét cửa sổ các công cụ bắt gói tin & hook đang chạy (Fiddler, Charles, Wireshark, HTTPDebugger...)
+    let bad_windows: &[&[u8]] = &[
+      b"Fiddler\0",
+      b"Wireshark\0",
+      b"Charles\0",
+      b"HTTPDebuggerUI\0",
+      b"Burp Suite\0",
+      b"x64dbg\0",
+      b"x32dbg\0",
+      b"Cheat Engine\0",
+    ];
+    for &win_name in bad_windows {
+      if !FindWindowA(std::ptr::null(), win_name.as_ptr()).is_null() {
         std::process::exit(0);
       }
     }
