@@ -6,7 +6,6 @@ import {
   Check,
   ChevronRight,
   Clock,
-  Coins,
   ExternalLink,
   Eye,
   EyeOff,
@@ -464,18 +463,16 @@ export function AppSettingsDialog({
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-xs font-semibold text-foreground">
-                  {xsmmAccount?.isLoggedIn
-                    ? xsmmAccount.username
-                    : licenseInfo?.buyer
-                      ? licenseInfo.buyer
+                  {licenseInfo?.buyer
+                    ? licenseInfo.buyer
+                    : xsmmAccount?.isLoggedIn
+                      ? xsmmAccount.username
                       : tr("Tài khoản cục bộ", "Local Account")}
                 </span>
                 <span className="truncate text-[11px] text-muted-foreground">
-                  {xsmmAccount?.isLoggedIn
-                    ? `${tr("Số dư", "Balance")}: ${xsmmAccount.balance} xu`
-                    : licenseInfo?.key
-                      ? tr("Đã xác thực bản quyền", "License Verified")
-                      : tr("Chưa kích hoạt", "Not activated")}
+                  {licenseInfo?.key
+                    ? tr("Đã xác thực bản quyền", "License Verified")
+                    : tr("Chưa kích hoạt", "Not activated")}
                 </span>
               </div>
               <ChevronRight className="size-4 shrink-0 text-muted-foreground/60" />
@@ -560,13 +557,13 @@ export function AppSettingsDialog({
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-center gap-2">
                       <span className="text-base font-bold text-foreground">
-                        {xsmmAccount?.isLoggedIn
-                          ? xsmmAccount.username
-                          : licenseInfo?.buyer
-                            ? licenseInfo.buyer
+                        {licenseInfo?.buyer
+                          ? licenseInfo.buyer
+                          : xsmmAccount?.isLoggedIn
+                            ? xsmmAccount.username
                             : tr("Tài khoản cục bộ", "Local Account")}
                       </span>
-                      {xsmmAccount?.isLoggedIn || licenseInfo?.buyer ? (
+                      {licenseInfo?.buyer || xsmmAccount?.isLoggedIn ? (
                         <Badge className="bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/20 text-[10px] px-2 py-0 border-emerald-500/30">
                           {tr("Đã kích hoạt", "Active")}
                         </Badge>
@@ -579,17 +576,12 @@ export function AppSettingsDialog({
                         </Badge>
                       )}
                     </div>
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <Coins className="size-3.5 text-amber-500" />
-                        <span className="font-semibold text-foreground">
-                          {xsmmAccount?.isLoggedIn ? xsmmAccount.balance : "0"}
-                        </span>{" "}
-                        xu
-                      </span>
-                      <span>•</span>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>
-                        {tr("Quyền hạn: Thành viên VIP", "Role: VIP Member")}
+                        {tr(
+                          "Quyền hạn: Bản quyền chính thức",
+                          "Role: Official License",
+                        )}
                       </span>
                     </div>
                   </div>
@@ -709,31 +701,6 @@ export function AppSettingsDialog({
                         )}
                       </div>
                     </div>
-
-                    {/* Owner / Buyer row */}
-                    {licenseInfo?.buyer && (
-                      <div className="flex items-center justify-between p-3.5 text-xs">
-                        <div className="flex items-center gap-2.5">
-                          <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10">
-                            <User className="size-3.5 text-indigo-500" />
-                          </div>
-                          <div>
-                            <div className="font-medium text-foreground">
-                              {tr("Chủ sở hữu key", "Key Owner")}
-                            </div>
-                            <div className="text-[11px] text-muted-foreground">
-                              {tr(
-                                "Tài khoản mua bản quyền từ hệ thống Lunex",
-                                "Account registered on Lunex",
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <span className="font-semibold text-xs text-foreground bg-muted/60 px-2.5 py-1 rounded-md border border-border/50">
-                          {licenseInfo.buyer}
-                        </span>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
