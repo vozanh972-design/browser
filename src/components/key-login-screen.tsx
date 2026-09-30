@@ -276,14 +276,14 @@ export function KeyLoginScreen({
             >
               <input
                 ref={inputRef}
-                type="text"
+                type="password"
                 value={key}
                 onChange={(e) => handleChange(e.target.value)}
                 placeholder="Nhập license key"
                 autoComplete="off"
                 spellCheck={false}
                 disabled={isLoading || isSuccess}
-                className={`w-full rounded-full border px-5 py-2 text-[13px] text-center font-mono tracking-widest placeholder:text-muted-foreground/40 placeholder:tracking-normal placeholder:font-sans outline-none transition-all bg-muted/40 backdrop-blur-sm disabled:opacity-50 ${
+                className={`w-full rounded-full border px-5 py-2 text-[13px] text-center placeholder:text-muted-foreground/40 placeholder:font-sans outline-none transition-all bg-muted/40 backdrop-blur-sm disabled:opacity-50 ${
                   isError
                     ? "border-destructive/70 ring-2 ring-destructive/25 bg-destructive/5"
                     : "border-border/50 focus:border-primary/30 focus:ring-2 focus:ring-primary/10 dark:focus:border-white/20"
