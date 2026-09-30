@@ -4,6 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { Headset, Key, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
+import { Logo } from "@/components/icons/logo";
 
 // ── Avatar seed (persistent per install) ─────────────────────────
 function getOrCreateAvatarSeed(): string {
@@ -178,6 +179,23 @@ export function KeyLoginScreen({
           : { duration: 0.5, ease: [0.23, 1, 0.32, 1] }
       }
     >
+      {/* Top Titlebar with app logo, app name, and drag region */}
+      <div
+        data-tauri-drag-region
+        className="absolute top-0 inset-x-0 h-11 flex items-center justify-between px-4 select-none z-10 pointer-events-auto border-b border-border/20 bg-background/40 backdrop-blur-xs"
+      >
+        <div
+          data-tauri-drag-region
+          className="flex items-center gap-2 select-none pointer-events-none"
+        >
+          <Logo className="size-4.5 rounded-sm" />
+          <span className="text-xs font-semibold tracking-wide text-foreground/85">
+            AutoLunex
+          </span>
+        </div>
+        <div data-tauri-drag-region className="flex-1 h-full" />
+      </div>
+
       {/* Center content */}
       <motion.div
         initial={{ opacity: 0, y: 24 }}

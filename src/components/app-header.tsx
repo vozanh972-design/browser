@@ -4,6 +4,7 @@ import { Coins, Key, LogOut, Plus, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
+import { Logo } from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { getCurrentOS, type OperatingSystem } from "@/lib/platform";
 import { cn } from "@/lib/utils";
@@ -50,14 +51,23 @@ export function AppHeader({
       data-tauri-drag-region
       className={cn(
         "relative flex h-11 w-full shrink-0 select-none items-center justify-between border-b border-border/40 bg-background/80 px-4 backdrop-blur-md",
-        isMacOS && "pl-20",
+        isMacOS ? "pl-20" : "pr-[136px]",
       )}
     >
-      {/* Left: Platform Tabs (Facebook & Instagram) */}
+      {/* Left: App Logo + Platform Tabs (Facebook & Instagram) */}
       <div
         data-tauri-drag-region
         className="flex items-center gap-2 pointer-events-auto"
       >
+        {!isMacOS && (
+          <div
+            data-tauri-drag-region
+            className="flex items-center gap-1.5 mr-2 font-semibold text-xs tracking-wide text-foreground/85 select-none pointer-events-none"
+          >
+            <Logo className="size-4.5 rounded-sm" />
+            <span>AutoLunex</span>
+          </div>
+        )}
         <button
           type="button"
           onClick={() => onPlatformChange?.("facebook")}

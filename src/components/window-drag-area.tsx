@@ -219,6 +219,24 @@ export function WindowDragArea() {
     );
   }
 
-  // Windows: controls (- [] x) removed as requested
+  if (platform === "windows") {
+    return (
+      <>
+        {!isMaximized && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 z-[99999] border border-border/40"
+          />
+        )}
+        <WindowResizeHandles isMaximized={isMaximized} />
+        <div className="fixed top-0 right-0 z-[100000] flex h-11 items-center select-none pointer-events-auto">
+          {renderControl("minimize")}
+          {renderControl("maximize")}
+          {renderControl("close")}
+        </div>
+      </>
+    );
+  }
+
   return null;
 }
