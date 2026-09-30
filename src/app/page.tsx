@@ -99,6 +99,23 @@ export default function HomePage() {
     return localStorage.getItem("app_license_key") ?? "";
   });
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
+  // License info shown in settings (key + expiry) — populated after successful verify
+  const [licenseInfo, setLicenseInfo] = useState<{
+    key: string;
+    daysLeft: number | null;
+    expiredAt: string | null;
+  }>(() => {
+    if (typeof window === "undefined")
+      return { key: "", daysLeft: null, expiredAt: null };
+    return {
+      key: localStorage.getItem("app_license_key") ?? "",
+      daysLeft: (() => {
+        const v = localStorage.getItem("app_license_days_left");
+        return v ? Number(v) : null;
+      })(),
+      expiredAt: localStorage.getItem("app_license_expired_at"),
+    };
+  });
   const [currentPage, setCurrentPage] = useState<AppPage>("profiles");
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
@@ -960,8 +977,19 @@ export default function HomePage() {
       {!isUnlocked && (
         <KeyLoginScreen
           autoCheckKey={savedLicenseKey || undefined}
-          onUnlock={(key) => {
+          onUnlock={(key, daysLeft, expiredAt) => {
             localStorage.setItem("app_license_key", key);
+            if (daysLeft != null) {
+              localStorage.setItem("app_license_days_left", String(daysLeft));
+            } else {
+              localStorage.removeItem("app_license_days_left");
+            }
+            if (expiredAt) {
+              localStorage.setItem("app_license_expired_at", expiredAt);
+            } else {
+              localStorage.removeItem("app_license_expired_at");
+            }
+            setLicenseInfo({ key, daysLeft, expiredAt });
             setIsUnlocked(true);
           }}
         />
@@ -1619,6 +1647,7 @@ export default function HomePage() {
         }}
         xsmmAccount={xsmmAccount}
         accounts={accounts}
+        licenseInfo={licenseInfo}
         onXsmmLoginClick={() => setIsXsmmLoginOpen(true)}
         onXsmmLogoutClick={handleXsmmLogout}
       />

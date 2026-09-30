@@ -41,7 +41,11 @@ type VerifyStatus = "idle" | "loading" | "success" | "error";
 
 // ── Props ─────────────────────────────────────────────────────────
 interface KeyLoginScreenProps {
-  onUnlock: (key: string) => void;
+  onUnlock: (
+    key: string,
+    daysLeft: number | null,
+    expiredAt: string | null,
+  ) => void;
   /** If provided, the screen auto-submits this key on mount (recheck) */
   autoCheckKey?: string;
 }
@@ -98,20 +102,23 @@ export function KeyLoginScreen({
       if (result.success && result.status === "valid") {
         // ── SUCCESS animation ──
         setVerifyStatus("success");
-        if (result.days_left != null) {
-          setDaysLeft(Math.floor(result.days_left));
+        const dl =
+          result.days_left != null ? Math.floor(result.days_left) : null;
+        const ea = result.expired_at ?? null;
+        if (dl != null) {
+          setDaysLeft(dl);
         }
         // macOS-style: brief success state → dissolve out → unlock
         await delay(600);
         setIsExiting(true);
         await delay(450);
-        onUnlock(keyToCheck);
+        onUnlock(keyToCheck, dl, ea);
       } else {
         if (isAutoRecheck) {
           // Failed recheck (network or invalid) — drop to input form
           if (result.status === "network_error") {
             // Offline tolerance: allow if key was previously saved
-            onUnlock(keyToCheck);
+            onUnlock(keyToCheck, null, null);
             return;
           }
           setVerifyStatus("idle");
@@ -124,7 +131,7 @@ export function KeyLoginScreen({
     } catch {
       if (isAutoRecheck) {
         // Tauri invoke failed (dev browser preview etc.) → allow
-        onUnlock(keyToCheck);
+        onUnlock(keyToCheck, null, null);
         return;
       }
       triggerError(

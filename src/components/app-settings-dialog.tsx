@@ -5,11 +5,15 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   Check,
   ChevronRight,
+  Clock,
   Coins,
   Cpu,
   ExternalLink,
+  Eye,
+  EyeOff,
   Globe,
   Info,
+  KeyRound,
   LogOut,
   Monitor,
   Moon,
@@ -55,11 +59,18 @@ export interface SettingsAccountSummary {
   status: "live" | "checkpoint" | "die" | "unverified";
 }
 
+export interface LicenseInfo {
+  key: string;
+  daysLeft: number | null;
+  expiredAt: string | null;
+}
+
 interface AppSettingsDialogProps {
   isOpen: boolean;
   onClose: () => void;
   xsmmAccount?: XsmmAccountInfo;
   accounts?: SettingsAccountSummary[];
+  licenseInfo?: LicenseInfo;
   onXsmmLoginClick?: () => void;
   onXsmmLogoutClick?: () => void;
 }
@@ -85,11 +96,31 @@ export function AppSettingsDialog({
   onClose,
   xsmmAccount,
   accounts = [],
+  licenseInfo,
   onXsmmLoginClick,
   onXsmmLogoutClick,
 }: AppSettingsDialogProps) {
   const { i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
+
+  // License key display state (masked by default)
+  const [showFullKey, setShowFullKey] = useState(false);
+  // Avatar URL read from localStorage (same seed as key-login-screen)
+  const [settingsAvatarUrl, setSettingsAvatarUrl] = useState("");
+  const [settingsAvatarError, setSettingsAvatarError] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    try {
+      const seed =
+        localStorage.getItem("autolunex_avatar_seed") || "default_user";
+      setSettingsAvatarUrl(
+        `https://api.dicebear.com/10.x/lorelei/svg?seed=${encodeURIComponent(seed)}`,
+      );
+    } catch {
+      // ignore
+    }
+  }, [isOpen]);
 
   // Multi-language translation helper
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
@@ -553,11 +584,21 @@ export function AppSettingsDialog({
 
                 {/* Hero Profile Card */}
                 <div className="flex items-center gap-4 rounded-2xl border border-border/60 bg-linear-to-r from-blue-500/10 via-indigo-500/5 to-transparent p-4 sm:p-5">
-                  <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-600 to-indigo-600 text-white font-bold text-lg shadow-md ring-4 ring-blue-500/20">
-                    {xsmmAccount?.isLoggedIn ? (
-                      xsmmAccount.username.slice(0, 2).toUpperCase()
+                  {/* Avatar — DiceBear (same seed as key-login-screen) */}
+                  <div className="relative flex size-14 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-600 to-indigo-600 text-white shadow-md ring-4 ring-blue-500/20 overflow-hidden">
+                    {settingsAvatarUrl && !settingsAvatarError ? (
+                      // biome-ignore lint/performance/noImgElement: external avatar
+                      <img
+                        src={settingsAvatarUrl}
+                        alt="avatar"
+                        className="size-full object-cover"
+                        onError={() => setSettingsAvatarError(true)}
+                      />
                     ) : (
                       <User className="size-7" />
+                    )}
+                    {xsmmAccount?.isLoggedIn && (
+                      <span className="absolute bottom-0.5 right-0.5 size-3 rounded-full bg-emerald-500 ring-2 ring-background" />
                     )}
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -618,6 +659,101 @@ export function AppSettingsDialog({
                         {tr("Đăng nhập XSMM", "Sign in to XSMM")}
                       </Button>
                     )}
+                  </div>
+                </div>
+
+                {/* Inset Group: Bản quyền kích hoạt */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+                    {tr("Bản quyền kích hoạt", "Activated License")}
+                  </span>
+                  <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
+                    {/* Key row */}
+                    <div className="flex items-center justify-between p-3.5 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                          <KeyRound className="size-3.5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-foreground">
+                            {tr("Mã Key bản quyền", "License Key")}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {tr(
+                              "Đang kích hoạt trên thiết bị này",
+                              "Active on this device",
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono text-[11px] text-foreground bg-muted/60 px-2 py-0.5 rounded border border-border/50 max-w-[160px] truncate">
+                          {licenseInfo?.key
+                            ? showFullKey
+                              ? licenseInfo.key
+                              : licenseInfo.key.slice(0, 4) +
+                                "-••••••••••••••••"
+                            : tr("Chưa có key", "No key")}
+                        </span>
+                        {licenseInfo?.key && (
+                          <button
+                            type="button"
+                            onClick={() => setShowFullKey((v) => !v)}
+                            className="flex size-6 items-center justify-center rounded-md hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+                            title={showFullKey ? "Ẩn key" : "Hiện key"}
+                          >
+                            {showFullKey ? (
+                              <EyeOff className="size-3.5" />
+                            ) : (
+                              <Eye className="size-3.5" />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Expiry row */}
+                    <div className="flex items-center justify-between p-3.5 text-xs">
+                      <div className="flex items-center gap-2.5">
+                        <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10">
+                          <Clock className="size-3.5 text-emerald-500" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-foreground">
+                            {tr("Thời hạn sử dụng", "License Expiry")}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {licenseInfo?.expiredAt
+                              ? tr("Ngày hết hạn", "Expiry date") +
+                                ": " +
+                                licenseInfo.expiredAt
+                              : tr(
+                                  "Không giới hạn thời gian",
+                                  "No expiry limit",
+                                )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {licenseInfo?.daysLeft != null ? (
+                          <span
+                            className={`font-mono text-[11px] px-2 py-0.5 rounded border font-semibold ${
+                              licenseInfo.daysLeft <= 3
+                                ? "text-rose-500 bg-rose-500/10 border-rose-500/30"
+                                : licenseInfo.daysLeft <= 7
+                                  ? "text-amber-500 bg-amber-500/10 border-amber-500/30"
+                                  : "text-emerald-500 bg-emerald-500/10 border-emerald-500/30"
+                            }`}
+                          >
+                            {licenseInfo.daysLeft} {tr("ngày", "days")}
+                          </span>
+                        ) : (
+                          <span className="font-mono text-[11px] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">
+                            ∞ {tr("Vĩnh viễn", "Lifetime")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
