@@ -1744,8 +1744,6 @@ export default function HomePage() {
       <XsmmJobConfigDialog
         isOpen={isJobConfigOpen}
         onClose={() => setIsJobConfigOpen(false)}
-        onRunNow={handleRunSelected}
-        selectedCount={selectedIds.length}
       />
     </div>
   );

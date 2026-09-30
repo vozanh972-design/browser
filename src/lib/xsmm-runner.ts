@@ -57,9 +57,9 @@ export const DEFAULT_XSMM_JOB_CONFIG: XsmmJobConfig = {
   delayActionMin: 10,
   delayActionMax: 20,
   delayWaitJob: 8,
-  delayBetweenAccounts: 2.5,
-  maxJobsPerAccount: 0,
-  maxConsecutiveErrors: 5,
+  delayBetweenAccounts: 5,
+  maxJobsPerAccount: 150,
+  maxConsecutiveErrors: 50,
   commentList: "Tuyệt vời quá\nQuá đỉnh\nFollow chéo nhé bạn\nThả tym nè",
 };
 
