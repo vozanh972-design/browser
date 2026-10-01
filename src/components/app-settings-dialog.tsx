@@ -245,7 +245,7 @@ export function AppSettingsDialog({
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
 
   // Synchronized app version across all views
-  const appVersion = systemInfo?.app_version || "1.0.0";
+  const appVersion = systemInfo?.app_version || "1.0.1";
 
   // Load system info on open
   useEffect(() => {
@@ -254,7 +254,7 @@ export function AppSettingsDialog({
       .then(setSystemInfo)
       .catch(() => {
         setSystemInfo({
-          app_version: "1.0.0",
+          app_version: "1.0.1",
           os: "Windows 11",
           arch: "x86_64",
           portable: true,

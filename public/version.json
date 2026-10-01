@@ -1,13 +1,13 @@
 {
-  "version": "1.0.0",
-  "min_version": "1.0.0",
+  "version": "1.0.1",
+  "min_version": "1.0.1",
   "force_update": true,
   "download_url": "https://github.com/theanh39/lunexexe/releases/download/v1.0.1/AutoLunex.exe",
-  "title": "Yêu cầu cập nhật phiên bản mới",
-  "message": "Phiên bản bạn đang sử dụng đã cũ và đã bị vô hiệu hóa vì lý do bảo mật. Ứng dụng sẽ tự động tải ngầm phiên bản mới và khởi chạy ngay trong tool.",
+  "title": "Yêu cầu cập nhật AutoLunex v1.0.1",
+  "message": "Đã có bản cập nhật mới v1.0.1. Hệ thống sẽ tự động tải ngầm và cập nhật ngay trong tool.",
   "release_notes": [
-    "Cập nhật các tính năng và thuật toán mới",
-    "Tối ưu hóa tốc độ và độ ổn định",
-    "Bắt buộc nâng cấp để đồng bộ hệ sinh thái AutoLunex"
+    "Nâng cấp phiên bản lên AutoLunex v1.0.1",
+    "Tối ưu hóa hiệu suất và tính ổn định",
+    "Bắt buộc nâng cấp để đồng bộ toàn bộ tính năng"
   ]
 }
