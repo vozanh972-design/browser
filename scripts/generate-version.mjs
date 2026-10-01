@@ -1,7 +1,7 @@
 import fs from "node:fs";
 
 const packageJson = JSON.parse(fs.readFileSync("./package.json", "utf-8"));
-const version = packageJson.version || "1.0.1";
+const version = packageJson.version || "1.0.2";
 
 const versionData = {
   version: version,

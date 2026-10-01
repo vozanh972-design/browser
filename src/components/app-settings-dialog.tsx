@@ -54,6 +54,7 @@ import { THEMES } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import {
   type AppVersionCheckResult,
+  CURRENT_APP_VERSION,
   checkAppVersion,
 } from "@/lib/version-checker";
 import { Logo } from "./icons/logo";
@@ -245,7 +246,7 @@ export function AppSettingsDialog({
   const [updateStatus, setUpdateStatus] = useState<string | null>(null);
 
   // Synchronized app version across all views
-  const appVersion = systemInfo?.app_version || "1.0.1";
+  const appVersion = systemInfo?.app_version || CURRENT_APP_VERSION;
 
   // Load system info on open
   useEffect(() => {
@@ -254,7 +255,7 @@ export function AppSettingsDialog({
       .then(setSystemInfo)
       .catch(() => {
         setSystemInfo({
-          app_version: "1.0.1",
+          app_version: CURRENT_APP_VERSION,
           os: "Windows 11",
           arch: "x86_64",
           portable: true,
