@@ -194,7 +194,6 @@ jobs:
           if [ -n "$SETUP_EXE" ] && [ -f "$SETUP_EXE" ]; then
             echo "Found NSIS installer: $SETUP_EXE"
             cp "$SETUP_EXE" "$BUNDLE_DIR/AutoLunex.exe"
-            cp "$SETUP_EXE" "$BUNDLE_DIR/AutoLunex-Setup.exe"
           else
             echo "NSIS installer not found, copying release binary"
             cp "src-tauri/target/${{ matrix.target }}/release/autolunex.exe" "$BUNDLE_DIR/AutoLunex.exe"
