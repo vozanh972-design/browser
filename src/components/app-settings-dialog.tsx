@@ -4,12 +4,16 @@ import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import {
   Check,
+  CheckCircle2,
   ChevronRight,
   Clock,
   ExternalLink,
   Eye,
   EyeOff,
+  FolderOpen,
+  FolderSync,
   Globe,
+  HardDrive,
   Info,
   KeyRound,
   LogOut,
@@ -40,6 +44,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { SUPPORTED_LANGUAGES } from "@/i18n";
+import {
+  getAvailableDrives,
+  getCurrentStorageDrive,
+  migrateAppToDrive,
+  openStorageFolder,
+} from "@/lib/storage-drive";
 import { THEMES } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import { Logo } from "./icons/logo";
@@ -126,6 +136,53 @@ export function AppSettingsDialog({
   const [activeSection, setActiveSection] =
     useState<SettingsSection>("account");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Storage drive migration state
+  const [availableDrives, setAvailableDrives] = useState<string[]>([
+    "C:",
+    "D:",
+  ]);
+  const [currentDrive, setCurrentDrive] = useState<string>("C:");
+  const [selectedDrive, setSelectedDrive] = useState<string>("D:");
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrateStatus, setMigrateStatus] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    void getAvailableDrives().then((drives) => {
+      setAvailableDrives(drives);
+    });
+    void getCurrentStorageDrive().then((drive) => {
+      setCurrentDrive(drive);
+      if (drive === "C:") {
+        setSelectedDrive("D:");
+      } else {
+        setSelectedDrive(drive);
+      }
+    });
+  }, [isOpen]);
+
+  const handleMigrateDrive = async () => {
+    setIsMigrating(true);
+    setMigrateStatus(null);
+    try {
+      const res = await migrateAppToDrive(selectedDrive);
+      if (res.success) {
+        setCurrentDrive(selectedDrive);
+        setMigrateStatus(res.message);
+      } else {
+        alert(res.message);
+      }
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Lỗi khi di chuyển ổ đĩa");
+    } finally {
+      setIsMigrating(false);
+    }
+  };
+
+  const handleOpenStorageFolder = async () => {
+    await openStorageFolder(currentDrive);
+  };
 
   // Display & Brightness state
   const [brightness, setBrightness] = useState<number>(() => {
@@ -573,7 +630,7 @@ export function AppSettingsDialog({
                       className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30 cursor-pointer"
                     >
                       <LogOut className="size-3.5" />
-                      {tr("Đăng xuất Key", "Log out Key")}
+                      {tr("Đăng xuất", "Log out")}
                     </Button>
                   </div>
                 </div>
@@ -1118,7 +1175,7 @@ export function AppSettingsDialog({
               </div>
             )}
 
-            {/* TAB: PRIVACY & DATA / BẢO MẬT */}
+            {/* TAB: PRIVACY & DATA / BẢO MẬT & DỮ LIỆU */}
             {activeSection === "privacy" && (
               <div className="flex flex-col gap-5 max-w-2xl">
                 <div>
@@ -1127,12 +1184,177 @@ export function AppSettingsDialog({
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {tr(
-                      "Quản lý lưu trữ cục bộ, cookie tài khoản và làm sạch bộ nhớ tạm.",
-                      "Manage local storage, account cookies, and cache cleaning.",
+                      "Quản lý ổ đĩa lưu trữ, dữ liệu tài khoản và bảo mật bộ nhớ.",
+                      "Manage storage drive, account data, and memory security.",
                     )}
                   </p>
                 </div>
 
+                {/* Inset Group: Ổ ĐĨA LƯU TRỮ DỮ LIỆU & ỨNG DỤNG */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+                    {tr(
+                      "Ổ đĩa lưu trữ dữ liệu & Ứng dụng",
+                      "Storage Drive & Application",
+                    )}
+                  </span>
+                  <div className="rounded-xl border border-border/60 bg-card/60 divide-y divide-border/40 overflow-hidden shadow-xs">
+                    {/* Hàng chọn ổ đĩa */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 text-xs gap-3">
+                      <div className="flex items-start sm:items-center gap-3">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+                          <HardDrive className="size-4" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-foreground flex items-center gap-2">
+                            <span>
+                              {tr("Chọn ổ đĩa lưu trữ", "Select Storage Drive")}
+                            </span>
+                            {currentDrive.toUpperCase().startsWith("D") && (
+                              <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30 text-[10px] px-1.5 py-0">
+                                {tr(
+                                  "Đã cách ly khỏi ổ C",
+                                  "Isolated from Drive C",
+                                )}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {tr(
+                              "Khuyên dùng ổ D để lưu trữ vĩnh viễn, bảo vệ dữ liệu và giải phóng ổ C.",
+                              "Recommended Drive D for permanent storage, protecting data and freeing Drive C.",
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                        {availableDrives.map((d) => {
+                          const isD = d.toUpperCase().startsWith("D");
+                          const isCurrent = currentDrive
+                            .toUpperCase()
+                            .startsWith(d.toUpperCase());
+                          const isSelected = selectedDrive
+                            .toUpperCase()
+                            .startsWith(d.toUpperCase());
+                          return (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => setSelectedDrive(d)}
+                              className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer",
+                                isSelected
+                                  ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                                  : "bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground border-border/60",
+                              )}
+                            >
+                              <span>Ổ {d}</span>
+                              {isD && (
+                                <span
+                                  className={cn(
+                                    "text-[9px] px-1 py-0.2 rounded font-normal",
+                                    isSelected
+                                      ? "bg-white/20 text-white"
+                                      : "bg-emerald-500/15 text-emerald-500",
+                                  )}
+                                >
+                                  {tr("Tối ưu", "Optimal")}
+                                </span>
+                              )}
+                              {isCurrent && (
+                                <span
+                                  className="size-1.5 rounded-full bg-emerald-500"
+                                  title="Đang kích hoạt"
+                                />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Hàng thực hiện di chuyển sang ổ đĩa */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 text-xs gap-3 bg-muted/20">
+                      <div className="flex items-start sm:items-center gap-3">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+                          <FolderSync className="size-4" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-foreground">
+                            {tr(
+                              `Chuyển toàn bộ dữ liệu & App sang ổ ${selectedDrive}`,
+                              `Move all data & App to Drive ${selectedDrive}`,
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {tr(
+                              `Tự động chuyển toàn bộ nick, cookie, proxy và file app sang ${selectedDrive}\\AutoLunex. Tuyệt đối không lưu vào ổ C.`,
+                              `Automatically moves all accounts, cookies, proxies and app files to ${selectedDrive}\\AutoLunex. Strictly avoids Drive C.`,
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                        {currentDrive
+                          .toUpperCase()
+                          .startsWith(selectedDrive.toUpperCase()) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleOpenStorageFolder}
+                            className="gap-1.5 text-xs h-8 cursor-pointer"
+                          >
+                            <FolderOpen className="size-3.5" />
+                            {tr("Mở thư mục", "Open Folder")}
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          disabled={isMigrating}
+                          onClick={handleMigrateDrive}
+                          className="gap-1.5 text-xs h-8 bg-blue-600 hover:bg-blue-500 text-white cursor-pointer font-medium"
+                        >
+                          <RefreshCw
+                            className={cn(
+                              "size-3.5",
+                              isMigrating && "animate-spin",
+                            )}
+                          />
+                          {isMigrating
+                            ? tr("Đang chuyển...", "Moving...")
+                            : currentDrive
+                                  .toUpperCase()
+                                  .startsWith(selectedDrive.toUpperCase())
+                              ? tr("Đồng bộ lại", "Re-sync")
+                              : tr(
+                                  `Chuyển sang ${selectedDrive}`,
+                                  `Move to ${selectedDrive}`,
+                                )}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Trạng thái sau khi chuyển */}
+                    {migrateStatus && (
+                      <div className="p-3 text-xs bg-emerald-500/10 border-t border-emerald-500/20 text-emerald-500 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="size-4 shrink-0" />
+                          <span>{migrateStatus}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleOpenStorageFolder}
+                          className="h-6 text-xs text-emerald-500 hover:text-emerald-400 hover:bg-emerald-500/20 px-2 cursor-pointer"
+                        >
+                          {tr("Xem thư mục", "View Folder")}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Inset Group: BẢO MẬT & DỌN DẸP */}
                 <div className="flex flex-col gap-1.5">
                   <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
                     {tr("Lưu trữ trên máy", "Local Device Storage")}
@@ -1148,8 +1370,8 @@ export function AppSettingsDialog({
                         </div>
                         <div className="text-[11px] text-muted-foreground">
                           {tr(
-                            "Dữ liệu tài khoản được mã hóa bảo mật trong localStorage máy tính",
-                            "Account credentials stored encrypted in local machine storage",
+                            `Dữ liệu tài khoản được mã hóa và bảo vệ tại ${currentDrive}\\AutoLunex`,
+                            `Account credentials encrypted and protected at ${currentDrive}\\AutoLunex`,
                           )}
                         </div>
                       </div>

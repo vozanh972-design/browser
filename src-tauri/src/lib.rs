@@ -561,17 +561,196 @@ pub struct SystemInfo {
 
 #[tauri::command]
 fn get_system_info() -> SystemInfo {
+  let is_portable = {
+    #[cfg(windows)]
+    {
+      if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+          parent.join(".portable").exists()
+        } else {
+          false
+        }
+      } else {
+        false
+      }
+    }
+    #[cfg(not(windows))]
+    {
+      false
+    }
+  };
+
   SystemInfo {
     app_version: env!("CARGO_PKG_VERSION").to_string(),
     os: std::env::consts::OS.to_string(),
     arch: std::env::consts::ARCH.to_string(),
-    portable: false,
+    portable: is_portable,
   }
 }
 
 #[tauri::command]
 fn confirm_quit(app: AppHandle) {
   app.exit(0);
+}
+
+// ============================================================
+// Storage drive migration & management
+// ============================================================
+#[derive(Serialize)]
+pub struct MigrateResult {
+  pub success: bool,
+  pub target_path: String,
+  pub exe_copied: bool,
+  pub message: String,
+}
+
+#[tauri::command]
+fn get_available_drives() -> Vec<String> {
+  let mut drives = Vec::new();
+  #[cfg(windows)]
+  {
+    for letter in b'C'..=b'Z' {
+      let path_str = format!("{}:\\", letter as char);
+      if std::path::Path::new(&path_str).exists() {
+        drives.push(format!("{}:", letter as char));
+      }
+    }
+  }
+  if drives.is_empty() {
+    drives.push("C:".to_string());
+  }
+  drives
+}
+
+#[tauri::command]
+fn get_current_storage_drive() -> String {
+  #[cfg(windows)]
+  {
+    for letter in b'D'..=b'Z' {
+      let candidate = format!("{}:\\AutoLunex\\.portable", letter as char);
+      if std::path::Path::new(&candidate).exists() {
+        return format!("{}:", letter as char);
+      }
+    }
+    if let Ok(exe) = std::env::current_exe() {
+      let exe_str = exe.to_string_lossy().to_uppercase();
+      if exe_str.len() >= 2 && exe_str.as_bytes()[1] == b':' {
+        return exe_str[..2].to_string();
+      }
+    }
+  }
+  "C:".to_string()
+}
+
+#[tauri::command]
+fn migrate_app_to_drive(target_drive: String, data_json: String) -> Result<MigrateResult, String> {
+  let drive = target_drive.trim_end_matches(['\\', '/']).to_uppercase();
+  #[cfg(windows)]
+  {
+    let drive_root = format!("{}\\", drive);
+    if !std::path::Path::new(&drive_root).exists() {
+      return Err(format!("Ổ đĩa {} không tồn tại trên hệ thống.", drive));
+    }
+
+    let target_dir = format!("{}\\AutoLunex", drive);
+    let data_dir = format!("{}\\data", target_dir);
+    let webview_dir = format!("{}\\webview_data", target_dir);
+
+    std::fs::create_dir_all(&data_dir)
+      .map_err(|e| format!("Lỗi tạo thư mục dữ liệu: {}", e))?;
+    std::fs::create_dir_all(&webview_dir)
+      .map_err(|e| format!("Lỗi tạo thư mục webview: {}", e))?;
+
+    let portable_file = format!("{}\\.portable", target_dir);
+    let _ = std::fs::write(&portable_file, "portable");
+
+    let storage_file = format!("{}\\autolunex_storage.json", data_dir);
+    std::fs::write(&storage_file, &data_json)
+      .map_err(|e| format!("Lỗi ghi file dữ liệu: {}", e))?;
+
+    let mut exe_copied = false;
+    if let Ok(current_exe) = std::env::current_exe() {
+      let dest_exe = format!("{}\\AutoLunex.exe", target_dir);
+      if current_exe != std::path::PathBuf::from(&dest_exe) {
+        if std::fs::copy(&current_exe, &dest_exe).is_ok() {
+          exe_copied = true;
+        }
+      }
+      if let Some(parent) = current_exe.parent() {
+        if let Ok(entries) = std::fs::read_dir(parent) {
+          for entry in entries.flatten() {
+            let p = entry.path();
+            if let Some(ext) = p.extension() {
+              if ext.eq_ignore_ascii_case("dll") {
+                if let Some(fname) = p.file_name() {
+                  let dest_dll = format!("{}\\{}", target_dir, fname.to_string_lossy());
+                  let _ = std::fs::copy(&p, &dest_dll);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    #[allow(unused_unsafe)]
+    unsafe {
+      std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", &webview_dir);
+    }
+
+    Ok(MigrateResult {
+      success: true,
+      target_path: target_dir.clone(),
+      exe_copied,
+      message: format!(
+        "Đã chuyển toàn bộ dữ liệu và ứng dụng sang {}. Tuyệt đối không còn lưu vào ổ C.",
+        target_dir
+      ),
+    })
+  }
+  #[cfg(not(windows))]
+  {
+    let _ = (drive, data_json);
+    Err("Chỉ hỗ trợ trên Windows.".to_string())
+  }
+}
+
+#[tauri::command]
+fn read_drive_data(target_drive: String) -> Result<String, String> {
+  let drive = target_drive.trim_end_matches(['\\', '/']).to_uppercase();
+  #[cfg(windows)]
+  {
+    let data_file = format!("{}\\AutoLunex\\data\\autolunex_storage.json", drive);
+    if std::path::Path::new(&data_file).exists() {
+      std::fs::read_to_string(&data_file)
+        .map_err(|e| format!("Lỗi đọc file dữ liệu: {}", e))
+    } else {
+      Err("Chưa có file dữ liệu trên ổ đĩa này".to_string())
+    }
+  }
+  #[cfg(not(windows))]
+  {
+    let _ = drive;
+    Err("Không hỗ trợ".to_string())
+  }
+}
+
+#[tauri::command]
+fn open_storage_folder(path: String) -> Result<bool, String> {
+  #[cfg(windows)]
+  {
+    use std::process::Command;
+    let _ = Command::new("explorer.exe")
+      .arg(&path)
+      .spawn()
+      .map_err(|e| format!("Không thể mở thư mục: {}", e))?;
+    Ok(true)
+  }
+  #[cfg(not(windows))]
+  {
+    let _ = path;
+    Ok(false)
+  }
 }
 
 // ============================================================
@@ -740,6 +919,22 @@ pub fn run() {
   // who dump strings: they see Mongolian, Tibetan, Cherokee, etc.
   decoy_matrix::activate();
 
+  #[cfg(windows)]
+  {
+    // Kiểm tra cấu hình chuyển ổ đĩa lưu trữ (ưu tiên ổ D đến Z nếu tồn tại file .portable)
+    for letter in b'D'..=b'Z' {
+      let candidate = format!("{}:\\AutoLunex\\.portable", letter as char);
+      if std::path::Path::new(&candidate).exists() {
+        let webview_dir = format!("{}:\\AutoLunex\\webview_data", letter as char);
+        #[allow(unused_unsafe)]
+        unsafe {
+          std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", &webview_dir);
+        }
+        break;
+      }
+    }
+  }
+
   tauri::Builder::default()
     .plugin(tauri_plugin_opener::init())
     .plugin(tauri_plugin_fs::init())
@@ -754,6 +949,11 @@ pub fn run() {
       xsmm_request,
       curl_request,
       verify_license,
+      get_available_drives,
+      get_current_storage_drive,
+      migrate_app_to_drive,
+      read_drive_data,
+      open_storage_folder,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
