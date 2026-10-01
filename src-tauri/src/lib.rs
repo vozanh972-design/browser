@@ -914,6 +914,35 @@ pub struct UpdateProgressPayload {
 }
 
 #[tauri::command]
+async fn fetch_remote_version_json(url: String) -> Result<String, String> {
+  tauri::async_runtime::spawn_blocking(move || {
+    #[cfg(windows)]
+    let mut cmd = std::process::Command::new("curl.exe");
+    #[cfg(not(windows))]
+    let mut cmd = std::process::Command::new("curl");
+
+    cmd
+      .arg("-s")
+      .arg("-L")
+      .arg("--connect-timeout")
+      .arg("8")
+      .arg(&url);
+
+    #[cfg(windows)]
+    {
+      use std::os::windows::process::CommandExt;
+      cmd.creation_flags(0x0800_0000);
+    }
+
+    let output = cmd.output().map_err(|e| format!("Curl error: {}", e))?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.into_owned())
+  })
+  .await
+  .map_err(|e| format!("Task join error: {}", e))?
+}
+
+#[tauri::command]
 #[allow(clippy::collapsible_if, clippy::unnecessary_wraps)]
 async fn start_app_update(
   app: AppHandle,
@@ -1155,6 +1184,7 @@ pub fn run() {
       read_drive_data,
       open_storage_folder,
       start_app_update,
+      fetch_remote_version_json,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

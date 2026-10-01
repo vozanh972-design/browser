@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+
 export const CURRENT_APP_VERSION = "1.0.1";
 
 export interface RemoteVersionConfig {
@@ -51,12 +53,44 @@ const GITHUB_TARGET_REPO = "theanh39/lunexexe";
 const REMOTE_VERSION_ENDPOINTS = [
   // 1. Repo mục tiêu https://github.com/theanh39/lunexexe (version.json trên main branch)
   `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/version.json`,
-  // 2. GitHub Releases API của theanh39/lunexexe
-  `https://api.github.com/repos/${GITHUB_TARGET_REPO}/releases/latest`,
-  // 3. Fallback endpoints
+  // 2. Repo browser fallback
   "https://raw.githubusercontent.com/vozanh972-design/browser/main/version.json",
+  // 3. GitHub Releases API của theanh39/lunexexe
+  `https://api.github.com/repos/${GITHUB_TARGET_REPO}/releases/latest`,
+  // 4. Domain API fallback
   "https://lunex.io.vn/api/version.json",
 ];
+
+async function fetchRemoteJsonText(url: string): Promise<string | null> {
+  // Thử gọi qua lệnh Rust tauri để miễn nhiễm hoàn toàn với CORS / Webview restrictions
+  try {
+    const isTauri =
+      typeof window !== "undefined" &&
+      ("__TAURI_INTERNALS__" in window || "__TAURI__" in window);
+
+    if (isTauri) {
+      const res = await invoke<string>("fetch_remote_version_json", { url });
+      if (res && (res.trim().startsWith("{") || res.trim().startsWith("["))) {
+        return res.trim();
+      }
+    }
+  } catch {
+    // Tiếp tục thử webview fetch
+  }
+
+  // Webview fetch — TUYỆT ĐỐI không gửi custom headers để tránh bị CORS preflight 403 Forbidden từ GitHub
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+    });
+    if (response.ok) {
+      return await response.text();
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
 
 /**
  * Kiểm tra ngầm xem phiên bản hiện tại có bản cập nhật bắt buộc không.
@@ -65,7 +99,22 @@ const REMOTE_VERSION_ENDPOINTS = [
  * tool sẽ bị vô hiệu hóa hoàn toàn và bắt buộc cập nhật.
  */
 export async function checkAppVersion(): Promise<AppVersionCheckResult> {
-  const currentVersion = CURRENT_APP_VERSION;
+  let currentVersion = CURRENT_APP_VERSION;
+
+  // Lấy chính xác phiên bản của file binary đang chạy
+  try {
+    const isTauri =
+      typeof window !== "undefined" &&
+      ("__TAURI_INTERNALS__" in window || "__TAURI__" in window);
+    if (isTauri) {
+      const info = await invoke<{ app_version?: string }>("get_system_info");
+      if (info?.app_version) {
+        currentVersion = info.app_version;
+      }
+    }
+  } catch {
+    // fallback to CURRENT_APP_VERSION
+  }
 
   // Kiểm tra cờ đã bị đánh dấu vô hiệu hóa trong cache trước đó
   const cachedOutdated =
@@ -78,8 +127,8 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
   const cachedDownloadUrl =
     typeof window !== "undefined"
       ? localStorage.getItem("autolunex_download_url") ||
-        `https://github.com/${GITHUB_TARGET_REPO}/releases/latest`
-      : `https://github.com/${GITHUB_TARGET_REPO}/releases/latest`;
+        `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex_${cachedLatest}_x64-setup.exe`
+      : `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex_${cachedLatest}_x64-setup.exe`;
 
   let remoteConfig: RemoteVersionConfig | null = null;
 
@@ -87,66 +136,59 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
   for (const endpoint of REMOTE_VERSION_ENDPOINTS) {
     try {
       const url = `${endpoint}${endpoint.includes("?") ? "&" : "?"}_t=${Date.now()}`;
-      const response = await fetch(url, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Cache-Control": "no-cache",
-        },
-      });
+      const text = await fetchRemoteJsonText(url);
+      if (!text) continue;
 
-      if (response.ok) {
-        const data = (await response.json()) as Record<string, unknown>;
+      const data = JSON.parse(text) as Record<string, unknown>;
 
-        // Trường hợp 1: File version.json
-        if (data && typeof data.version === "string") {
-          remoteConfig = data as unknown as RemoteVersionConfig;
-          break;
-        }
+      // Trường hợp 1: File version.json
+      if (data && typeof data.version === "string") {
+        remoteConfig = data as unknown as RemoteVersionConfig;
+        break;
+      }
 
-        // Trường hợp 2: GitHub Releases API (/repos/theanh39/lunexexe/releases/latest)
-        if (data && typeof data.tag_name === "string") {
-          const rawTag = data.tag_name.replace(/^v/i, "").trim();
-          if (rawTag) {
-            interface ReleaseAsset {
-              name?: string;
-              browser_download_url?: string;
-            }
-            const assets = Array.isArray(data.assets)
-              ? (data.assets as ReleaseAsset[])
-              : [];
-            const exeAsset = assets.find(
-              (a) =>
-                typeof a?.name === "string" &&
-                a.name.toLowerCase().endsWith(".exe"),
-            );
-            const downloadUrl =
-              exeAsset?.browser_download_url ||
-              `https://github.com/${GITHUB_TARGET_REPO}/releases/download/v${rawTag}/AutoLunex.exe`;
-
-            const releaseNotes =
-              typeof data.body === "string"
-                ? data.body
-                    .split("\n")
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                : [];
-
-            remoteConfig = {
-              version: rawTag,
-              min_version: rawTag,
-              force_update: true,
-              download_url: downloadUrl,
-              title:
-                typeof data.name === "string" && data.name
-                  ? data.name
-                  : "Yêu cầu cập nhật phiên bản mới",
-              message:
-                "Đã có phiên bản cập nhật mới trên hệ thống. Ứng dụng sẽ tự động tải ngầm và nâng cấp.",
-              release_notes: releaseNotes,
-            };
-            break;
+      // Trường hợp 2: GitHub Releases API (/repos/theanh39/lunexexe/releases/latest)
+      if (data && typeof data.tag_name === "string") {
+        const rawTag = data.tag_name.replace(/^v/i, "").trim();
+        if (rawTag) {
+          interface ReleaseAsset {
+            name?: string;
+            browser_download_url?: string;
           }
+          const assets = Array.isArray(data.assets)
+            ? (data.assets as ReleaseAsset[])
+            : [];
+          const exeAsset = assets.find(
+            (a) =>
+              typeof a?.name === "string" &&
+              a.name.toLowerCase().endsWith(".exe"),
+          );
+          const downloadUrl =
+            exeAsset?.browser_download_url ||
+            `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex_${rawTag}_x64-setup.exe`;
+
+          const releaseNotes =
+            typeof data.body === "string"
+              ? data.body
+                  .split("\n")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+              : [];
+
+          remoteConfig = {
+            version: rawTag,
+            min_version: rawTag,
+            force_update: true,
+            download_url: downloadUrl,
+            title:
+              typeof data.name === "string" && data.name
+                ? data.name
+                : "Yêu cầu cập nhật phiên bản mới",
+            message:
+              "Đã có phiên bản cập nhật mới trên hệ thống. Ứng dụng sẽ tự động tải ngầm và nâng cấp.",
+            release_notes: releaseNotes,
+          };
+          break;
         }
       }
     } catch {
@@ -185,9 +227,16 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
 
   const latestVersion = remoteConfig.version || currentVersion;
   const minVersion = remoteConfig.min_version || latestVersion;
-  const downloadUrl =
-    remoteConfig.download_url ||
-    `https://github.com/${GITHUB_TARGET_REPO}/releases/latest`;
+
+  // Xử lý link tải thông minh: nếu trỏ đến release nhưng file thực tế đang upload ở nhánh main của theanh39/lunexexe
+  let downloadUrl = remoteConfig.download_url || "";
+  if (
+    !downloadUrl ||
+    downloadUrl.includes("releases/download") ||
+    downloadUrl.endsWith("AutoLunex.exe")
+  ) {
+    downloadUrl = `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex_${latestVersion}_x64-setup.exe`;
+  }
 
   // Điều kiện vô hiệu hóa phiên bản cũ:
   // 1. Bản hiện tại < min_version được phép chạy
