@@ -53,12 +53,10 @@ const GITHUB_TARGET_REPO = "theanh39/lunexexe";
 const REMOTE_VERSION_ENDPOINTS = [
   // 1. Repo mục tiêu https://github.com/theanh39/lunexexe (version.json trên main branch)
   `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/version.json`,
-  // 2. Repo browser fallback
-  "https://raw.githubusercontent.com/vozanh972-design/browser/main/version.json",
+  // 2. GitHub Contents API của repo theanh39/lunexexe (tránh Fastly CDN cache của raw)
+  `https://api.github.com/repos/${GITHUB_TARGET_REPO}/contents/version.json`,
   // 3. GitHub Releases API của theanh39/lunexexe
   `https://api.github.com/repos/${GITHUB_TARGET_REPO}/releases/latest`,
-  // 4. Domain API fallback
-  "https://lunex.io.vn/api/version.json",
 ];
 
 async function fetchRemoteJsonText(url: string): Promise<string | null> {
@@ -94,9 +92,8 @@ async function fetchRemoteJsonText(url: string): Promise<string | null> {
 
 /**
  * Kiểm tra ngầm xem phiên bản hiện tại có bản cập nhật bắt buộc không.
- * Đọc từ https://github.com/theanh39/lunexexe.
- * Nếu phiên bản trên server lớn hơn hoặc phiên bản hiện tại nhỏ hơn min_version,
- * tool sẽ bị vô hiệu hóa hoàn toàn và bắt buộc cập nhật.
+ * Đọc duy nhất từ https://github.com/theanh39/lunexexe.
+ * CHỈ HIỆN CẬP NHẬT KHI THỰC SỰ CÓ BẢN MỚI HƠN TRÊN SERVER.
  */
 export async function checkAppVersion(): Promise<AppVersionCheckResult> {
   let currentVersion = CURRENT_APP_VERSION;
@@ -108,27 +105,13 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
       ("__TAURI_INTERNALS__" in window || "__TAURI__" in window);
     if (isTauri) {
       const info = await invoke<{ app_version?: string }>("get_system_info");
-      if (info?.app_version) {
-        currentVersion = info.app_version;
+      if (info?.app_version?.trim()) {
+        currentVersion = info.app_version.trim();
       }
     }
   } catch {
     // fallback to CURRENT_APP_VERSION
   }
-
-  // Kiểm tra cờ đã bị đánh dấu vô hiệu hóa trong cache trước đó
-  const cachedOutdated =
-    typeof window !== "undefined" &&
-    localStorage.getItem("autolunex_is_outdated") === "true";
-  const cachedLatest =
-    typeof window !== "undefined"
-      ? localStorage.getItem("autolunex_latest_version") || currentVersion
-      : currentVersion;
-  const cachedDownloadUrl =
-    typeof window !== "undefined"
-      ? localStorage.getItem("autolunex_download_url") ||
-        `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex.exe`
-      : `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex.exe`;
 
   let remoteConfig: RemoteVersionConfig | null = null;
 
@@ -166,6 +149,20 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
         }
       }
 
+      // Trường hợp: GitHub Contents API (/repos/theanh39/lunexexe/contents/version.json)
+      if (
+        data &&
+        typeof data.content === "string" &&
+        data.encoding === "base64"
+      ) {
+        try {
+          const decoded = atob(data.content.replace(/\s+/g, ""));
+          data = JSON.parse(decoded) as Record<string, unknown>;
+        } catch {
+          // ignore
+        }
+      }
+
       // Trường hợp 1: File version.json
       if (data && typeof data.version === "string") {
         remoteConfig = data as unknown as RemoteVersionConfig;
@@ -193,7 +190,7 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
           );
           const downloadUrl =
             exeAsset?.browser_download_url ||
-            `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex_${rawTag}_x64-setup.exe`;
+            `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex.exe`;
 
           const releaseNotes =
             typeof data.body === "string"
@@ -224,21 +221,13 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
     }
   }
 
-  // Nếu không gọi được server nhưng trước đó máy đã ghi nhận bị vô hiệu hóa
-  if (!remoteConfig) {
-    if (cachedOutdated) {
-      return {
-        isOutdated: true,
-        currentVersion,
-        latestVersion: cachedLatest,
-        minVersion: cachedLatest,
-        forceUpdate: true,
-        downloadUrl: cachedDownloadUrl,
-        title: "Yêu cầu cập nhật bắt buộc",
-        message:
-          "Phiên bản này đã bị vô hiệu hóa vì đã có bản cập nhật mới. Vui lòng tải phiên bản mới nhất để tiếp tục sử dụng.",
-        releaseNotes: [],
-      };
+  // Nếu không tải được thông tin phiên bản từ theanh39/lunexexe:
+  // TUYỆT ĐỐI KHÔNG BÁO CẬP NHẬT (Không có bằng chứng cập nhật thật)
+  if (!remoteConfig?.version) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("autolunex_is_outdated");
+      localStorage.removeItem("autolunex_latest_version");
+      localStorage.removeItem("autolunex_download_url");
     }
     return {
       isOutdated: false,
@@ -246,28 +235,48 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
       latestVersion: currentVersion,
       minVersion: currentVersion,
       forceUpdate: false,
-      downloadUrl: cachedDownloadUrl,
+      downloadUrl: "",
       title: "",
       message: "",
       releaseNotes: [],
     };
   }
 
-  const latestVersion = remoteConfig.version || currentVersion;
-  const minVersion = remoteConfig.min_version || latestVersion;
+  const latestVersion = (remoteConfig.version || "").trim();
+  const minVersion = (remoteConfig.min_version || latestVersion).trim();
 
-  // Nếu không có URL tải, dùng URL cố định từ theanh39/lunexexe
+  // ĐIỀU KIỆN TIÊN QUYẾT BẮT BUỘC ĐỂ CÓ CẬP NHẬT THẬT:
+  // Phiên bản trên server (latestVersion) PHẢI LỚN HƠN phiên bản hiện tại (currentVersion)
+  const isTrulyNewer = compareSemver(currentVersion, latestVersion) < 0;
+
+  if (!isTrulyNewer) {
+    // Nếu bản trên server <= bản đang chạy: CHẮC CHẮN ĐÃ LÀ BẢN MỚI NHẤT -> KHÔNG HIỆN POPUP!
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("autolunex_is_outdated");
+      localStorage.removeItem("autolunex_latest_version");
+      localStorage.removeItem("autolunex_download_url");
+    }
+    return {
+      isOutdated: false,
+      currentVersion,
+      latestVersion,
+      minVersion,
+      forceUpdate: false,
+      downloadUrl: "",
+      title: "",
+      message: "",
+      releaseNotes: [],
+    };
+  }
+
+  // Chỉ khi phiên bản server THỰC SỰ LỚN HƠN thì mới xem xét cập nhật
   const downloadUrl =
     remoteConfig.download_url ||
     `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex.exe`;
 
-  // Điều kiện vô hiệu hóa phiên bản cũ:
-  // 1. Bản hiện tại < min_version được phép chạy
-  // 2. Server bật cờ force_update và bản hiện tại < version mới nhất
   const isLowerThanMin = compareSemver(currentVersion, minVersion) < 0;
-  const isLowerThanLatest = compareSemver(currentVersion, latestVersion) < 0;
   const isOutdated =
-    isLowerThanMin || (remoteConfig.force_update && isLowerThanLatest);
+    isTrulyNewer && (isLowerThanMin || !!remoteConfig.force_update);
 
   if (typeof window !== "undefined") {
     if (isOutdated) {
@@ -276,6 +285,8 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
       localStorage.setItem("autolunex_download_url", downloadUrl);
     } else {
       localStorage.removeItem("autolunex_is_outdated");
+      localStorage.removeItem("autolunex_latest_version");
+      localStorage.removeItem("autolunex_download_url");
     }
   }
 
@@ -289,7 +300,7 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
     title: remoteConfig.title || "Yêu cầu cập nhật phiên bản mới",
     message:
       remoteConfig.message ||
-      `Phiên bản v${currentVersion} đã cũ và không còn được hỗ trợ. Vui lòng cập nhật lên v${latestVersion} để tiếp tục sử dụng.`,
+      `Phiên bản v${currentVersion} đã cũ. Vui lòng cập nhật lên v${latestVersion} để tiếp tục sử dụng.`,
     releaseNotes: remoteConfig.release_notes || [],
   };
 }

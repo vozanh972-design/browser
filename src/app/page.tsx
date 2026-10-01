@@ -44,7 +44,6 @@ import { showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
 import {
   type AppVersionCheckResult,
-  CURRENT_APP_VERSION,
   checkAppVersion,
 } from "@/lib/version-checker";
 import { getXsmmUser } from "@/lib/xsmm-api";
@@ -130,32 +129,7 @@ export default function HomePage() {
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [updateResult, setUpdateResult] =
-    useState<AppVersionCheckResult | null>(() => {
-      if (typeof window === "undefined") return null;
-      const isOutdated =
-        localStorage.getItem("autolunex_is_outdated") === "true";
-      if (isOutdated) {
-        const latest =
-          localStorage.getItem("autolunex_latest_version") ||
-          CURRENT_APP_VERSION;
-        const downloadUrl =
-          localStorage.getItem("autolunex_download_url") ||
-          "https://github.com/vozanh972-design/browser/releases/latest";
-        return {
-          isOutdated: true,
-          currentVersion: CURRENT_APP_VERSION,
-          latestVersion: latest,
-          minVersion: latest,
-          forceUpdate: true,
-          downloadUrl,
-          title: "Yêu cầu cập nhật bắt buộc",
-          message:
-            "Phiên bản này đã bị vô hiệu hóa vì đã có bản cập nhật mới. Vui lòng tải phiên bản mới nhất để tiếp tục sử dụng.",
-          releaseNotes: [],
-        };
-      }
-      return null;
-    });
+    useState<AppVersionCheckResult | null>(null);
   const [isAddFacebookOpen, setIsAddFacebookOpen] = useState(false);
   const [isXsmmLoginOpen, setIsXsmmLoginOpen] = useState(false);
   const [isUtilitiesChoiceOpen, setIsUtilitiesChoiceOpen] = useState(false);
