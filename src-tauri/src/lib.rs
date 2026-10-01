@@ -656,10 +656,8 @@ fn migrate_app_to_drive(target_drive: String, data_json: String) -> Result<Migra
     let data_dir = format!("{}\\data", target_dir);
     let webview_dir = format!("{}\\webview_data", target_dir);
 
-    std::fs::create_dir_all(&data_dir)
-      .map_err(|e| format!("Lỗi tạo thư mục dữ liệu: {}", e))?;
-    std::fs::create_dir_all(&webview_dir)
-      .map_err(|e| format!("Lỗi tạo thư mục webview: {}", e))?;
+    std::fs::create_dir_all(&data_dir).map_err(|e| format!("Lỗi tạo thư mục dữ liệu: {}", e))?;
+    std::fs::create_dir_all(&webview_dir).map_err(|e| format!("Lỗi tạo thư mục webview: {}", e))?;
 
     let portable_file = format!("{}\\.portable", target_dir);
     let _ = std::fs::write(&portable_file, "portable");
@@ -722,8 +720,7 @@ fn read_drive_data(target_drive: String) -> Result<String, String> {
   {
     let data_file = format!("{}\\AutoLunex\\data\\autolunex_storage.json", drive);
     if std::path::Path::new(&data_file).exists() {
-      std::fs::read_to_string(&data_file)
-        .map_err(|e| format!("Lỗi đọc file dữ liệu: {}", e))
+      std::fs::read_to_string(&data_file).map_err(|e| format!("Lỗi đọc file dữ liệu: {}", e))
     } else {
       Err("Chưa có file dữ liệu trên ổ đĩa này".to_string())
     }
