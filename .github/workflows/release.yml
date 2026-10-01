@@ -183,6 +183,15 @@ jobs:
           VERSION="${TAG#v}"
           gh release upload "$TAG" "AutoLunex_${VERSION}_x64-portable.zip" --clobber
 
+      - name: Upload version.json to release
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$TAG" "version.json" --clobber
+
   # Runs after every matrix leg (including the portable ZIP upload) so the
   # sums cover the complete, final asset set. The app self-updater refuses to
   # install a release it cannot verify against this file.

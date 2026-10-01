@@ -195,6 +195,15 @@ jobs:
         run: |
           gh release upload "$NIGHTLY_TAG" "AutoLunex_x64-portable.zip" --clobber
 
+      - name: Upload version.json to release
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NIGHTLY_TAG: "nightly-${{ steps.timestamp.outputs.timestamp }}"
+        run: |
+          gh release upload "$NIGHTLY_TAG" "version.json" --clobber
+
   update-nightly-release:
     if: github.repository == 'vozanh972-design/browser'
     needs: [rolling-release]
