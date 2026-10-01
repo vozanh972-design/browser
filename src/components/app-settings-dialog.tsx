@@ -458,11 +458,8 @@ export function AppSettingsDialog({
               </div>
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-xs font-semibold text-foreground">
-                  {licenseInfo?.buyer
-                    ? licenseInfo.buyer
-                    : xsmmAccount?.isLoggedIn
-                      ? xsmmAccount.username
-                      : tr("Tài khoản cục bộ", "Local Account")}
+                  {licenseInfo?.buyer ||
+                    tr("Tài khoản bản quyền", "Licensed User")}
                 </span>
                 <span className="truncate text-[11px] text-muted-foreground">
                   {licenseInfo?.key
