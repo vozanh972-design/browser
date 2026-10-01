@@ -309,6 +309,7 @@ jobs:
           gh release create nightly \
             "$ASSETS_DIR"/AutoLunex_nightly_* \
             "$ASSETS_DIR"/SHA256SUMS.txt \
+            version.json \
             --title "AutoLunex Nightly" \
             --notes-file /tmp/nightly-notes.md \
             --prerelease
