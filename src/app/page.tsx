@@ -22,6 +22,7 @@ import { AccountDetailDialog } from "@/components/account-detail-dialog";
 import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dialog";
 import { AppHeader } from "@/components/app-header";
 import { AppSettingsDialog } from "@/components/app-settings-dialog";
+import { ForceUpdateModal } from "@/components/force-update-modal";
 import { KeyLoginScreen } from "@/components/key-login-screen";
 import { type AppPage, RailNav } from "@/components/rail-nav";
 import { RegPageView } from "@/components/reg-page-view";
@@ -41,6 +42,11 @@ import { checkCookieIg, fetchIgUserInfo } from "@/lib/instagram-api";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
+import {
+  type AppVersionCheckResult,
+  CURRENT_APP_VERSION,
+  checkAppVersion,
+} from "@/lib/version-checker";
 import { getXsmmUser } from "@/lib/xsmm-api";
 import { type AccountRunState, xsmmRunner } from "@/lib/xsmm-runner";
 
@@ -123,6 +129,33 @@ export default function HomePage() {
   const [currentPage, setCurrentPage] = useState<AppPage>("profiles");
   const [aboutDialogOpen, setAboutDialogOpen] = useState(false);
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [updateResult, setUpdateResult] =
+    useState<AppVersionCheckResult | null>(() => {
+      if (typeof window === "undefined") return null;
+      const isOutdated =
+        localStorage.getItem("autolunex_is_outdated") === "true";
+      if (isOutdated) {
+        const latest =
+          localStorage.getItem("autolunex_latest_version") ||
+          CURRENT_APP_VERSION;
+        const downloadUrl =
+          localStorage.getItem("autolunex_download_url") ||
+          "https://github.com/vozanh972-design/browser/releases/latest";
+        return {
+          isOutdated: true,
+          currentVersion: CURRENT_APP_VERSION,
+          latestVersion: latest,
+          minVersion: latest,
+          forceUpdate: true,
+          downloadUrl,
+          title: "Yêu cầu cập nhật bắt buộc",
+          message:
+            "Phiên bản này đã bị vô hiệu hóa vì đã có bản cập nhật mới. Vui lòng tải phiên bản mới nhất để tiếp tục sử dụng.",
+          releaseNotes: [],
+        };
+      }
+      return null;
+    });
   const [isAddFacebookOpen, setIsAddFacebookOpen] = useState(false);
   const [isXsmmLoginOpen, setIsXsmmLoginOpen] = useState(false);
   const [isUtilitiesChoiceOpen, setIsUtilitiesChoiceOpen] = useState(false);
@@ -214,6 +247,39 @@ export default function HomePage() {
       // ignore storage error
     }
   }, [accounts]);
+
+  // Tự động kiểm tra phiên bản ứng dụng ngầm định kỳ
+  useEffect(() => {
+    let isMounted = true;
+    const runCheck = async () => {
+      try {
+        const res = await checkAppVersion();
+        if (isMounted) {
+          if (res.isOutdated) {
+            setUpdateResult(res);
+          } else {
+            setUpdateResult(null);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to check app version:", e);
+      }
+    };
+
+    void runCheck();
+    // 15 phút kiểm tra ngầm định kỳ 1 lần
+    const interval = setInterval(
+      () => {
+        void runCheck();
+      },
+      15 * 60 * 1000,
+    );
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   const [runnerStates, setRunnerStates] = useState<
     Map<string, AccountRunState>
@@ -1764,6 +1830,10 @@ export default function HomePage() {
         accounts={accounts}
         licenseInfo={licenseInfo}
         onKeyLogout={handleKeyLogout}
+        onUpdateFound={(res) => {
+          setSettingsDialogOpen(false);
+          setUpdateResult(res);
+        }}
       />
 
       {/* About Dialog */}
@@ -1793,6 +1863,17 @@ export default function HomePage() {
         isOpen={isJobConfigOpen}
         onClose={() => setIsJobConfigOpen(false)}
       />
+
+      {/* Khóa bắt buộc cập nhật nếu phát hiện phiên bản cũ */}
+      {updateResult?.isOutdated && (
+        <ForceUpdateModal
+          updateInfo={updateResult}
+          onRecheck={async () => {
+            const res = await checkAppVersion();
+            setUpdateResult(res.isOutdated ? res : null);
+          }}
+        />
+      )}
     </div>
   );
 }

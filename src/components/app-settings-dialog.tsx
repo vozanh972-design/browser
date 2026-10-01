@@ -52,6 +52,10 @@ import {
 } from "@/lib/storage-drive";
 import { THEMES } from "@/lib/themes";
 import { cn } from "@/lib/utils";
+import {
+  type AppVersionCheckResult,
+  checkAppVersion,
+} from "@/lib/version-checker";
 import { Logo } from "./icons/logo";
 import { useTheme } from "./theme-provider";
 
@@ -80,6 +84,7 @@ interface AppSettingsDialogProps {
   accounts?: SettingsAccountSummary[];
   licenseInfo?: LicenseInfo;
   onKeyLogout?: () => void;
+  onUpdateFound?: (result: AppVersionCheckResult) => void;
 }
 
 type SettingsSection =
@@ -103,6 +108,7 @@ export function AppSettingsDialog({
   accounts: _accounts = [],
   licenseInfo,
   onKeyLogout,
+  onUpdateFound,
 }: AppSettingsDialogProps) {
   const { i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
@@ -319,10 +325,31 @@ export function AppSettingsDialog({
     }
   };
 
-  const handleCheckUpdate = () => {
+  const handleCheckUpdate = async () => {
     setIsCheckingUpdate(true);
     setUpdateStatus(null);
-    setTimeout(() => {
+    try {
+      const res = await checkAppVersion();
+      setIsCheckingUpdate(false);
+      if (res.isOutdated) {
+        setUpdateStatus(
+          tr(
+            `Đã có bản cập nhật mới v${res.latestVersion}!`,
+            `New update v${res.latestVersion} available!`,
+          ),
+        );
+        if (onUpdateFound) {
+          onUpdateFound(res);
+        }
+      } else {
+        setUpdateStatus(
+          tr(
+            `AutoLunex v${appVersion} đã là phiên bản mới nhất!`,
+            `AutoLunex v${appVersion} is already up to date!`,
+          ),
+        );
+      }
+    } catch {
       setIsCheckingUpdate(false);
       setUpdateStatus(
         tr(
@@ -330,7 +357,7 @@ export function AppSettingsDialog({
           `AutoLunex v${appVersion} is already up to date!`,
         ),
       );
-    }, 1200);
+    }
   };
 
   const handleOpenUrl = (url: string) => {

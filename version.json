@@ -1,0 +1,13 @@
+{
+  "version": "1.0.0",
+  "min_version": "1.0.0",
+  "force_update": true,
+  "download_url": "https://github.com/vozanh972-design/browser/releases/latest",
+  "title": "Yêu cầu cập nhật phiên bản mới",
+  "message": "Phiên bản bạn đang sử dụng đã cũ và đã bị vô hiệu hóa vì lý do bảo mật. Vui lòng cập nhật lên phiên bản mới nhất để tiếp tục sử dụng tool.",
+  "release_notes": [
+    "Cập nhật các tính năng và thuật toán mới",
+    "Tối ưu hóa tốc độ và độ ổn định",
+    "Bắt buộc nâng cấp để đồng bộ hệ sinh thái AutoLunex"
+  ]
+}
