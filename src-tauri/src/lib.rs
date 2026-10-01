@@ -642,6 +642,7 @@ fn get_current_storage_drive() -> String {
   "C:".to_string()
 }
 
+#[allow(clippy::collapsible_if, clippy::cmp_owned)]
 #[tauri::command]
 fn migrate_app_to_drive(target_drive: String, data_json: String) -> Result<MigrateResult, String> {
   let drive = target_drive.trim_end_matches(['\\', '/']).to_uppercase();
@@ -669,21 +670,18 @@ fn migrate_app_to_drive(target_drive: String, data_json: String) -> Result<Migra
     let mut exe_copied = false;
     if let Ok(current_exe) = std::env::current_exe() {
       let dest_exe = format!("{}\\AutoLunex.exe", target_dir);
-      if current_exe != std::path::PathBuf::from(&dest_exe) {
-        if std::fs::copy(&current_exe, &dest_exe).is_ok() {
-          exe_copied = true;
-        }
+      let dest_path = std::path::Path::new(&dest_exe);
+      if current_exe.as_path() != dest_path && std::fs::copy(&current_exe, dest_path).is_ok() {
+        exe_copied = true;
       }
       if let Some(parent) = current_exe.parent() {
         if let Ok(entries) = std::fs::read_dir(parent) {
           for entry in entries.flatten() {
             let p = entry.path();
-            if let Some(ext) = p.extension() {
-              if ext.eq_ignore_ascii_case("dll") {
-                if let Some(fname) = p.file_name() {
-                  let dest_dll = format!("{}\\{}", target_dir, fname.to_string_lossy());
-                  let _ = std::fs::copy(&p, &dest_dll);
-                }
+            if p.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("dll")) {
+              if let Some(fname) = p.file_name() {
+                let dest_dll = format!("{}\\{}", target_dir, fname.to_string_lossy());
+                let _ = std::fs::copy(&p, &dest_dll);
               }
             }
           }
