@@ -20,6 +20,48 @@ export function ClientProviders({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore in non-Tauri preview environments
     }
+
+    // Chặn menu chuột phải mặc định của WebView2 (Lùi, Làm mới, Lưu thành, In...)
+    // Chỉ cho phép menu trên input/textarea/contentEditable để người dùng có thể Cắt/Sao chép/Dán.
+    const handleContextMenu = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      const isInput =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable;
+
+      if (!isInput) {
+        e.preventDefault();
+      }
+    };
+
+    // Chặn các phím tắt trình duyệt: in ấn (Ctrl+P), lưu trang (Ctrl+S), reload (Ctrl+R, F5)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey &&
+          (e.key === "p" ||
+            e.key === "P" ||
+            e.key === "s" ||
+            e.key === "S" ||
+            e.key === "r" ||
+            e.key === "R")) ||
+        e.key === "F5"
+      ) {
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("contextmenu", handleContextMenu, {
+      capture: true,
+    });
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+
+    return () => {
+      window.removeEventListener("contextmenu", handleContextMenu, {
+        capture: true,
+      });
+      window.removeEventListener("keydown", handleKeyDown, { capture: true });
+    };
   }, []);
 
   return (

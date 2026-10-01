@@ -1264,23 +1264,18 @@ export function AppSettingsDialog({
                   </div>
                   <div className="flex justify-between p-3">
                     <span className="text-muted-foreground">
-                      {tr("Lõi phần mềm", "Software Core")}
+                      {tr("Động cơ xử lý", "Processing Engine")}
                     </span>
                     <span className="font-semibold text-foreground">
-                      Tauri v2 • Lunex Engine • React 19
+                      Lunex High-Speed Core
                     </span>
                   </div>
                   <div className="flex justify-between p-3">
                     <span className="text-muted-foreground">
-                      {tr("Kênh phân phối", "Distribution Channel")}
+                      {tr("Nhà phát hành", "Publisher")}
                     </span>
                     <span className="font-semibold text-foreground">
-                      {systemInfo?.portable
-                        ? tr(
-                            "Bản Portable (Không cần cài đặt)",
-                            "Portable Edition",
-                          )
-                        : tr("Bản chính thức", "Official Release")}
+                      lunex.mt
                     </span>
                   </div>
                 </div>
@@ -1313,11 +1308,11 @@ export function AppSettingsDialog({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleOpenUrl("https://lunex.io.vn")}
+                    onClick={() => handleOpenUrl("https://lunex.mt")}
                     className="gap-1.5 text-xs h-8 cursor-pointer"
                   >
                     <ExternalLink className="size-3.5" />
-                    {tr("Trang chủ lunex.io.vn", "Website lunex.io.vn")}
+                    {tr("Trang chủ lunex.mt", "Website lunex.mt")}
                   </Button>
                 </div>
 
