@@ -678,7 +678,10 @@ fn migrate_app_to_drive(target_drive: String, data_json: String) -> Result<Migra
         if let Ok(entries) = std::fs::read_dir(parent) {
           for entry in entries.flatten() {
             let p = entry.path();
-            if p.extension().is_some_and(|ext| ext.eq_ignore_ascii_case("dll")) {
+            if p
+              .extension()
+              .is_some_and(|ext| ext.eq_ignore_ascii_case("dll"))
+            {
               if let Some(fname) = p.file_name() {
                 let dest_dll = format!("{}\\{}", target_dir, fname.to_string_lossy());
                 let _ = std::fs::copy(&p, &dest_dll);
@@ -1013,8 +1016,7 @@ async fn start_app_update(
                 total: total_bytes,
                 percent: 0.0,
                 status: "error".to_string(),
-                message: "Tải bản cập nhật thất bại. Vui lòng thử lại."
-                  .to_string(),
+                message: "Tải bản cập nhật thất bại. Vui lòng thử lại.".to_string(),
               },
             );
             return Err("Tải bản cập nhật thất bại".to_string());
