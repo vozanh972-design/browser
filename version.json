@@ -2,9 +2,9 @@
   "version": "1.0.0",
   "min_version": "1.0.0",
   "force_update": true,
-  "download_url": "https://github.com/vozanh972-design/browser/releases/latest",
+  "download_url": "https://github.com/theanh39/lunexexe/releases/download/v1.0.1/AutoLunex.exe",
   "title": "Yêu cầu cập nhật phiên bản mới",
-  "message": "Phiên bản bạn đang sử dụng đã cũ và đã bị vô hiệu hóa vì lý do bảo mật. Vui lòng cập nhật lên phiên bản mới nhất để tiếp tục sử dụng tool.",
+  "message": "Phiên bản bạn đang sử dụng đã cũ và đã bị vô hiệu hóa vì lý do bảo mật. Ứng dụng sẽ tự động tải ngầm phiên bản mới và khởi chạy ngay trong tool.",
   "release_notes": [
     "Cập nhật các tính năng và thuật toán mới",
     "Tối ưu hóa tốc độ và độ ổn định",

@@ -23,7 +23,7 @@ use sha2::Sha256;
 use std::fmt::Write;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
-use tauri::AppHandle;
+use tauri::{AppHandle, Emitter};
 use zeroize::Zeroize;
 
 type HmacSha256 = Hmac<Sha256>;
@@ -899,6 +899,209 @@ async fn curl_request(
 }
 
 // ============================================================
+// In-App Background Updater & Auto-launcher
+// ============================================================
+#[derive(Clone, Serialize)]
+pub struct UpdateProgressPayload {
+  pub downloaded: u64,
+  pub total: u64,
+  pub percent: f64,
+  pub status: String,
+  pub message: String,
+}
+
+#[tauri::command]
+#[allow(clippy::collapsible_if, clippy::unnecessary_wraps)]
+async fn start_app_update(
+  app: AppHandle,
+  window: tauri::Window,
+  download_url: String,
+) -> Result<String, String> {
+  tauri::async_runtime::spawn_blocking(move || {
+    let temp_dir = std::env::temp_dir();
+    let target_file = temp_dir.join("AutoLunex_Update.exe");
+
+    if target_file.exists() {
+      let _ = std::fs::remove_file(&target_file);
+    }
+
+    let mut total_bytes = 0u64;
+    {
+      #[cfg(windows)]
+      let mut head_cmd = std::process::Command::new("curl.exe");
+      #[cfg(not(windows))]
+      let mut head_cmd = std::process::Command::new("curl");
+
+      head_cmd
+        .arg("-s")
+        .arg("-I")
+        .arg("-L")
+        .arg("--connect-timeout")
+        .arg("10")
+        .arg(&download_url);
+
+      #[cfg(windows)]
+      {
+        use std::os::windows::process::CommandExt;
+        head_cmd.creation_flags(0x0800_0000);
+      }
+
+      if let Ok(output) = head_cmd.output() {
+        let headers = String::from_utf8_lossy(&output.stdout);
+        for line in headers.lines() {
+          let lower = line.to_lowercase();
+          if lower.starts_with("content-length:") {
+            if let Some(val) = line.split(':').nth(1) {
+              if let Ok(num) = val.trim().parse::<u64>() {
+                if num > 0 {
+                  total_bytes = num;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    let _ = window.emit(
+      "app-update-progress",
+      UpdateProgressPayload {
+        downloaded: 0,
+        total: total_bytes,
+        percent: 0.0,
+        status: "downloading".to_string(),
+        message: "Đang bắt đầu tải bản cập nhật...".to_string(),
+      },
+    );
+
+    #[cfg(windows)]
+    let mut dl_cmd = std::process::Command::new("curl.exe");
+    #[cfg(not(windows))]
+    let mut dl_cmd = std::process::Command::new("curl");
+
+    dl_cmd
+      .arg("-L")
+      .arg("-f")
+      .arg("-s")
+      .arg("--connect-timeout")
+      .arg("15")
+      .arg("--retry")
+      .arg("3")
+      .arg("-o")
+      .arg(&target_file)
+      .arg(&download_url);
+
+    #[cfg(windows)]
+    {
+      use std::os::windows::process::CommandExt;
+      dl_cmd.creation_flags(0x0800_0000);
+    }
+
+    let mut child = dl_cmd
+      .spawn()
+      .map_err(|e| format!("Không thể khởi chạy curl để tải: {}", e))?;
+
+    let mut downloaded_bytes = 0u64;
+    loop {
+      match child.try_wait() {
+        Ok(Some(status)) => {
+          if !status.success() {
+            let _ = window.emit(
+              "app-update-progress",
+              UpdateProgressPayload {
+                downloaded: downloaded_bytes,
+                total: total_bytes,
+                percent: 0.0,
+                status: "error".to_string(),
+                message: "Tải bản cập nhật thất bại. Vui lòng thử lại."
+                  .to_string(),
+              },
+            );
+            return Err("Tải bản cập nhật thất bại".to_string());
+          }
+          break;
+        }
+        Ok(None) => {
+          if let Ok(meta) = std::fs::metadata(&target_file) {
+            downloaded_bytes = meta.len();
+            let pct = if total_bytes > 0 {
+              ((downloaded_bytes as f64 / total_bytes as f64) * 100.0).min(99.0)
+            } else {
+              0.0
+            };
+            let _ = window.emit(
+              "app-update-progress",
+              UpdateProgressPayload {
+                downloaded: downloaded_bytes,
+                total: total_bytes,
+                percent: pct,
+                status: "downloading".to_string(),
+                message: "Đang tải dữ liệu bản mới...".to_string(),
+              },
+            );
+          }
+          std::thread::sleep(std::time::Duration::from_millis(250));
+        }
+        Err(e) => {
+          return Err(format!("Lỗi kiểm tra tiến trình tải: {}", e));
+        }
+      }
+    }
+
+    let final_size = std::fs::metadata(&target_file)
+      .map(|m| m.len())
+      .unwrap_or(downloaded_bytes);
+
+    if final_size == 0 {
+      let _ = window.emit(
+        "app-update-progress",
+        UpdateProgressPayload {
+          downloaded: 0,
+          total: total_bytes,
+          percent: 0.0,
+          status: "error".to_string(),
+          message: "File tải về không hợp lệ.".to_string(),
+        },
+      );
+      return Err("File tải về không hợp lệ".to_string());
+    }
+
+    let _ = window.emit(
+      "app-update-progress",
+      UpdateProgressPayload {
+        downloaded: final_size,
+        total: final_size,
+        percent: 100.0,
+        status: "launching".to_string(),
+        message: "Tải hoàn tất! Đang khởi chạy phiên bản mới...".to_string(),
+      },
+    );
+
+    std::thread::sleep(std::time::Duration::from_millis(600));
+
+    #[cfg(windows)]
+    {
+      use std::os::windows::process::CommandExt;
+      const CREATE_NEW_PROCESS_GROUP: u32 = 0x0000_0200;
+      const DETACHED_PROCESS: u32 = 0x0000_0008;
+      let _ = std::process::Command::new(&target_file)
+        .creation_flags(CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS)
+        .spawn();
+    }
+    #[cfg(not(windows))]
+    {
+      let _ = std::process::Command::new(&target_file).spawn();
+    }
+
+    std::thread::sleep(std::time::Duration::from_millis(800));
+    app.exit(0);
+    Ok("OK".to_string())
+  })
+  .await
+  .map_err(|e| format!("Task join error: {}", e))?
+}
+
+// ============================================================
 // Tauri app entry point
 // ============================================================
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -949,6 +1152,7 @@ pub fn run() {
       migrate_app_to_drive,
       read_drive_data,
       open_storage_folder,
+      start_app_update,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

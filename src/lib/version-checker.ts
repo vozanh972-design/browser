@@ -46,13 +46,21 @@ export function compareSemver(v1: string, v2: string): number {
   return 0;
 }
 
+const GITHUB_TARGET_REPO = "theanh39/lunexexe";
+
 const REMOTE_VERSION_ENDPOINTS = [
+  // 1. Repo mục tiêu https://github.com/theanh39/lunexexe (version.json trên main branch)
+  `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/version.json`,
+  // 2. GitHub Releases API của theanh39/lunexexe
+  `https://api.github.com/repos/${GITHUB_TARGET_REPO}/releases/latest`,
+  // 3. Fallback endpoints
   "https://raw.githubusercontent.com/vozanh972-design/browser/main/version.json",
   "https://lunex.io.vn/api/version.json",
 ];
 
 /**
  * Kiểm tra ngầm xem phiên bản hiện tại có bản cập nhật bắt buộc không.
+ * Đọc từ https://github.com/theanh39/lunexexe.
  * Nếu phiên bản trên server lớn hơn hoặc phiên bản hiện tại nhỏ hơn min_version,
  * tool sẽ bị vô hiệu hóa hoàn toàn và bắt buộc cập nhật.
  */
@@ -70,15 +78,15 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
   const cachedDownloadUrl =
     typeof window !== "undefined"
       ? localStorage.getItem("autolunex_download_url") ||
-        "https://github.com/vozanh972-design/browser/releases/latest"
-      : "https://github.com/vozanh972-design/browser/releases/latest";
+        `https://github.com/${GITHUB_TARGET_REPO}/releases/latest`
+      : `https://github.com/${GITHUB_TARGET_REPO}/releases/latest`;
 
   let remoteConfig: RemoteVersionConfig | null = null;
 
   // Thử các endpoint với cache-busting timestamp
   for (const endpoint of REMOTE_VERSION_ENDPOINTS) {
     try {
-      const url = `${endpoint}?_t=${Date.now()}`;
+      const url = `${endpoint}${endpoint.includes("?") ? "&" : "?"}_t=${Date.now()}`;
       const response = await fetch(url, {
         method: "GET",
         headers: {
@@ -88,10 +96,57 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
       });
 
       if (response.ok) {
-        const data = (await response.json()) as RemoteVersionConfig;
-        if (data?.version) {
-          remoteConfig = data;
+        const data = (await response.json()) as Record<string, unknown>;
+
+        // Trường hợp 1: File version.json
+        if (data && typeof data.version === "string") {
+          remoteConfig = data as unknown as RemoteVersionConfig;
           break;
+        }
+
+        // Trường hợp 2: GitHub Releases API (/repos/theanh39/lunexexe/releases/latest)
+        if (data && typeof data.tag_name === "string") {
+          const rawTag = data.tag_name.replace(/^v/i, "").trim();
+          if (rawTag) {
+            interface ReleaseAsset {
+              name?: string;
+              browser_download_url?: string;
+            }
+            const assets = Array.isArray(data.assets)
+              ? (data.assets as ReleaseAsset[])
+              : [];
+            const exeAsset = assets.find(
+              (a) =>
+                typeof a?.name === "string" &&
+                a.name.toLowerCase().endsWith(".exe"),
+            );
+            const downloadUrl =
+              exeAsset?.browser_download_url ||
+              `https://github.com/${GITHUB_TARGET_REPO}/releases/download/v${rawTag}/AutoLunex.exe`;
+
+            const releaseNotes =
+              typeof data.body === "string"
+                ? data.body
+                    .split("\n")
+                    .map((s) => s.trim())
+                    .filter(Boolean)
+                : [];
+
+            remoteConfig = {
+              version: rawTag,
+              min_version: rawTag,
+              force_update: true,
+              download_url: downloadUrl,
+              title:
+                typeof data.name === "string" && data.name
+                  ? data.name
+                  : "Yêu cầu cập nhật phiên bản mới",
+              message:
+                "Đã có phiên bản cập nhật mới trên hệ thống. Ứng dụng sẽ tự động tải ngầm và nâng cấp.",
+              release_notes: releaseNotes,
+            };
+            break;
+          }
         }
       }
     } catch {
@@ -132,7 +187,7 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
   const minVersion = remoteConfig.min_version || latestVersion;
   const downloadUrl =
     remoteConfig.download_url ||
-    "https://github.com/vozanh972-design/browser/releases/latest";
+    `https://github.com/${GITHUB_TARGET_REPO}/releases/latest`;
 
   // Điều kiện vô hiệu hóa phiên bản cũ:
   // 1. Bản hiện tại < min_version được phép chạy
