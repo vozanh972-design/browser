@@ -309,9 +309,8 @@ export function AppSettingsDialog({
       {
         id: "account" as const,
         label: tr("Tài khoản người dùng", "User Account"),
-        subLabel: xsmmAccount?.isLoggedIn
-          ? xsmmAccount.username
-          : tr("XSMM & Dữ liệu", "XSMM & Data"),
+        subLabel:
+          licenseInfo?.buyer || tr("Bản quyền thiết bị", "Device License"),
         icon: User,
         color: "bg-blue-500",
       },
@@ -363,7 +362,7 @@ export function AppSettingsDialog({
         color: "bg-slate-500",
       },
     ],
-    [tr],
+    [tr, licenseInfo?.buyer],
   );
 
   const filteredNavItems = navItems.filter((item) => {
