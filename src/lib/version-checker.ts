@@ -256,15 +256,10 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
   const latestVersion = remoteConfig.version || currentVersion;
   const minVersion = remoteConfig.min_version || latestVersion;
 
-  // Xử lý link tải thông minh: nếu trỏ đến release nhưng file thực tế đang upload ở nhánh main của theanh39/lunexexe
-  let downloadUrl = remoteConfig.download_url || "";
-  if (
-    !downloadUrl ||
-    downloadUrl.includes("releases/download") ||
-    downloadUrl.endsWith("AutoLunex.exe")
-  ) {
-    downloadUrl = `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex_${latestVersion}_x64-setup.exe`;
-  }
+  // Nếu không có URL tải, dùng URL cố định từ theanh39/lunexexe
+  const downloadUrl =
+    remoteConfig.download_url ||
+    `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex.exe`;
 
   // Điều kiện vô hiệu hóa phiên bản cũ:
   // 1. Bản hiện tại < min_version được phép chạy
