@@ -183,6 +183,40 @@ jobs:
           VERSION="${TAG#v}"
           gh release upload "$TAG" "AutoLunex_${VERSION}_x64-portable.zip" --clobber
 
+      - name: Create AutoLunex Update Bundle ZIP
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          BUNDLE_DIR="AutoLunex-Update-Bundle"
+          mkdir -p "$BUNDLE_DIR"
+
+          SETUP_EXE=$(find src-tauri/target/${{ matrix.target }}/release/bundle/nsis -name "*.exe" 2>/dev/null | head -n 1)
+          if [ -n "$SETUP_EXE" ] && [ -f "$SETUP_EXE" ]; then
+            echo "Found NSIS installer: $SETUP_EXE"
+            cp "$SETUP_EXE" "$BUNDLE_DIR/AutoLunex.exe"
+            cp "$SETUP_EXE" "$BUNDLE_DIR/AutoLunex-Setup.exe"
+          else
+            echo "NSIS installer not found, copying release binary"
+            cp "src-tauri/target/${{ matrix.target }}/release/autolunex.exe" "$BUNDLE_DIR/AutoLunex.exe"
+          fi
+
+          if [ -f "src-tauri/target/${{ matrix.target }}/release/WebView2Loader.dll" ]; then
+            cp "src-tauri/target/${{ matrix.target }}/release/WebView2Loader.dll" "$BUNDLE_DIR/"
+          fi
+
+          cp version.json "$BUNDLE_DIR/"
+
+          7z a "AutoLunex-Update-Bundle.zip" "./$BUNDLE_DIR/*"
+
+      - name: Upload bundle ZIP to release
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload "$TAG" "AutoLunex-Update-Bundle.zip" --clobber
+
       - name: Upload version.json to release
         if: matrix.platform == 'windows-latest'
         shell: bash

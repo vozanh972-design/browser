@@ -1,13 +1,14 @@
 import fs from "node:fs";
 
 const packageJson = JSON.parse(fs.readFileSync("./package.json", "utf-8"));
-const version = packageJson.version || "1.0.0";
+const version = packageJson.version || "1.0.1";
 
 const versionData = {
   version: version,
   min_version: version,
   force_update: true,
-  download_url: `https://github.com/theanh39/lunexexe/releases/download/v${version}/AutoLunex.exe`,
+  download_url:
+    "https://raw.githubusercontent.com/theanh39/lunexexe/main/AutoLunex.exe",
   title: `Yêu cầu cập nhật AutoLunex v${version}`,
   message: `Đã có bản cập nhật mới v${version}. Hệ thống sẽ tự động tải ngầm và cập nhật.`,
   release_notes: [

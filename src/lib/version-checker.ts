@@ -127,8 +127,8 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
   const cachedDownloadUrl =
     typeof window !== "undefined"
       ? localStorage.getItem("autolunex_download_url") ||
-        `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex_${cachedLatest}_x64-setup.exe`
-      : `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex_${cachedLatest}_x64-setup.exe`;
+        `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex.exe`
+      : `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex.exe`;
 
   let remoteConfig: RemoteVersionConfig | null = null;
 
@@ -139,11 +139,39 @@ export async function checkAppVersion(): Promise<AppVersionCheckResult> {
       const text = await fetchRemoteJsonText(url);
       if (!text) continue;
 
-      const data = JSON.parse(text) as Record<string, unknown>;
+      let data: Record<string, unknown> | null = null;
+      try {
+        data = JSON.parse(text) as Record<string, unknown>;
+      } catch {
+        // Tự động sửa lỗi cú pháp nếu có thừa dấu ngoặc kép ""
+        try {
+          const sanitized = text
+            .replace(/""([^"]+)":\s*"([^"]+)""/g, '"$1": "$2"')
+            .replace(/""([^"]+)""/g, '"$1"');
+          data = JSON.parse(sanitized) as Record<string, unknown>;
+        } catch {
+          // Trích xuất regex an toàn
+          const versionMatch = text.match(/"version"\s*:\s*"([^"]+)"/i);
+          const downloadMatch = text.match(/"download_url"\s*:\s*"([^"]+)"/i);
+          if (versionMatch?.[1]) {
+            data = {
+              version: versionMatch[1],
+              min_version: versionMatch[1],
+              force_update: true,
+              download_url:
+                downloadMatch?.[1] ||
+                `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex.exe`,
+            };
+          }
+        }
+      }
 
       // Trường hợp 1: File version.json
       if (data && typeof data.version === "string") {
         remoteConfig = data as unknown as RemoteVersionConfig;
+        if (!remoteConfig.download_url) {
+          remoteConfig.download_url = `https://raw.githubusercontent.com/${GITHUB_TARGET_REPO}/main/AutoLunex.exe`;
+        }
         break;
       }
 
