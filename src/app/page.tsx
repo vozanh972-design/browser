@@ -96,7 +96,7 @@ export default function HomePage() {
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
   const tr = (vi: string, en: string) => (isVi ? vi : en);
   // License: always start locked, recheck saved key silently on mount
-  const [savedLicenseKey] = useState<string>(() => {
+  const [savedLicenseKey, setSavedLicenseKey] = useState<string>(() => {
     if (typeof window === "undefined") return "";
     return localStorage.getItem("app_license_key") ?? "";
   });
@@ -131,11 +131,19 @@ export default function HomePage() {
     balance: string;
     token: string;
     isLoggedIn: boolean;
-  }>({
-    username: "",
-    balance: "",
-    token: "",
-    isLoggedIn: false,
+  }>(() => {
+    if (typeof window === "undefined") {
+      return { username: "", balance: "", token: "", isLoggedIn: false };
+    }
+    const token = localStorage.getItem("xsmm_token") || "";
+    const username = localStorage.getItem("xsmm_username") || "";
+    const balance = localStorage.getItem("xsmm_balance") || "";
+    return {
+      username,
+      balance,
+      token,
+      isLoggedIn: !!token,
+    };
   });
   const [accounts, setAccounts] = useState<FacebookAccount[]>(() => {
     if (typeof window === "undefined") return [];
@@ -223,9 +231,15 @@ export default function HomePage() {
           10,
         );
         const newPts = curPts + pts;
+        const newBalance = `${newPts.toLocaleString("vi-VN")} xu`;
+        try {
+          localStorage.setItem("xsmm_balance", newBalance);
+        } catch {
+          // ignore
+        }
         return {
           ...prev,
-          balance: `${newPts.toLocaleString("vi-VN")} xu`,
+          balance: newBalance,
         };
       });
     });
@@ -239,9 +253,16 @@ export default function HomePage() {
       if (savedToken) {
         void getXsmmUser(savedToken).then((res) => {
           if (res.success && res.user) {
+            const formattedBalance = `${res.user.points.toLocaleString("vi-VN")} xu`;
+            try {
+              localStorage.setItem("xsmm_username", res.user.username);
+              localStorage.setItem("xsmm_balance", formattedBalance);
+            } catch {
+              // ignore
+            }
             setXsmmAccount({
               username: res.user.username,
-              balance: `${res.user.points.toLocaleString("vi-VN")} xu`,
+              balance: formattedBalance,
               token: savedToken,
               isLoggedIn: true,
             });
@@ -258,6 +279,13 @@ export default function HomePage() {
     balance: string;
     token: string;
   }) => {
+    try {
+      localStorage.setItem("xsmm_token", user.token);
+      localStorage.setItem("xsmm_username", user.username);
+      localStorage.setItem("xsmm_balance", user.balance);
+    } catch {
+      // ignore
+    }
     setXsmmAccount({
       ...user,
       isLoggedIn: true,
@@ -268,6 +296,8 @@ export default function HomePage() {
   const handleXsmmLogout = () => {
     try {
       localStorage.removeItem("xsmm_token");
+      localStorage.removeItem("xsmm_username");
+      localStorage.removeItem("xsmm_balance");
     } catch {
       // ignore
     }
@@ -278,6 +308,25 @@ export default function HomePage() {
       isLoggedIn: false,
     });
     showSuccessToast("Đã đăng xuất tài khoản XSMM");
+  };
+
+  // Đăng xuất key bản quyền ứng dụng (giữ nguyên toàn bộ tài khoản và phiên XSMM)
+  const handleKeyLogout = () => {
+    try {
+      localStorage.removeItem("app_license_key");
+      localStorage.removeItem("app_license_days_left");
+      localStorage.removeItem("app_license_expired_at");
+      localStorage.removeItem("app_license_buyer");
+    } catch {
+      // ignore
+    }
+    setSavedLicenseKey("");
+    setLicenseInfo({ key: "", daysLeft: null, expiredAt: null, buyer: null });
+    setIsUnlocked(false);
+    setSettingsDialogOpen(false);
+    showSuccessToast(
+      tr("Đã đăng xuất Key bản quyền", "License key logged out"),
+    );
   };
 
   const handleRailNavigate = useCallback((page: AppPage) => {
@@ -1040,6 +1089,7 @@ export default function HomePage() {
             } else {
               localStorage.removeItem("app_license_buyer");
             }
+            setSavedLicenseKey(key);
             setLicenseInfo({ key, daysLeft, expiredAt, buyer });
             setIsUnlocked(true);
           }}
@@ -1711,11 +1761,9 @@ export default function HomePage() {
           setSettingsDialogOpen(false);
           setCurrentPage("profiles");
         }}
-        xsmmAccount={xsmmAccount}
         accounts={accounts}
         licenseInfo={licenseInfo}
-        onXsmmLoginClick={() => setIsXsmmLoginOpen(true)}
-        onXsmmLogoutClick={handleXsmmLogout}
+        onKeyLogout={handleKeyLogout}
       />
 
       {/* About Dialog */}

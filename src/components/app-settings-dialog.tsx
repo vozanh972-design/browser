@@ -67,11 +67,9 @@ export interface LicenseInfo {
 interface AppSettingsDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  xsmmAccount?: XsmmAccountInfo;
   accounts?: SettingsAccountSummary[];
   licenseInfo?: LicenseInfo;
-  onXsmmLoginClick?: () => void;
-  onXsmmLogoutClick?: () => void;
+  onKeyLogout?: () => void;
 }
 
 type SettingsSection =
@@ -92,11 +90,9 @@ interface SystemInfo {
 export function AppSettingsDialog({
   isOpen,
   onClose,
-  xsmmAccount,
   accounts: _accounts = [],
   licenseInfo,
-  onXsmmLoginClick,
-  onXsmmLogoutClick,
+  onKeyLogout,
 }: AppSettingsDialogProps) {
   const { i18n } = useTranslation();
   const { theme, setTheme } = useTheme();
@@ -367,7 +363,7 @@ export function AppSettingsDialog({
         color: "bg-slate-500",
       },
     ],
-    [tr, xsmmAccount],
+    [tr],
   );
 
   const filteredNavItems = navItems.filter((item) => {
@@ -532,8 +528,8 @@ export function AppSettingsDialog({
                   </h2>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {tr(
-                      "Quản lý phiên đăng nhập XSMM, số dư xu và dữ liệu tài khoản mạng xã hội.",
-                      "Manage XSMM session, coin balance, and social account data.",
+                      "Quản lý bản quyền ứng dụng và thông tin kích hoạt thiết bị.",
+                      "Manage application license and device activation info.",
                     )}
                   </p>
                 </div>
@@ -557,24 +553,12 @@ export function AppSettingsDialog({
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-center gap-2">
                       <span className="text-base font-bold text-foreground">
-                        {licenseInfo?.buyer
-                          ? licenseInfo.buyer
-                          : xsmmAccount?.isLoggedIn
-                            ? xsmmAccount.username
-                            : tr("Tài khoản cục bộ", "Local Account")}
+                        {licenseInfo?.buyer ||
+                          tr("Tài khoản bản quyền", "Licensed User")}
                       </span>
-                      {licenseInfo?.buyer || xsmmAccount?.isLoggedIn ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/20 text-[10px] px-2 py-0 border-emerald-500/30">
-                          {tr("Đã kích hoạt", "Active")}
-                        </Badge>
-                      ) : (
-                        <Badge
-                          variant="secondary"
-                          className="text-[10px] px-2 py-0"
-                        >
-                          {tr("Khách", "Guest")}
-                        </Badge>
-                      )}
+                      <Badge className="bg-emerald-500/15 text-emerald-500 hover:bg-emerald-500/20 text-[10px] px-2 py-0 border-emerald-500/30">
+                        {tr("Đã kích hoạt", "Active")}
+                      </Badge>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>
@@ -586,26 +570,15 @@ export function AppSettingsDialog({
                     </div>
                   </div>
                   <div className="shrink-0">
-                    {xsmmAccount?.isLoggedIn ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onXsmmLogoutClick}
-                        className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
-                      >
-                        <LogOut className="size-3.5" />
-                        {tr("Đăng xuất", "Sign out")}
-                      </Button>
-                    ) : (
-                      <Button
-                        size="sm"
-                        onClick={onXsmmLoginClick}
-                        className="gap-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium"
-                      >
-                        <User className="size-3.5" />
-                        {tr("Đăng nhập XSMM", "Sign in to XSMM")}
-                      </Button>
-                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onKeyLogout}
+                      className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30 cursor-pointer"
+                    >
+                      <LogOut className="size-3.5" />
+                      {tr("Đăng xuất Key", "Log out Key")}
+                    </Button>
                   </div>
                 </div>
 
@@ -1264,14 +1237,6 @@ export function AppSettingsDialog({
                   </div>
                   <div className="flex justify-between p-3">
                     <span className="text-muted-foreground">
-                      {tr("Động cơ xử lý", "Processing Engine")}
-                    </span>
-                    <span className="font-semibold text-foreground">
-                      Lunex High-Speed Core
-                    </span>
-                  </div>
-                  <div className="flex justify-between p-3">
-                    <span className="text-muted-foreground">
                       {tr("Nhà phát hành", "Publisher")}
                     </span>
                     <span className="font-semibold text-foreground">
@@ -1308,11 +1273,11 @@ export function AppSettingsDialog({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => handleOpenUrl("https://lunex.mt")}
+                    onClick={() => handleOpenUrl("https://lunex.io.vn")}
                     className="gap-1.5 text-xs h-8 cursor-pointer"
                   >
                     <ExternalLink className="size-3.5" />
-                    {tr("Trang chủ lunex.mt", "Website lunex.mt")}
+                    {tr("Trang chủ lunex.io.vn", "Website lunex.io.vn")}
                   </Button>
                 </div>
 
