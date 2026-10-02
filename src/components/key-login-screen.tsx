@@ -60,6 +60,7 @@ export function KeyLoginScreen({
   const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>(
     autoCheckKey ? "loading" : "idle",
   );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [shakeCounter, setShakeCounter] = useState(0); // increment → re-trigger shake
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [avatarError, setAvatarError] = useState(false);
@@ -99,6 +100,7 @@ export function KeyLoginScreen({
       });
 
       if (result.success && result.status === "valid") {
+        setErrorMessage(null);
         setVerifyStatus("success");
         const dl =
           result.days_left != null ? Math.floor(result.days_left) : null;
@@ -119,13 +121,18 @@ export function KeyLoginScreen({
           inputRef.current?.focus();
           return;
         }
+        setErrorMessage(
+          result.message || "Key không hợp lệ hoặc đã dùng trên thiết bị khác.",
+        );
         triggerError();
       }
-    } catch {
+    } catch (err: unknown) {
       if (isAutoRecheck) {
         onUnlock(keyToCheck, null, null, null);
         return;
       }
+      const msg = typeof err === "string" ? err : "Lỗi xác thực bản quyền.";
+      setErrorMessage(msg);
       triggerError();
     }
   }
@@ -143,6 +150,7 @@ export function KeyLoginScreen({
     e.preventDefault();
     const trimmed = key.trim();
     if (!trimmed) {
+      setErrorMessage("Vui lòng nhập mã key bản quyền!");
       triggerError();
       return;
     }
@@ -151,6 +159,9 @@ export function KeyLoginScreen({
 
   function handleChange(v: string) {
     setKey(v);
+    if (errorMessage) {
+      setErrorMessage(null);
+    }
     if (verifyStatus === "error") {
       setVerifyStatus("idle");
     }
@@ -291,6 +302,17 @@ export function KeyLoginScreen({
                 )}
               </button>
             </motion.div>
+
+            {/* Thông báo lỗi chi tiết từ máy chủ */}
+            {errorMessage && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-[12px] text-rose-500 text-center font-medium mt-2.5 px-2 break-words"
+              >
+                {errorMessage}
+              </motion.p>
+            )}
           </form>
         )}
 
