@@ -831,6 +831,7 @@ async fn curl_request(
   proxy: Option<String>,
   include_headers: Option<bool>,
   timeout_secs: Option<u64>,
+  form_fields: Option<Vec<String>>,
 ) -> Result<String, String> {
   // Gate A
   if !gate_network() {
@@ -877,6 +878,11 @@ async fn curl_request(
     }
     if let Some(ref b) = body {
       cmd.arg("-d").arg(b);
+    }
+    if let Some(fields) = form_fields {
+      for f in fields {
+        cmd.arg("-F").arg(f);
+      }
     }
     cmd.arg(&url);
 

@@ -1,6 +1,8 @@
 "use client";
 
+import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import {
+  Camera,
   Check,
   Copy,
   Eye,
@@ -10,7 +12,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
@@ -22,8 +24,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { FacebookPageItem } from "@/lib/facebook-api";
-import { showSuccessToast } from "@/lib/toast-utils";
+import {
+  type FacebookPageItem,
+  uploadFacebookPageAvatar,
+  uploadFacebookPageCover,
+} from "@/lib/facebook-api";
+import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
 
 export interface AccountDetailData {
@@ -51,6 +57,7 @@ interface AccountDetailDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onRecheck?: (account: AccountDetailData) => void;
+  onUpdateMedia?: (updated: { avatar?: string; cover?: string }) => void;
   isChecking?: boolean;
 }
 
@@ -94,6 +101,7 @@ export function AccountDetailDialog({
   isOpen,
   onClose,
   onRecheck,
+  onUpdateMedia,
   isChecking = false,
 }: AccountDetailDialogProps) {
   const { i18n } = useTranslation();
@@ -102,6 +110,19 @@ export function AccountDetailDialog({
 
   const [showPassword, setShowPassword] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [currentAvatar, setCurrentAvatar] = useState<string | undefined>(
+    account?.avatar,
+  );
+  const [currentCover, setCurrentCover] = useState<string | undefined>(
+    account?.cover,
+  );
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+
+  useEffect(() => {
+    setCurrentAvatar(account?.avatar);
+    setCurrentCover(account?.cover);
+  }, [account?.avatar, account?.cover]);
 
   if (!account) return null;
 
@@ -115,14 +136,116 @@ export function AccountDetailDialog({
     }, 1800);
   };
 
+  const handleSelectAvatar = async () => {
+    if (!account.token) return;
+    try {
+      let filePath: string | null = null;
+      try {
+        const selected = await openFileDialog({
+          multiple: false,
+          filters: [
+            { name: "Images", extensions: ["png", "jpg", "jpeg", "webp"] },
+          ],
+        });
+        if (selected && typeof selected === "string") {
+          filePath = selected;
+        }
+      } catch {
+        // dialog plugin fallback
+      }
+
+      if (filePath) {
+        setIsUploadingAvatar(true);
+        const res = await uploadFacebookPageAvatar({
+          pageId: account.uid,
+          token: account.token,
+          filePath,
+          proxy: account.proxy,
+        });
+        if (res.success) {
+          showSuccessToast(
+            tr(
+              "Đã đổi ảnh đại diện thành công!",
+              "Updated avatar successfully!",
+            ),
+          );
+          if (res.mediaUrl) {
+            setCurrentAvatar(res.mediaUrl);
+            onUpdateMedia?.({ avatar: res.mediaUrl });
+          }
+        } else {
+          showErrorToast(
+            res.message ||
+              tr("Đổi ảnh đại diện thất bại", "Failed to update avatar"),
+          );
+        }
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      showErrorToast(msg);
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
+
+  const handleSelectCover = async () => {
+    if (!account.token) return;
+    try {
+      let filePath: string | null = null;
+      try {
+        const selected = await openFileDialog({
+          multiple: false,
+          filters: [
+            { name: "Images", extensions: ["png", "jpg", "jpeg", "webp"] },
+          ],
+        });
+        if (selected && typeof selected === "string") {
+          filePath = selected;
+        }
+      } catch {
+        // dialog plugin fallback
+      }
+
+      if (filePath) {
+        setIsUploadingCover(true);
+        const res = await uploadFacebookPageCover({
+          pageId: account.uid,
+          token: account.token,
+          filePath,
+          proxy: account.proxy,
+        });
+        if (res.success) {
+          showSuccessToast(
+            tr("Đã đổi ảnh bìa thành công!", "Updated cover successfully!"),
+          );
+          if (res.mediaUrl) {
+            setCurrentCover(res.mediaUrl);
+            onUpdateMedia?.({ cover: res.mediaUrl });
+          }
+        } else {
+          showErrorToast(
+            res.message || tr("Đổi ảnh bìa thất bại", "Failed to update cover"),
+          );
+        }
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      showErrorToast(msg);
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
   const isInstagram = account.platform === "instagram";
   const avatarUrl =
+    currentAvatar ||
     account.avatar ||
     (account.token
       ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${account.token}`
       : account.uid && !account.uid.startsWith("acc_")
         ? `https://graph.facebook.com/${account.uid}/picture?type=large`
         : undefined);
+  const coverUrl = currentCover || account.cover;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -134,11 +257,11 @@ export function AccountDetailDialog({
         </DialogHeader>
 
         {/* Banner Cover Photo */}
-        <div className="relative h-32 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 overflow-hidden">
-          {account.cover && (
+        <div className="relative h-32 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 overflow-hidden group">
+          {coverUrl && (
             // biome-ignore lint/performance/noImgElement: dynamic external cover URL
             <img
-              src={account.cover}
+              src={coverUrl}
               alt=""
               className="h-full w-full object-cover"
               onError={(e) => {
@@ -147,6 +270,27 @@ export function AccountDetailDialog({
             />
           )}
           <div className="absolute inset-0 bg-black/20" />
+          {/* Nút đổi ảnh bìa khi có token */}
+          {account.token && (
+            <button
+              type="button"
+              disabled={isUploadingCover}
+              onClick={handleSelectCover}
+              className="absolute top-3 right-3 flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/60 hover:bg-black/80 text-white text-[11px] font-medium backdrop-blur-xs transition-colors cursor-pointer shadow-xs border border-white/20"
+              title={tr("Đổi ảnh bìa", "Change cover photo")}
+            >
+              {isUploadingCover ? (
+                <RefreshCw className="size-3 animate-spin" />
+              ) : (
+                <Camera className="size-3" />
+              )}
+              <span>
+                {isUploadingCover
+                  ? tr("Đang tải...", "Uploading...")
+                  : tr("Đổi ảnh bìa", "Change cover")}
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Profile Header Info */}
@@ -154,12 +298,31 @@ export function AccountDetailDialog({
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 -mt-12 sm:-mt-14 mb-3">
             <div className="flex items-end gap-3.5">
               {/* Avatar Thật */}
-              <div className="relative size-20 sm:size-22 rounded-full border-4 border-background bg-muted overflow-hidden shrink-0 shadow-md">
+              <div className="relative size-20 sm:size-22 rounded-full border-4 border-background bg-muted overflow-hidden shrink-0 shadow-md group">
                 <DialogAvatar
                   url={avatarUrl}
                   name={account.name || account.uid}
                   isInstagram={isInstagram}
                 />
+                {/* Nút đổi Avatar khi có token */}
+                {account.token && (
+                  <button
+                    type="button"
+                    disabled={isUploadingAvatar}
+                    onClick={handleSelectAvatar}
+                    className="absolute inset-0 bg-black/55 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity cursor-pointer text-[10px] font-medium"
+                    title={tr("Đổi ảnh đại diện", "Change profile picture")}
+                  >
+                    {isUploadingAvatar ? (
+                      <RefreshCw className="size-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Camera className="size-4 mb-0.5" />
+                        <span>{tr("Đổi ảnh", "Change")}</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
 
               {/* Tên & Trạng thái */}

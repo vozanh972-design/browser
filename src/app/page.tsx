@@ -1665,9 +1665,9 @@ export default function HomePage() {
 
                           {/* Danh sách Pages con của tài khoản bên dưới */}
                           {acc.pages && acc.pages.length > 0 && (
-                            <div className="pl-12 pr-4 py-2 bg-muted/15 border-t border-border/20 flex flex-col gap-1.5 text-xs">
-                              <div className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
-                                <Flag className="size-3.5 text-blue-500 shrink-0" />
+                            <div className="border-t border-border/20 bg-muted/10 divide-y divide-border/20">
+                              <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5 bg-muted/20">
+                                <Flag className="size-3.5 text-blue-500 shrink-0 ml-2" />
                                 <span>
                                   {tr(
                                     `Danh sách Page / Profile+ (${acc.pages.length}):`,
@@ -1675,168 +1675,247 @@ export default function HomePage() {
                                   )}
                                 </span>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-0.5">
-                                {acc.pages.map((p) => {
-                                  const displayUid =
-                                    p.additionalProfileId || p.pageId;
-                                  const pageKey = `page_${acc.id}_${p.pageId}`;
-                                  const pageRunState =
-                                    runnerStates.get(pageKey);
-                                  const isPageRunning =
-                                    pageRunState?.isRunning ?? false;
-                                  const isPageChecking =
-                                    checkingIds.includes(pageKey);
+                              {acc.pages.map((p) => {
+                                const displayUid =
+                                  p.additionalProfileId || p.pageId;
+                                const pageKey = `page_${acc.id}_${p.pageId}`;
+                                const pageRunState =
+                                  runnerStates.get(pageKey);
+                                const isPageRunning =
+                                  pageRunState?.isRunning ?? false;
+                                const isPageChecking =
+                                  checkingIds.includes(pageKey);
 
-                                  return (
-                                    <div
-                                      key={p.pageId}
-                                      className={cn(
-                                        "flex items-center justify-between p-2 rounded-md bg-background/80 border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-colors shadow-2xs gap-2",
-                                        isPageRunning &&
-                                          "border-emerald-500/30 bg-emerald-500/5",
-                                      )}
-                                    >
-                                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                                        <AccountAvatar url={p.avatar} />
-                                        <div className="flex flex-col min-w-0">
-                                          <div className="flex items-center gap-1.5">
-                                            <span className="font-medium truncate text-foreground leading-tight text-[11.5px]">
-                                              {p.pageName}
-                                            </span>
-                                            {isPageRunning ? (
-                                              <span
-                                                className="relative flex size-2 shrink-0"
-                                                title={pageRunState?.status}
-                                              >
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                                <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
-                                              </span>
-                                            ) : pageRunState &&
-                                              pageRunState.successCount > 0 ? (
-                                              <span
-                                                className="text-[9px] font-mono px-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold shrink-0"
-                                                title={`${pageRunState.successCount} thành công, ${pageRunState.errorCount} lỗi`}
-                                              >
-                                                ✓ {pageRunState.successCount}
-                                              </span>
-                                            ) : null}
-                                          </div>
-                                          <span className="font-mono text-[9.5px] text-muted-foreground truncate leading-tight">
-                                            UID: {displayUid}
+                                return (
+                                  <div
+                                    key={p.pageId}
+                                    className={cn(
+                                      "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-1.5 min-h-[44px] text-xs text-foreground hover:bg-muted/30 transition-colors select-none",
+                                      isPageRunning && "bg-emerald-500/5",
+                                    )}
+                                  >
+                                    {/* Cột 0 (40px): Biểu tượng nhánh con */}
+                                    <div className="flex items-center justify-center text-muted-foreground/60">
+                                      <span className="text-[12px] font-mono leading-none">
+                                        ↳
+                                      </span>
+                                    </div>
+
+                                    {/* Cột 1 (2.8fr): Avatar, Tên Page & UID */}
+                                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                                      <AccountAvatar url={p.avatar} />
+                                      <div className="flex flex-col min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="font-medium truncate text-foreground leading-tight text-[11.5px]">
+                                            {p.pageName}
                                           </span>
-                                        </div>
-                                      </div>
-
-                                      {/* Thao tác của Page 615 */}
-                                      <div className="flex items-center gap-1 shrink-0">
-                                        {p.pageToken ? (
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (p.pageToken) {
-                                                handleCopy(p.pageToken);
-                                              }
-                                            }}
-                                            className="text-[9px] px-1.5 py-0.5 font-mono bg-blue-500/10 text-blue-500 rounded border border-blue-500/20 hover:bg-blue-500/20 shrink-0 cursor-pointer"
-                                            title={tr(
-                                              "Copy Page Token",
-                                              "Copy Page Token",
-                                            )}
-                                          >
-                                            Token
-                                          </button>
-                                        ) : null}
-
-                                        {/* Nút xem chi tiết Page */}
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setDetailAccount({
-                                              id: pageKey,
-                                              uid: displayUid,
-                                              name: p.pageName,
-                                              token: p.pageToken || acc.token,
-                                              cookie: acc.cookie,
-                                              proxy: acc.proxy,
-                                              avatar: p.avatar,
-                                              platform: "facebook",
-                                              status:
-                                                p.isLive === false
-                                                  ? "die"
-                                                  : "live",
-                                              rawText: `Page: ${p.pageName} | UID 615: ${displayUid}`,
-                                            });
-                                            setIsDetailOpen(true);
-                                          }}
-                                          title={tr(
-                                            "Xem chi tiết Page",
-                                            "View page details",
-                                          )}
-                                          className="p-1 text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
-                                        >
-                                          <CircleAlert className="size-3.5" />
-                                        </button>
-
-                                        {/* Nút kiểm tra lại Page */}
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            void handleCheckPage(acc, p);
-                                          }}
-                                          title={tr(
-                                            "Kiểm tra lại Page",
-                                            "Re-check page",
-                                          )}
-                                          className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
-                                        >
-                                          <RefreshCw
-                                            className={cn(
-                                              "size-3.5",
-                                              isPageChecking &&
-                                                "animate-spin text-primary",
-                                            )}
-                                          />
-                                        </button>
-
-                                        {/* Nút Chạy/Dừng Page */}
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleRunPage(acc, p);
-                                          }}
-                                          title={
-                                            isPageRunning
-                                              ? tr(
-                                                  "Dừng chạy Page",
-                                                  "Stop running page",
-                                                )
-                                              : tr(
-                                                  "Chạy nhiệm vụ bằng Page",
-                                                  "Run task with page",
-                                                )
-                                          }
-                                          className={cn(
-                                            "p-1 rounded transition-colors",
-                                            isPageRunning
-                                              ? "text-rose-500 bg-rose-500/15 hover:bg-rose-500/25 cursor-pointer"
-                                              : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 cursor-pointer",
-                                          )}
-                                        >
+                                          <span className="text-[9px] font-mono px-1 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold shrink-0">
+                                            Page 615
+                                          </span>
                                           {isPageRunning ? (
-                                            <Square className="size-3.5 fill-current" />
-                                          ) : (
-                                            <Play className="size-3.5 fill-current" />
-                                          )}
-                                        </button>
+                                            <span
+                                              className="relative flex size-2 shrink-0"
+                                              title={pageRunState?.status}
+                                            >
+                                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                              <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+                                            </span>
+                                          ) : pageRunState &&
+                                            pageRunState.successCount > 0 ? (
+                                            <span
+                                              className="text-[9px] font-mono px-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 font-bold shrink-0"
+                                              title={`${pageRunState.successCount} thành công, ${pageRunState.errorCount} lỗi`}
+                                            >
+                                              ✓ {pageRunState.successCount}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                        <span className="font-mono text-[9.5px] text-muted-foreground truncate leading-tight">
+                                          UID: {displayUid}
+                                        </span>
                                       </div>
                                     </div>
-                                  );
-                                })}
-                              </div>
+
+                                    {/* Cột 2 (1.2fr): Token của Page */}
+                                    <div className="flex items-center pr-2">
+                                      {p.pageToken ? (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (p.pageToken) {
+                                              handleCopy(p.pageToken);
+                                            }
+                                          }}
+                                          className="text-[9.5px] px-1.5 py-0.5 font-mono bg-blue-500/10 text-blue-500 rounded border border-blue-500/20 hover:bg-blue-500/20 shrink-0 cursor-pointer inline-flex items-center gap-1"
+                                          title={tr(
+                                            "Copy Page Token",
+                                            "Copy Page Token",
+                                          )}
+                                        >
+                                          <Key className="size-2.5" />
+                                          <span>Token</span>
+                                        </button>
+                                      ) : (
+                                        <span className="text-muted-foreground/40 text-[10px]">
+                                          —
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Cột 3 (1.5fr): Proxy / VPN */}
+                                    <div className="text-muted-foreground truncate font-mono text-[11px] pr-2">
+                                      {acc.proxy || "—"}
+                                    </div>
+
+                                    {/* Cột 4 (1.2fr): Trạng thái */}
+                                    <div className="pr-2">
+                                      {isPageChecking ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground whitespace-nowrap">
+                                          <RefreshCw className="size-2.5 animate-spin shrink-0" />
+                                          {tr("Đang kiểm tra", "Checking")}
+                                        </span>
+                                      ) : pageRunState &&
+                                        (pageRunState.successCount > 0 ||
+                                          pageRunState.earnedPoints > 0) ? (
+                                        <span
+                                          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
+                                          title={`${pageRunState.successCount} thành công, ${pageRunState.errorCount} lỗi`}
+                                        >
+                                          ✓ {pageRunState.successCount}{" "}
+                                          {pageRunState.earnedPoints > 0
+                                            ? `(+${pageRunState.earnedPoints})`
+                                            : ""}
+                                        </span>
+                                      ) : p.isLive === false ? (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
+                                          Die
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
+                                          Live
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Cột 5 (1.5fr): Hành động */}
+                                    <div className="text-muted-foreground truncate pr-2 font-medium">
+                                      {isPageRunning ? (
+                                        <span
+                                          className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold truncate"
+                                          title={pageRunState?.status}
+                                        >
+                                          <span className="relative flex size-2 shrink-0">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                            <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+                                          </span>
+                                          <span className="truncate">
+                                            {pageRunState?.status ||
+                                              tr("Đang chạy...", "Running...")}
+                                          </span>
+                                        </span>
+                                      ) : pageRunState?.lastError ? (
+                                        <span
+                                          className="text-amber-500 truncate"
+                                          title={pageRunState.lastError}
+                                        >
+                                          {pageRunState.lastError}
+                                        </span>
+                                      ) : (
+                                        p.category || tr("Sẵn sàng", "Ready")
+                                      )}
+                                    </div>
+
+                                    {/* Cột 6 (125px): Thao tác — căn khớp tuyệt đối với Thao tác của Profile */}
+                                    <div className="flex items-center justify-end gap-1.5 pr-2">
+                                      {/* Nút xem chi tiết Page */}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setDetailAccount({
+                                            id: pageKey,
+                                            uid: displayUid,
+                                            name: p.pageName,
+                                            token: p.pageToken || acc.token,
+                                            cookie: acc.cookie,
+                                            proxy: acc.proxy,
+                                            avatar: p.avatar,
+                                            platform: "facebook",
+                                            status:
+                                              p.isLive === false
+                                                ? "die"
+                                                : "live",
+                                            rawText: `Page: ${p.pageName} | UID 615: ${displayUid}`,
+                                          });
+                                          setIsDetailOpen(true);
+                                        }}
+                                        title={tr(
+                                          "Xem chi tiết Page",
+                                          "View page details",
+                                        )}
+                                        className="p-1 text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                                      >
+                                        <CircleAlert className="size-3.5" />
+                                      </button>
+
+                                      {/* Nút kiểm tra lại Page */}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          void handleCheckPage(acc, p);
+                                        }}
+                                        title={tr(
+                                          "Kiểm tra lại Page",
+                                          "Re-check page",
+                                        )}
+                                        className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                                      >
+                                        <RefreshCw
+                                          className={cn(
+                                            "size-3.5",
+                                            isPageChecking &&
+                                              "animate-spin text-primary",
+                                          )}
+                                        />
+                                      </button>
+
+                                      {/* Nút Chạy/Dừng Page */}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleRunPage(acc, p);
+                                        }}
+                                        title={
+                                          isPageRunning
+                                            ? tr(
+                                                "Dừng chạy Page",
+                                                "Stop running page",
+                                              )
+                                            : tr(
+                                                "Chạy nhiệm vụ bằng Page",
+                                                "Run task with page",
+                                              )
+                                        }
+                                        className={cn(
+                                          "p-1 rounded transition-colors cursor-pointer",
+                                          isPageRunning
+                                            ? "text-rose-500 bg-rose-500/15 hover:bg-rose-500/25"
+                                            : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10",
+                                        )}
+                                      >
+                                        {isPageRunning ? (
+                                          <Square className="size-3.5 fill-current" />
+                                        ) : (
+                                          <Play className="size-3.5 fill-current" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -1994,6 +2073,37 @@ export default function HomePage() {
           setDetailAccount(null);
         }}
         onRecheck={(acc) => void handleCheckAccount(acc as FacebookAccount)}
+        onUpdateMedia={(updated) => {
+          if (!detailAccount) return;
+          setAccounts((prev) =>
+            prev.map((a) => {
+              if (a.id === detailAccount.id) {
+                return {
+                  ...a,
+                  avatar: updated.avatar || a.avatar,
+                  cover: updated.cover || a.cover,
+                };
+              }
+              if (a.pages && a.pages.length > 0) {
+                const pageIndex = a.pages.findIndex(
+                  (p) =>
+                    `page_${a.id}_${p.pageId}` === detailAccount.id ||
+                    p.pageId === detailAccount.uid ||
+                    p.additionalProfileId === detailAccount.uid,
+                );
+                if (pageIndex !== -1) {
+                  const newPages = [...a.pages];
+                  newPages[pageIndex] = {
+                    ...newPages[pageIndex],
+                    avatar: updated.avatar || newPages[pageIndex].avatar,
+                  };
+                  return { ...a, pages: newPages };
+                }
+              }
+              return a;
+            }),
+          );
+        }}
         isChecking={
           detailAccount ? checkingIds.includes(detailAccount.id) : false
         }
