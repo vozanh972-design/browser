@@ -10,10 +10,18 @@ export interface RegPageResult {
   rawResponse?: string;
 }
 
-const KATANA_USER_AGENT =
-  "[FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]";
+export interface FacebookPageItem {
+  pageId: string;
+  pageName: string;
+  pageToken: string;
+  additionalProfileId?: string;
+  avatar?: string;
+  isLive: boolean;
+}
 
-// Danh sách danh mục phổ biến hợp lệ để logic tự chọn
+const KATANA_USER_AGENT =
+  "[FBAN/FB4A;FBAV/537.0.0.47.77;FBPN/com.facebook.katana;]";
+
 export const AUTO_CATEGORIES = [
   { id: "180164648685982", name: "Blog cá nhân" },
   { id: "2612", name: "Cửa hàng quần áo" },
@@ -89,7 +97,7 @@ const VIETNAMESE_LAST = [
   "Hằng",
   "Chi",
   "Quân",
-  "Nhật",
+  "Nam",
   "Phong",
   "Huy",
   "Sơn",
@@ -162,7 +170,9 @@ const WESTERN_LAST = [
 ];
 
 /**
- * Sinh tên ngẫu nhiên chuẩn thuần theo Loại tên (Tên Việt hoặc Tên Tây)
+ * Sinh tên ngẫu nhiên chuẩn 100% thuần từ FacebookPageService.kt:
+ * - Tên Việt: 50% là 3 từ (Họ + Đệm + Tên) và 50% là 2 từ (Đệm + Tên)
+ * - Tên Tây: First Name + Last Name
  */
 export function generateRandomName(type: "vietnamese" | "western"): string {
   if (type === "western") {
@@ -171,7 +181,6 @@ export function generateRandomName(type: "vietnamese" | "western"): string {
     return `${f} ${l}`;
   }
 
-  // Tên Việt: 50% là 3 từ (Họ + Đệm + Tên) và 50% là 2 từ (Đệm + Tên / Họ + Tên)
   const isThree = Math.random() > 0.4;
   if (isThree) {
     const f =
@@ -189,9 +198,6 @@ export function generateRandomName(type: "vietnamese" | "western"): string {
   return `${m} ${l}`;
 }
 
-/**
- * Tự động chọn ngẫu nhiên danh mục hợp lệ
- */
 export function getRandomCategory(): { id: string; name: string } {
   const item =
     AUTO_CATEGORIES[Math.floor(Math.random() * AUTO_CATEGORIES.length)];
@@ -199,12 +205,18 @@ export function getRandomCategory(): { id: string; name: string } {
 }
 
 /**
- * Tạo Facebook Profile Plus Page (UID 615) bằng GraphQL chuẩn Katana Android
+ * 1. TẠO PROFILE PLUS / FANPAGE FACEBOOK BẰNG BLOKS GRAPHQL CHUẨN APP KATANA (Li2/n;)
+ * Endpoint: POST https://graph.facebook.com/graphql
+ * App ID: com.bloks.www.additional.profile.plus.creation.action.category.submit
+ * Bloks Versioning ID: 338f8ead5977a2c41eba3e92584dcf1d132e8b7928f1f5796662ec064023047d
+ * Styles ID: 588d028b36bed0e1889e09b60e0f9aea
+ * Client Doc ID: 119940804239956818821550724
+ * User-Agent: [FBAN/FB4A;FBAV/537.0.0.47.77;FBPN/com.facebook.katana;]
  */
 export async function createFacebookPageApi({
   pageName,
   token,
-  categoryId,
+  categoryId = "180164648685982",
   proxy,
 }: {
   pageName: string;
@@ -221,15 +233,13 @@ export async function createFacebookPageApi({
     };
   }
 
-  const selectedCategory = categoryId || getRandomCategory().id;
-
   const innerParams = {
     client_input_params: {
       page_id: "0",
       profile_plus_id: "0",
       cp_upsell_declined: 0,
       off_platform_creator_reachout_id: "",
-      category_ids: [selectedCategory],
+      category_ids: [categoryId],
       nav_chain: "...",
     },
     server_params: {
@@ -294,7 +304,6 @@ export async function createFacebookPageApi({
     "X-Fb-Server-Cluster: True",
     "X-Graphql-Request-Purpose: fetch",
     "X-Graphql-Client-Library: graphservice",
-    "X-FB-Friendly-Name: AdditionalProfilePlusCreation",
   ];
 
   try {
@@ -304,53 +313,55 @@ export async function createFacebookPageApi({
       body: params.toString(),
       headers,
       proxy,
+      timeoutSecs: 30,
     });
 
-    // 1. Bóc tách Page ID / Profile Plus ID (UID 615)
+    // 1. Bóc tách Page ID / Profile Plus ID theo 4 mẫu định dạng chuẩn (Li2/i0;)
     let extractedPageId: string | undefined;
     let extractedProfilePlusId: string | undefined;
 
-    // Pattern 1: WriteGlobalConsistencyStore
+    // Mẫu 1: WriteGlobalConsistencyStore
     const p1Page = raw.match(
       /\(bk\.action\.bloks\.WriteGlobalConsistencyStore,\s*"ADDITIONAL_PROFILE_PLUS_CREATION:page_id"\s*,\s*"(\d+)"/,
     );
-    if (p1Page) extractedPageId = p1Page[1];
+    if (p1Page?.[1]) extractedPageId = p1Page[1];
 
     const p1Plus = raw.match(
       /\(bk\.action\.bloks\.WriteGlobalConsistencyStore,\s*"ADDITIONAL_PROFILE_PLUS_CREATION:profile_plus_id"\s*,\s*"(\d+)"/,
     );
-    if (p1Plus) extractedProfilePlusId = p1Plus[1];
+    if (p1Plus?.[1]) extractedProfilePlusId = p1Plus[1];
 
-    // Pattern 2: dq8 action
+    // Mẫu 2: dq8 action
     if (!extractedPageId) {
       const p2Page = raw.match(
         /\(dq8\s+"ADDITIONAL_PROFILE_PLUS_CREATION:page_id"\s+"(\d+)"/,
       );
-      if (p2Page) extractedPageId = p2Page[1];
+      if (p2Page?.[1]) extractedPageId = p2Page[1];
     }
     if (!extractedProfilePlusId) {
       const p2Plus = raw.match(
         /\(dq8\s+"ADDITIONAL_PROFILE_PLUS_CREATION:profile_plus_id"\s+"(\d+)"/,
       );
-      if (p2Plus) extractedProfilePlusId = p2Plus[1];
+      if (p2Plus?.[1]) extractedProfilePlusId = p2Plus[1];
     }
 
-    // Pattern 3: JSON key-value
+    // Mẫu 3: JSON key-value
     if (!extractedPageId) {
       const p3Page = raw.match(/"page_id"\s*[:=]\s*"?(\d{6,})"?/);
-      if (p3Page && p3Page[1] !== "0") extractedPageId = p3Page[1];
+      if (p3Page?.[1] && p3Page[1] !== "0") extractedPageId = p3Page[1];
     }
     if (!extractedProfilePlusId) {
       const p3Plus = raw.match(/"profile_plus_id"\s*[:=]\s*"?(\d{6,})"?/);
-      if (p3Plus && p3Plus[1] !== "0") extractedProfilePlusId = p3Plus[1];
+      if (p3Plus?.[1] && p3Plus[1] !== "0") extractedProfilePlusId = p3Plus[1];
     }
 
-    // Pattern 4: Regex UID 615
-    if (!extractedProfilePlusId) {
-      const p615Match = raw.match(/615\d{10,}/);
-      if (p615Match) extractedProfilePlusId = p615Match[0];
+    // Mẫu 4: Word boundary
+    if (!extractedPageId) {
+      const p4Page = raw.match(/\bpage_id\b[^\d]*(\d{6,})/);
+      if (p4Page?.[1] && p4Page[1] !== "0") extractedPageId = p4Page[1];
     }
 
+    // Kiểm tra cờ thành công create_success hoặc đã trích xuất được Page ID hợp lệ
     const isSuccess =
       raw.includes("create_success") ||
       (!!extractedPageId && extractedPageId !== "0") ||
@@ -362,95 +373,224 @@ export async function createFacebookPageApi({
         pageId: extractedPageId || extractedProfilePlusId,
         profilePlusId: extractedProfilePlusId,
         pageName,
-        category: selectedCategory,
+        category: categoryId,
         rawResponse: raw,
       };
     }
 
-    // 2. Trích xuất thông báo lỗi chi tiết
-    let errorMessage: string | undefined;
+    // 2. Bóc tách Toast lỗi và Error Marker (Chuẩn FacebookPageService.kt)
+    let bloksError: string | undefined;
 
-    // Toast lỗi
-    const toastMatch = raw.match(/\(bk\.action\.io\.Toast,\s*"([^"]+)"/);
-    if (toastMatch?.[1].trim()) {
-      errorMessage = toastMatch[1].trim();
+    const toastRegex = raw.match(/\(bk\.action\.io\.Toast,\s*"([^"]+)"/);
+    if (toastRegex?.[1]) {
+      bloksError = toastRegex[1];
     }
 
-    // Generic Toast
-    if (!errorMessage) {
-      const genToast = raw.match(/Toast,\s*["']([^"']+)["']/i);
-      if (genToast?.[1].trim()) {
-        errorMessage = genToast[1].trim();
+    if (!bloksError) {
+      const genericToast = raw.match(/Toast,\s*["']([^"']+)["']/i);
+      if (genericToast?.[1]) {
+        bloksError = genericToast[1];
       }
     }
 
-    // Các lỗi Meta đặc thù
-    if (!errorMessage) {
-      const lower = raw.toLowerCase();
+    if (!bloksError) {
       if (
-        lower.includes("phone_verification") ||
-        lower.includes("confirm_phone") ||
-        lower.includes("xác minh số điện thoại")
+        raw.includes("profile_creation_error") ||
+        raw.includes("create_error")
       ) {
-        errorMessage =
-          "Tài khoản yêu cầu xác minh Số điện thoại / SMS (Checkpoint)";
-      } else if (lower.includes("checkpoint")) {
-        errorMessage = "Tài khoản bị Checkpoint bảo mật từ chối tạo Page";
-      } else if (
-        lower.includes("profile_creation_error") ||
-        lower.includes("create_error") ||
-        lower.includes("quá nhiều") ||
-        lower.includes("too many") ||
-        lower.includes("limit_reached")
-      ) {
-        errorMessage =
-          "Tài khoản bị giới hạn (Đã tạo quá nhiều Trang gần đây, hãy thử lại sau)";
-      } else if (
-        lower.includes("invalid_name") ||
-        lower.includes("tên không hợp lệ")
-      ) {
-        errorMessage =
-          "Tên Page không hợp lệ hoặc chứa từ khóa bị Facebook chặn";
-      }
-    }
-
-    // JSON error
-    if (!errorMessage) {
-      try {
-        const json = JSON.parse(raw);
-        if (json.error?.message) {
-          errorMessage = json.error.message;
-        } else if (Array.isArray(json.errors) && json.errors[0]?.message) {
-          errorMessage = json.errors[0].message;
+        const msgPattern = raw.match(
+          /["'](Bạn đã tạo quá nhiều|Tài khoản của bạn|Không thể tạo [tT]rang|Vui lòng thử lại|You've created too many|You cannot create)[^"']*["']/i,
+        );
+        if (msgPattern?.[0]) {
+          bloksError = msgPattern[0].replace(/^["']|["']$/g, "");
+        } else {
+          bloksError =
+            "Không thể tạo Trang: Gần đây bạn đã thử tạo Trang quá nhiều lần. Hãy thử lại vào lúc khác.";
         }
-      } catch {
-        // ignore json parse error
       }
     }
 
-    if (!errorMessage) {
-      const clean = raw.replace(/[\r\n\t]+/g, " ").slice(0, 150);
-      errorMessage = clean
-        ? `Lỗi: ${clean}`
-        : "Không thể tạo Trang (Lỗi không xác định)";
-    }
-
+    const finalError = bloksError || extractDetailedFacebookError(raw);
     return {
       isSuccess: false,
       pageName,
-      category: selectedCategory,
-      errorMessage,
+      category: categoryId,
+      errorMessage: finalError,
       rawResponse: raw,
     };
   } catch (err: unknown) {
-    const msg =
-      err instanceof Error
-        ? err.message
-        : "Lỗi kết nối khi gửi yêu cầu Reg Page";
     return {
       isSuccess: false,
       pageName,
-      errorMessage: msg,
+      errorMessage:
+        err instanceof Error
+          ? err.message
+          : "Lỗi kết nối khi gửi yêu cầu Reg Page",
     };
   }
+}
+
+/**
+ * Bóc tách thông điệp lỗi chi tiết từ Facebook (Chuẩn FacebookPageService.kt)
+ */
+function extractDetailedFacebookError(body: string): string {
+  const lowerBody = body.toLowerCase();
+  if (
+    lowerBody.includes("phone_verification") ||
+    lowerBody.includes("confirm_phone") ||
+    lowerBody.includes("sms_code") ||
+    lowerBody.includes("xác minh số điện thoại") ||
+    lowerBody.includes("xác thực sms")
+  ) {
+    return "Tài khoản yêu cầu xác thực Số điện thoại / SMS (Checkpoint)";
+  }
+  if (
+    lowerBody.includes("checkpoint_required") ||
+    lowerBody.includes("account_checkpoint") ||
+    lowerBody.includes("checkpoint")
+  ) {
+    return "Tài khoản bị Checkpoint yêu cầu xác minh bảo mật";
+  }
+  if (
+    lowerBody.includes("profile_creation_error") ||
+    lowerBody.includes("quá nhiều") ||
+    lowerBody.includes("too many") ||
+    lowerBody.includes("limit_reached")
+  ) {
+    return "Tài khoản bị giới hạn tạo Trang (Đã tạo quá nhiều Trang gần đây, hãy thử lại sau)";
+  }
+  if (
+    lowerBody.includes("invalid_name") ||
+    lowerBody.includes("tên không hợp lệ")
+  ) {
+    return "Tên Page không hợp lệ hoặc chứa ký tự/từ khóa bị Meta từ chối";
+  }
+
+  try {
+    const json = JSON.parse(body);
+    if (Array.isArray(json.errors) && json.errors.length > 0) {
+      const err = json.errors[0];
+      const desc = err.description || err.summary || err.message || "";
+      const code = err.code || 0;
+      if (desc) return code !== 0 ? `(#${code}) ${desc}` : desc;
+    }
+    if (json.error) {
+      const err = json.error;
+      const desc =
+        err.error_user_msg || err.error_user_title || err.message || "";
+      const code = err.code || 0;
+      if (desc) return code !== 0 ? `(#${code}) ${desc}` : desc;
+    }
+  } catch {
+    // ignore
+  }
+
+  const clean = body.replace(/[\r\n\t]+/g, " ").trim();
+  return clean.length > 120
+    ? `${clean.slice(0, 120)}...`
+    : clean || "Lỗi không xác định từ Facebook";
+}
+
+/**
+ * 2. LẤY DANH SÁCH FANPAGE CỦA TÀI KHOẢN (Chuẩn Lz2/m FacebookPageService.kt)
+ * Endpoint: GET /v24.0/me?fields=facebook_pages{access_token,additional_profile_id,id,name}
+ * Fallback: GET /v19.0/me/accounts?fields=id,name,access_token,additional_profile_id&limit=100
+ */
+export async function getFacebookPages(
+  userToken: string,
+  proxy?: string,
+): Promise<FacebookPageItem[]> {
+  const cleanToken = userToken.replace(/^(OAuth|Bearer)\s+/i, "").trim();
+  if (!cleanToken) return [];
+
+  const list: FacebookPageItem[] = [];
+
+  // 1. Thử cơ chế chuẩn Lz2/m v24.0
+  try {
+    const url = `https://graph.facebook.com/v24.0/me?fields=facebook_pages{access_token,additional_profile_id,id,name}&access_token=${cleanToken}`;
+    const raw = await executeCurlRequest({
+      url,
+      method: "GET",
+      proxy,
+      timeoutSecs: 15,
+    });
+    const json = JSON.parse(raw);
+    const arr = json.facebook_pages?.data;
+    if (Array.isArray(arr) && arr.length > 0) {
+      for (const p of arr) {
+        if (p.id) {
+          list.push({
+            pageId: String(p.id),
+            pageName: String(p.name || ""),
+            pageToken: String(p.access_token || ""),
+            additionalProfileId: p.additional_profile_id
+              ? String(p.additional_profile_id)
+              : undefined,
+            avatar: `https://graph.facebook.com/${p.id}/picture?type=large`,
+            isLive: true,
+          });
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  if (list.length > 0) return list;
+
+  // 2. Fallback v19.0 me/accounts
+  try {
+    const fallbackUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token,additional_profile_id&limit=100&access_token=${cleanToken}`;
+    const raw = await executeCurlRequest({
+      url: fallbackUrl,
+      method: "GET",
+      proxy,
+      timeoutSecs: 15,
+    });
+    const json = JSON.parse(raw);
+    const arr = json.data;
+    if (Array.isArray(arr) && arr.length > 0) {
+      for (const p of arr) {
+        if (p.id) {
+          list.push({
+            pageId: String(p.id),
+            pageName: String(p.name || ""),
+            pageToken: String(p.access_token || ""),
+            additionalProfileId: p.additional_profile_id
+              ? String(p.additional_profile_id)
+              : undefined,
+            avatar: `https://graph.facebook.com/${p.id}/picture?type=large`,
+            isLive: true,
+          });
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  return list;
+}
+
+/**
+ * 3. TÌM PAGE VỪA TẠO THEO TÊN ĐỂ LẤY UID VÀ PAGE TOKEN (Chuẩn Lz2/m FacebookPageService.kt)
+ */
+export async function findPageByName(
+  token: string,
+  pageName: string,
+  maxRetries = 5,
+  delayMs = 2000,
+  proxy?: string,
+): Promise<FacebookPageItem | null> {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const pages = await getFacebookPages(token, proxy);
+    const found = pages.find(
+      (p) => p.pageName.trim().toLowerCase() === pageName.trim().toLowerCase(),
+    );
+    if (found) return found;
+    if (attempt < maxRetries - 1) {
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  return null;
 }

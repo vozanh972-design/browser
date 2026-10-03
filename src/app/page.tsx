@@ -32,6 +32,7 @@ import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import {
+  checkFacebookAccountFull,
   fetchAccountDetailsWithToken,
   getTokenAndInfoFromCookie,
 } from "@/lib/facebook-api";
@@ -597,76 +598,27 @@ export default function HomePage() {
           ? targetAccount.proxy
           : undefined;
 
-      let isLive = false;
-      let accountStatus: "live" | "checkpoint" | "die" = "checkpoint";
-      let fetchedUid = targetAccount.uid;
-      let fetchedName = targetAccount.name;
-      let fetchedAvatar = targetAccount.avatar;
-      let fetchedCover = targetAccount.cover;
-      let fetchedMail = targetAccount.mail;
-      let fetchedToken = targetAccount.token;
-      const fetchedCookie = targetAccount.cookie;
+      // Kiểm tra toàn diện tài khoản Facebook bằng chuẩn FacebookLiveChecker + FacebookToken
+      const checked = await checkFacebookAccountFull({
+        uid: targetAccount.uid,
+        pass: targetAccount.pass,
+        twoFactor: targetAccount.twoFactor,
+        cookie: targetAccount.cookie,
+        token: targetAccount.token,
+        proxy: proxyParam,
+      });
 
-      // 1. Kiểm tra trực tiếp bằng API Token Facebook (graph.facebook.com/me?access_token)
-      if (fetchedToken?.trim()) {
-        try {
-          const info = await fetchAccountDetailsWithToken(
-            fetchedToken.trim(),
-            proxyParam,
-          );
-          if (info.isLive) {
-            isLive = true;
-            accountStatus = "live";
-            if (info.uid) fetchedUid = info.uid;
-            if (info.name) fetchedName = info.name;
-            if (info.avatar) fetchedAvatar = info.avatar;
-            if (info.cover) fetchedCover = info.cover;
-            if (info.email) fetchedMail = info.email;
-          } else {
-            accountStatus = "checkpoint";
-          }
-        } catch {
-          accountStatus = "checkpoint";
-        }
-      }
-
-      // 2. Nếu có Cookie: Lấy Token và thông tin từ Cookie
-      if (!isLive && fetchedCookie?.trim()) {
-        try {
-          const cookieInfo = await getTokenAndInfoFromCookie(
-            fetchedCookie.trim(),
-            proxyParam,
-          );
-          if (cookieInfo.isLive) {
-            isLive = true;
-            accountStatus = "live";
-            if (cookieInfo.token) fetchedToken = cookieInfo.token;
-            if (
-              cookieInfo.uid &&
-              (!fetchedUid || fetchedUid.startsWith("acc_"))
-            ) {
-              fetchedUid = cookieInfo.uid;
-            }
-            if (cookieInfo.name) fetchedName = cookieInfo.name;
-            if (cookieInfo.avatar) fetchedAvatar = cookieInfo.avatar;
-            if (cookieInfo.cover) fetchedCover = cookieInfo.cover;
-            if (cookieInfo.email) fetchedMail = cookieInfo.email;
-          } else {
-            accountStatus = "checkpoint";
-          }
-        } catch {
-          accountStatus = "checkpoint";
-        }
-      }
+      const isLive = checked.isLive;
+      const accountStatus = isLive ? "live" : "checkpoint";
 
       const updated = {
-        uid: fetchedUid,
-        name: fetchedName,
-        avatar: fetchedAvatar,
-        cover: fetchedCover,
-        mail: fetchedMail,
-        token: fetchedToken,
-        cookie: fetchedCookie,
+        uid: checked.uid || targetAccount.uid,
+        name: checked.name || targetAccount.name,
+        avatar: checked.avatar || targetAccount.avatar,
+        cover: checked.cover || targetAccount.cover,
+        mail: checked.email || targetAccount.mail,
+        token: checked.token || targetAccount.token,
+        cookie: checked.cookie || targetAccount.cookie,
         status: (isLive ? "live" : accountStatus) as
           | "live"
           | "checkpoint"

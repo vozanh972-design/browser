@@ -290,17 +290,16 @@ export function RegPageView({
       for (let step = 1; step <= regCount; step++) {
         if (stopRequestedRef.current) break;
 
-        const rawName = generateRandomName(nameType);
-        const formattedPageName = `Page : ${rawName}`;
+        const pageName = generateRandomName(nameType);
         const randomCat = getRandomCategory();
 
         setAccountStatuses((prev) => ({
           ...prev,
-          [acc.uid]: `Đang tạo (${step}/${regCount}): ${formattedPageName}`,
+          [acc.uid]: `Đang tạo (${step}/${regCount}): ${pageName}`,
         }));
 
         const res = await createFacebookPageApi({
-          pageName: rawName,
+          pageName,
           token,
           categoryId: randomCat.id,
           proxy,
@@ -314,7 +313,7 @@ export function RegPageView({
           const newPage: CreatedPageItem = {
             id: `page_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
             pageId: finalId,
-            name: formattedPageName,
+            name: pageName,
             category: randomCat.name,
             nameType,
             creatorUid: acc.uid,
@@ -335,7 +334,7 @@ export function RegPageView({
           }));
           setAccountStatuses((prev) => ({
             ...prev,
-            [acc.uid]: `Đã tạo ${createdCount}/${regCount}: ${formattedPageName}`,
+            [acc.uid]: `Đã tạo ${createdCount}/${regCount}: ${pageName}`,
           }));
         } else {
           const errMsg = res.errorMessage || "Không thể tạo trang";

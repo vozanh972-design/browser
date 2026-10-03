@@ -1,17 +1,36 @@
 import { executeCurlRequest } from "./facebook-api";
 
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-const SEC_CH_UA =
-  '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"';
+// -------------------------------------------------------------
+// GoMax Instagram Engine Constants (Chuẩn 100% GoMaxInstagramEngine.kt)
+// -------------------------------------------------------------
+const GRAPHQL_URL = "https://www.instagram.com/graphql/query";
+const APP_ID = "936619743392459";
+const ASBD_ID = "359341";
+const BLOKS_VER =
+  "61fc9465e13b77eaa110f317859102ba7fb93a0a2bcc08c46473da6713640739";
 const ALPHABET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+// Doc IDs chính xác từ GoMax
+const DOC_FOLLOW = "9740159112729312";
+const DOC_FOLLOW_FALLBACK = "9663809173698092";
+const DOC_LIKE = "9595477160535898";
+const DOC_LIKE_CMT = "7358156687612196";
+const DOC_COMMENT = "7755358241198424";
+
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+const NATIVE_APP_UA =
+  "Instagram 447.0.0.55.81 Android (34/14; 420dpi; 1080x2340; samsung; SM-A556B; a55xq; qcom; vi_VN; 385311890)";
 
 export interface IgCookieInfo {
   isLive: boolean;
   username: string;
   userId: string;
+  fullName?: string;
   avatar?: string;
+  fbDtsg?: string;
+  lsd?: string;
 }
 
 export interface IgPageTokens {
@@ -28,41 +47,7 @@ export interface IgActionResult {
 }
 
 /**
- * Trích xuất các token từ chuỗi cookie Instagram
- */
-export function extractTokensFromCookie(
-  cookie: string,
-): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const part of cookie.split(";")) {
-    const idx = part.indexOf("=");
-    if (idx > 0) {
-      const k = part.substring(0, idx).trim();
-      const v = part.substring(idx + 1).trim();
-      if (k) map[k] = v;
-    }
-  }
-  return map;
-}
-
-/**
- * Lấy csrf_token từ chuỗi cookie
- */
-export function getCsrfToken(cookie: string): string {
-  const match = cookie.match(/csrftoken=([^;]+)/);
-  return match?.[1] ? match[1].trim() : "missing";
-}
-
-/**
- * Lấy actor ID từ ds_user_id trong cookie
- */
-export function getActorId(cookie: string): string {
-  const match = cookie.match(/ds_user_id=(\d+)/);
-  return match?.[1] ? match[1].trim() : "0";
-}
-
-/**
- * Chuyển đổi Instagram shortcode sang numeric Media ID (dùng BigInt)
+ * Thuật toán GoMax: Giải mã shortcode sang Media ID bằng BigInt (GoMaxInstagramEngine.kt)
  */
 export function shortcodeToMediaId(shortcode: string): string | null {
   if (!shortcode?.trim()) return null;
@@ -78,7 +63,7 @@ export function shortcodeToMediaId(shortcode: string): string | null {
 }
 
 /**
- * Trích xuất shortcode từ URL bài viết Instagram (/p/..., /reel/..., /tv/...)
+ * Trích xuất shortcode từ link bài viết / reel / tv
  */
 export function extractShortcode(url: string): string | null {
   const match = url.match(/\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
@@ -86,169 +71,253 @@ export function extractShortcode(url: string): string | null {
 }
 
 /**
- * 1. KIỂM TRA TÌNH TRẠNG COOKIE INSTAGRAM (chuẩn TA Tool - check_cookie_ig kết hợp fallback)
+ * Chuẩn hóa cookie sang định dạng chuẩn Instagram (normalizeToIosCookie)
  */
-export async function checkCookieIg(
-  cookie: string,
-  proxy?: string,
-): Promise<IgCookieInfo> {
-  const cleanCookie = cookie.replace(/[\r\n]+/g, "").trim();
-  const dsMatch = cleanCookie.match(/ds_user_id=(\d+)/);
-  const fallbackUid = dsMatch?.[1] || "";
-
-  if (!cleanCookie || (!cleanCookie.includes("sessionid=") && !fallbackUid)) {
-    return { isLive: false, username: "", userId: fallbackUid };
+export function normalizeCookie(rawCookie: string): string {
+  if (!rawCookie?.trim()) return "";
+  let cleaned = rawCookie.trim();
+  if (
+    (cleaned.startsWith('"') && cleaned.endsWith('"')) ||
+    (cleaned.startsWith("'") && cleaned.endsWith("'"))
+  ) {
+    cleaned = cleaned.substring(1, cleaned.length - 1).trim();
   }
 
-  // 1. Thử qua endpoint web_form_data (Chuẩn TA Tool - check_cookie_ig)
-  try {
-    const raw = await executeCurlRequest({
-      url: "https://www.instagram.com/api/v1/accounts/edit/web_form_data/",
-      method: "GET",
-      cookie: cleanCookie,
-      proxy,
-      headers: [
-        "x-ig-app-id: 936619743392459",
-        "x-requested-with: XMLHttpRequest",
-        "referer: https://www.instagram.com/accounts/edit/",
-        `User-Agent: ${USER_AGENT}`,
-        `sec-ch-ua: ${SEC_CH_UA}`,
-      ],
-      timeoutSecs: 7,
-    });
+  const pairs = cleaned
+    .split(";")
+    .map((p) => p.trim())
+    .filter((p) => p.includes("="));
 
-    if (raw?.trim()) {
-      const lower = raw.toLowerCase();
-      // Nếu có dấu hiệu checkpoint hoặc bắt login rõ ràng -> Cookie DIE / Checkpoint ngay lập tức
-      if (
-        lower.includes("checkpoint_required") ||
-        lower.includes("challenge_required") ||
-        lower.includes("checkpoint_url") ||
-        lower.includes("accounts/suspended") ||
-        lower.includes("login_required") ||
-        lower.includes('"is_logged_in":false') ||
-        lower.includes("<title>login") ||
-        lower.includes("/accounts/login/")
-      ) {
-        return { isLive: false, username: "", userId: fallbackUid };
-      }
-
-      try {
-        const json = JSON.parse(raw);
-        const formData = json.form_data;
-        if (formData?.username && !/^\d+$/.test(formData.username)) {
-          const username = String(formData.username).trim();
-          const uid = fallbackUid || String(formData.id || "");
-          return { isLive: true, username, userId: uid };
-        }
-      } catch {
-        // Tiếp tục thử fallback bên dưới
-      }
+  const map = new Map<string, string>();
+  for (const pair of pairs) {
+    const eqIdx = pair.indexOf("=");
+    if (eqIdx > 0) {
+      const k = pair.substring(0, eqIdx).trim();
+      const v = pair.substring(eqIdx + 1).trim();
+      map.set(k, v);
     }
-  } catch {
-    // Tiếp tục thử fallback
   }
 
-  // 2. Thử qua endpoint current_user/?edit=true (Endpoint JSON nhanh)
-  try {
-    const raw = await executeCurlRequest({
-      url: "https://www.instagram.com/api/v1/accounts/current_user/?edit=true",
-      method: "GET",
-      cookie: cleanCookie,
-      proxy,
-      headers: [
-        "x-ig-app-id: 936619743392459",
-        "x-requested-with: XMLHttpRequest",
-        `User-Agent: ${USER_AGENT}`,
-        `sec-ch-ua: ${SEC_CH_UA}`,
-      ],
-      timeoutSecs: 7,
-    });
-
-    if (raw?.trim()) {
-      const lower = raw.toLowerCase();
-      if (
-        lower.includes("checkpoint_required") ||
-        lower.includes("challenge_required") ||
-        lower.includes("login_required") ||
-        lower.includes('"is_logged_in":false')
-      ) {
-        return { isLive: false, username: "", userId: fallbackUid };
-      }
-
-      try {
-        const json = JSON.parse(raw);
-        const user = json.user;
-        if (user?.username && !/^\d+$/.test(user.username)) {
-          const username = String(user.username).trim();
-          const uid = String(user.pk || fallbackUid || "");
-          const avatar = user.profile_pic_url || "";
-          return { isLive: true, username, userId: uid, avatar };
-        }
-      } catch {
-        // Tiếp tục thử fallback
-      }
+  // Tự động bổ sung ds_user_id từ sessionid nếu thiếu
+  if (!map.has("ds_user_id") && map.has("sessionid")) {
+    const sVal = map.get("sessionid") || "";
+    const potentialUid = sVal.split("%3A")[0].split(":")[0];
+    if (potentialUid && /^\d+$/.test(potentialUid)) {
+      map.set("ds_user_id", potentialUid);
     }
-  } catch {
-    // Tiếp tục thử fallback
   }
 
-  // 3. Nếu cookie có sessionid hợp lệ và có fallbackUid, lấy avatar/username hiển thị
-  if (cleanCookie.includes("sessionid=") && fallbackUid) {
-    const userInfo = await fetchIgUserInfo(fallbackUid, proxy);
-    if (
-      userInfo.isLive &&
-      userInfo.username &&
-      !/^\d+$/.test(userInfo.username)
-    ) {
-      return {
-        isLive: true,
-        username: userInfo.username,
-        userId: fallbackUid,
-        avatar: userInfo.avatar,
-      };
-    }
-    return {
-      isLive: true,
-      username: "",
-      userId: fallbackUid,
-    };
+  const result: string[] = [];
+  for (const [k, v] of map.entries()) {
+    result.push(`${k}=${v}`);
   }
-
-  return { isLive: false, username: "", userId: fallbackUid };
+  return result.join("; ");
 }
 
 /**
- * Lấy thông tin tài khoản Instagram (username thật, avatar thật) qua Endpoint User Info
- * Chuẩn endpoint Android client i.instagram.com/api/v1/users/{uid}/info/
+ * Trích xuất các cookie con
+ */
+export function parseCookie(cookie: string): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const part of cookie.split(";")) {
+    const idx = part.indexOf("=");
+    if (idx > 0) {
+      const k = part.substring(0, idx).trim();
+      const v = part.substring(idx + 1).trim();
+      if (k) map[k] = v;
+    }
+  }
+  return map;
+}
+
+export function getCsrfToken(cookie: string): string {
+  const map = parseCookie(cookie);
+  return map.csrftoken || "";
+}
+
+export function getActorId(cookie: string): string {
+  const map = parseCookie(cookie);
+  return map.ds_user_id || "0";
+}
+
+/**
+ * Tính toán jazoest từ fb_dtsg (GoMax computeJazoest)
+ */
+export function computeJazoest(fbDtsg?: string | null): string {
+  if (!fbDtsg) return "26738";
+  let sum = 0;
+  for (let i = 0; i < fbDtsg.length; i++) {
+    sum += fbDtsg.charCodeAt(i);
+  }
+  return `2${sum}`;
+}
+
+/**
+ * 1. CHECK LIVE & TỰ ĐỘNG LẤY USERNAME/ID/AVATAR TỪ COOKIE (GoMaxInstagramEngine.kt + InstagramApiClient.kt)
+ */
+export async function checkCookieIg(
+  cookieStr: string,
+  proxy?: string,
+): Promise<IgCookieInfo> {
+  const cookie = normalizeCookie(cookieStr);
+  const cookies = parseCookie(cookie);
+
+  const uid = cookies.ds_user_id || "";
+  const csrf = cookies.csrftoken || "";
+  const sessionid = cookies.sessionid || "";
+
+  if (!uid || !csrf || !sessionid) {
+    return { isLive: false, username: "", userId: uid };
+  }
+
+  try {
+    const html = await executeCurlRequest({
+      url: "https://www.instagram.com/",
+      method: "GET",
+      cookie,
+      proxy,
+      headers: [
+        `User-Agent: ${BROWSER_UA}`,
+        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+      ],
+      timeoutSecs: 15,
+    });
+
+    const lower = html.toLowerCase();
+    // Kiểm tra die / checkpoint (GoMax checkLiveCookie)
+    if (
+      lower.includes("login_required") ||
+      lower.includes("checkpoint_required") ||
+      lower.includes("challenge_required") ||
+      lower.includes('"is_logged_in":false') ||
+      lower.includes("accounts/suspended") ||
+      lower.includes("1357031")
+    ) {
+      return { isLive: false, username: "", userId: uid };
+    }
+
+    // Bóc username bằng regex
+    let usernameMatch = html.match(/"username"\s*:\s*"([^"]+)"/);
+    if (!usernameMatch) {
+      usernameMatch = html.match(/username":"([^"]+)"/);
+    }
+    let username = usernameMatch?.[1] || "";
+
+    // Fallback bóc username qua REST API
+    if (!username || /^\d+$/.test(username)) {
+      try {
+        const restRes = await executeCurlRequest({
+          url: "https://www.instagram.com/api/v1/accounts/current_user/?edit=true",
+          method: "GET",
+          cookie,
+          proxy,
+          headers: [`User-Agent: ${BROWSER_UA}`, `X-IG-App-ID: ${APP_ID}`],
+          timeoutSecs: 8,
+        });
+        const restJson = JSON.parse(restRes);
+        if (restJson.user?.username) {
+          username = String(restJson.user.username).trim();
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // Bóc fb_dtsg và lsd
+    let fbDtsgMatch = html.match(/"fb_dtsg":"([^"]+)"/);
+    if (!fbDtsgMatch) {
+      fbDtsgMatch = html.match(/DTSGInitialData[^"]*"token":"([^"]+)"/);
+    }
+    const fbDtsg = fbDtsgMatch?.[1] || "";
+
+    const lsdMatch = html.match(/"lsd":"([^"]+)"/);
+    const lsd = lsdMatch?.[1] || "";
+
+    // Lấy thông tin chi tiết qua App Native REST API (/api/v1/users/{actorId}/info/)
+    let fullName = "";
+    let avatarUrl = "";
+    if (uid && uid !== "0") {
+      try {
+        const userRes = await executeCurlRequest({
+          url: `https://i.instagram.com/api/v1/users/${uid}/info/`,
+          method: "GET",
+          cookie,
+          proxy,
+          headers: [
+            `User-Agent: ${NATIVE_APP_UA}`,
+            `X-IG-App-ID: ${APP_ID}`,
+            "X-IG-Connection-Type: WIFI",
+            "X-IG-Capabilities: 3brBvw==",
+          ],
+          timeoutSecs: 10,
+        });
+        const userJson = JSON.parse(userRes);
+        const userObj = userJson.user;
+        if (userObj) {
+          if (!username) username = userObj.username || "";
+          fullName = userObj.full_name || "";
+          const hdPic = userObj.hd_profile_pic_url_info?.url;
+          const regPic = userObj.profile_pic_url;
+          avatarUrl = hdPic || regPic || "";
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    return {
+      isLive: true,
+      username: username || uid,
+      userId: uid,
+      fullName: fullName || undefined,
+      avatar: avatarUrl || undefined,
+      fbDtsg: fbDtsg || undefined,
+      lsd: lsd || undefined,
+    };
+  } catch {
+    return { isLive: false, username: "", userId: uid };
+  }
+}
+
+/**
+ * Lấy thông tin user qua Native App API
  */
 export async function fetchIgUserInfo(
-  uid: string,
+  uidOrUsername: string,
   proxy?: string,
 ): Promise<{ isLive: boolean; username: string; avatar?: string }> {
-  const cleanUid = uid.trim().replace(/^@/, "");
-  if (!cleanUid || !/^\d+$/.test(cleanUid)) {
-    return { isLive: false, username: "" };
-  }
+  const clean = uidOrUsername.trim().replace(/^@/, "");
+  if (!clean) return { isLive: false, username: "" };
+
   try {
+    const endpoint = /^\d+$/.test(clean)
+      ? `https://i.instagram.com/api/v1/users/${clean}/info/`
+      : `https://i.instagram.com/api/v1/users/web_profile_info/?username=${clean}`;
+
     const raw = await executeCurlRequest({
-      url: `https://i.instagram.com/api/v1/users/${cleanUid}/info/`,
+      url: endpoint,
       method: "GET",
       proxy,
       headers: [
-        "User-Agent: Instagram 275.0.0.27.98 Android (31/12; 420dpi; 1080x2400; samsung; SM-G998B; p3s; exynos2100; en_US; 455485458)",
+        `User-Agent: ${NATIVE_APP_UA}`,
+        `X-IG-App-ID: ${APP_ID}`,
+        "X-IG-Connection-Type: WIFI",
+        "X-IG-Capabilities: 3brBvw==",
       ],
-      timeoutSecs: 6,
+      timeoutSecs: 8,
     });
-    if (raw?.trim()) {
-      const json = JSON.parse(raw);
-      if (json.status === "ok" && json.user?.username) {
-        return {
-          isLive: true,
-          username: String(json.user.username).trim(),
-          avatar: json.user.profile_pic_url,
-        };
-      }
+
+    const json = JSON.parse(raw);
+    const user = json.user || json.data?.user;
+    if (user?.username) {
+      const hdPic = user.hd_profile_pic_url_info?.url;
+      const regPic = user.profile_pic_url || user.profile_pic_url_hd;
+      return {
+        isLive: true,
+        username: String(user.username).trim(),
+        avatar: hdPic || regPic || undefined,
+      };
     }
   } catch {
     // ignore
@@ -257,145 +326,131 @@ export async function fetchIgUserInfo(
 }
 
 /**
- * 2. TRÍCH XUẤT META TOKENS (fb_dtsg, lsd, jazoest)
+ * Phân giải UID người dùng từ username / link
  */
-export async function extractPageTokens(
-  cookie: string,
-  targetUrl = "https://www.instagram.com/",
+export async function resolveTargetUserId(
+  linkOrUsername: string,
   proxy?: string,
-  cachedDtsg?: string,
-  cachedLsd?: string,
-): Promise<IgPageTokens> {
-  let fbDtsg = cachedDtsg?.trim() || "";
-  let lsd = cachedLsd?.trim() || "";
-  let jazoest = "26328";
+): Promise<string | null> {
+  const clean = linkOrUsername.trim();
+  if (!clean) return null;
 
-  try {
-    const html = await executeCurlRequest({
-      url: targetUrl || "https://www.instagram.com/",
-      method: "GET",
-      cookie,
-      proxy,
-      headers: [
-        `User-Agent: ${USER_AGENT}`,
-        `sec-ch-ua: ${SEC_CH_UA}`,
-        "sec-ch-ua-mobile: ?0",
-        'sec-ch-ua-platform: "Windows"',
-      ],
-    });
-
-    // 1. Trích xuất lsd
-    const lsdPatterns = [
-      /\["LSD",\s*\[\],\s*\{"token":"([^"]+)"/,
-      /"LSD",\s*\[\],\s*\{"token":"([^"]+)"/,
-      /name="lsd"\s+value="([^"]+)"/,
-      /"lsd":\s*\{"token":"([^"]+)"/,
-    ];
-    for (const p of lsdPatterns) {
-      const m = html.match(p);
-      if (m?.[1]) {
-        lsd = m[1];
-        break;
-      }
+  let usernameCandidate = clean;
+  if (clean.startsWith("http")) {
+    const m = clean.match(/instagram\.com\/([a-zA-Z0-9._]+)/);
+    if (m?.[1] && m[1] !== "p" && m[1] !== "reel") {
+      usernameCandidate = m[1];
     }
-
-    // 2. Trích xuất fb_dtsg
-    const dtsgPatterns = [
-      /\["DTSGInitialData",\s*\[\],\s*\{"token":"([^"]+)"/,
-      /"DTSGInitData":\s*\{"token":"([^"]+)"/,
-      /"dtsg":\s*\{"token":"([^"]+)"/,
-      /name="fb_dtsg"\s+value="([^"]+)"/,
-      /"token":"(AQ[^"]+)"/,
-    ];
-    for (const p of dtsgPatterns) {
-      const m = html.match(p);
-      if (m?.[1]) {
-        fbDtsg = m[1];
-        break;
-      }
-    }
-
-    const jazoestMatch = html.match(/name="jazoest"\s+value="(\d+)"/);
-    if (jazoestMatch?.[1]) {
-      jazoest = jazoestMatch[1];
-    }
-  } catch {
-    // ignore
+  } else {
+    usernameCandidate = clean.replace(/^@/, "");
   }
 
-  return { dtsg: fbDtsg, lsd, jazoest };
+  if (
+    usernameCandidate &&
+    usernameCandidate !== "p" &&
+    usernameCandidate !== "reel"
+  ) {
+    try {
+      const raw = await executeCurlRequest({
+        url: `https://i.instagram.com/api/v1/users/web_profile_info/?username=${usernameCandidate}`,
+        method: "GET",
+        proxy,
+        headers: [`User-Agent: ${NATIVE_APP_UA}`, `X-IG-App-ID: ${APP_ID}`],
+        timeoutSecs: 8,
+      });
+      const json = JSON.parse(raw);
+      const uid = json.data?.user?.id;
+      if (uid) return String(uid);
+    } catch {
+      // ignore
+    }
+  }
+
+  return null;
 }
 
 /**
- * Tạo danh sách Headers chuẩn Instagram Web cho GraphQL / REST requests
+ * Phân giải Media ID từ link bài viết / reel (GoMax)
  */
-function buildIgHeaders(
-  _cookie: string,
-  csrftoken: string,
-  lsd = "",
-  referer = "https://www.instagram.com/",
-): string[] {
-  const headers = [
-    "accept: */*",
-    "accept-language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
-    "content-type: application/x-www-form-urlencoded",
-    "origin: https://www.instagram.com",
-    `referer: ${referer}`,
-    `sec-ch-ua: ${SEC_CH_UA}`,
-    "sec-ch-ua-mobile: ?0",
-    'sec-ch-ua-platform: "Windows"',
-    "sec-fetch-dest: empty",
-    "sec-fetch-mode: cors",
-    "sec-fetch-site: same-origin",
-    `user-agent: ${USER_AGENT}`,
-    "x-asbd-id: 129477",
-    `x-csrftoken: ${csrftoken}`,
-    "x-ig-app-id: 936619743392459",
-    "x-ig-www-claim: 0",
-    "x-requested-with: XMLHttpRequest",
-  ];
-  if (lsd) {
-    headers.push(`x-fb-lsd: ${lsd}`);
+export function resolveMediaId(linkJob: string): string | null {
+  if (!linkJob?.trim()) return null;
+  const shortcode = extractShortcode(linkJob);
+  if (shortcode) {
+    const decoded = shortcodeToMediaId(shortcode);
+    if (decoded) return decoded;
   }
-  return headers;
+  return null;
 }
 
 /**
- * 3. HÀM FOLLOW INSTAGRAM (GraphQL Query Chuẩn Meta Web - usePolarisFollowMutation)
+ * Helper kiểm tra kết quả GraphQL của GoMax (parseMethodU)
+ */
+function isGraphQLSuccess(response: string): boolean {
+  if (!response?.trim()) return false;
+  try {
+    const root = JSON.parse(response);
+    const data = root.data;
+    const friendship = data?.xdt_create_friendship;
+    const statusObj = friendship?.friendship_status;
+
+    if (
+      statusObj?.following === true ||
+      statusObj?.outgoing_request === true ||
+      root.status?.toLowerCase() === "ok"
+    ) {
+      return true;
+    }
+
+    const errors = root.errors;
+    if (Array.isArray(errors) && errors.length > 0) {
+      const msg = (errors[0]?.message || "").toLowerCase();
+      if (msg.includes("already")) return true;
+    }
+    return false;
+  } catch {
+    return (
+      response.includes('"following":true') ||
+      response.includes('"outgoing_request":true') ||
+      response.includes("already") ||
+      response.includes('"status":"ok"')
+    );
+  }
+}
+
+/**
+ * 2. FOLLOW INSTAGRAM (Chuẩn GoMaxInstagramEngine.kt - DOC_FOLLOW = 9740159112729312)
  */
 export async function doFollow(options: {
   cookie: string;
   targetNumericId: string;
   targetUsername?: string;
   targetUrl?: string;
-  tokens?: IgPageTokens;
   proxy?: string;
+  tokens?: IgPageTokens;
   userId?: string;
 }): Promise<IgActionResult> {
   const {
-    cookie,
+    cookie: rawCookie,
     targetNumericId,
-    targetUsername,
+    targetUsername = "",
     targetUrl,
-    tokens: inputTokens,
     proxy,
-    userId,
+    tokens: inputTokens,
   } = options;
 
-  let targetId = targetNumericId.trim();
-  if (!targetId || !/^\d+$/.test(targetId)) {
-    const extracted = targetUrl
-      ? await extractTargetIdFromUrl(cookie, targetUrl, proxy)
-      : null;
-    targetId =
-      extracted ||
-      (targetUsername
-        ? await resolveTargetUid(cookie, targetUsername, proxy)
-        : null) ||
-      targetNumericId;
+  const cookie = normalizeCookie(rawCookie);
+  let uid = targetNumericId.trim();
+
+  // Nếu targetNumericId chưa phải là số, phân giải UID
+  if (!/^\d+$/.test(uid)) {
+    const candidate = targetUsername || targetUrl || targetNumericId;
+    const resolved = await resolveTargetUserId(candidate, proxy);
+    if (resolved) {
+      uid = resolved;
+    }
   }
 
-  if (!targetId) {
+  if (!uid || !/^\d+$/.test(uid)) {
     return {
       isSuccess: false,
       httpCode: 400,
@@ -404,138 +459,162 @@ export async function doFollow(options: {
     };
   }
 
-  const tokens =
-    inputTokens?.dtsg && inputTokens.lsd
-      ? inputTokens
-      : await extractPageTokens(
-          cookie,
-          "https://www.instagram.com/",
-          proxy,
-          inputTokens?.dtsg,
-          inputTokens?.lsd,
-        );
+  const csrf = getCsrfToken(cookie);
+  const actorId = getActorId(cookie);
+  const avActor = actorId && actorId !== "0" ? `178414${actorId}` : "178414";
 
-  if (!tokens.dtsg || !tokens.lsd) {
-    return {
-      isSuccess: false,
-      httpCode: 400,
-      rawBody: "",
-      errorMessage: "Không lấy được fb_dtsg/lsd của Instagram",
-    };
+  // Lấy hoặc trích xuất fbDtsg / lsd
+  let fbDtsg = inputTokens?.dtsg || "";
+  let lsd = inputTokens?.lsd || "";
+  if (!fbDtsg || !lsd) {
+    const check = await checkCookieIg(cookie, proxy);
+    if (check.fbDtsg) fbDtsg = check.fbDtsg;
+    if (check.lsd) lsd = check.lsd;
   }
 
-  const csrftoken = getCsrfToken(cookie);
-  const actorId = userId?.trim() || getActorId(cookie);
+  const realJazoest = computeJazoest(fbDtsg);
+  const referer = targetUsername
+    ? targetUsername.startsWith("http")
+      ? targetUsername
+      : `https://www.instagram.com/${targetUsername}/`
+    : "https://www.instagram.com/";
 
-  const docIds = ["26508036048874888", "9740159112729312", "9663809173698092"];
-  let lastResult = "";
+  const vars = JSON.stringify({
+    target_user_id: uid,
+    container_module: "profile",
+    nav_chain:
+      "PolarisProfilePostsTabRoot:profilePage:1:via_cold_start,PolarisProfilePostsTabRoot:profilePage:3:unexpected",
+  });
 
-  for (const docId of docIds) {
-    const variables = JSON.stringify({
-      target_user_id: String(targetId),
-      container_module: "profile",
-      nav_chain:
-        "PolarisFeedRoot:feedPage:5:topnav-link,PolarisProfileRoot:profilePage:6:unexpected",
-    });
+  const baseHeaders = [
+    "Accept: */*",
+    "Accept-Language: vi,en;q=0.9",
+    "Cache-Control: no-cache",
+    "Content-Type: application/x-www-form-urlencoded",
+    "Origin: https://www.instagram.com",
+    "Pragma: no-cache",
+    `Referer: ${referer}`,
+    'Sec-Ch-Ua: "Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"',
+    "Sec-Ch-Ua-Mobile: ?0",
+    'Sec-Ch-Ua-Platform: "Windows"',
+    "Sec-Fetch-Dest: empty",
+    "Sec-Fetch-Mode: cors",
+    "Sec-Fetch-Site: same-origin",
+    `User-Agent: ${BROWSER_UA}`,
+    `X-ASBD-ID: ${ASBD_ID}`,
+    `X-Bloks-Version-Id: ${BLOKS_VER}`,
+    `X-CSRFToken: ${csrf}`,
+    "X-FB-Friendly-Name: usePolarisFollowMutation",
+    `X-IG-App-ID: ${APP_ID}`,
+    "X-Root-Field-Name: xdt_create_friendship",
+  ];
+  if (fbDtsg) baseHeaders.push(`X-FB-DTSG: ${fbDtsg}`);
+  if (lsd) baseHeaders.push(`X-FB-LSD: ${lsd}`);
+
+  const buildBody = (docId: string, reqParam: string) => {
     const bodyParams = new URLSearchParams({
-      av: actorId,
+      av: avActor,
       __d: "www",
       __user: "0",
       __a: "1",
-      __req: "s",
-      __hs: "20702.HYP:instagram_web_pkg.2.1...0",
+      __req: reqParam,
+      __hs: "20519.HYP:instagram_web_pkg.2.1...0",
       dpr: "1",
       __ccg: "EXCELLENT",
-      __rev: "1046917461",
+      __hsi: Date.now().toString(),
       __comet_req: "7",
-      fb_dtsg: tokens.dtsg,
-      jazoest: tokens.jazoest || "26328",
-      lsd: tokens.lsd || "Jfq8VQNmkkkJufHSbEE9bf",
+      jazoest: realJazoest,
       fb_api_caller_class: "RelayModern",
       fb_api_req_friendly_name: "usePolarisFollowMutation",
+      variables: vars,
       server_timestamps: "true",
       doc_id: docId,
-      variables,
+    });
+    if (fbDtsg) bodyParams.append("fb_dtsg", fbDtsg);
+    if (lsd) bodyParams.append("lsd", lsd);
+    return bodyParams.toString();
+  };
+
+  // 1. Thử GraphQL chính (GoMax Doc ID 9740159112729312)
+  try {
+    const res1 = await executeCurlRequest({
+      url: GRAPHQL_URL,
+      method: "POST",
+      body: buildBody(DOC_FOLLOW, "1j"),
+      cookie,
+      headers: baseHeaders,
+      proxy,
+      timeoutSecs: 20,
     });
 
-    const headers = [
-      ...buildIgHeaders(
-        cookie,
-        csrftoken,
-        tokens.lsd || "Jfq8VQNmkkkJufHSbEE9bf",
-        targetUrl || "https://www.instagram.com/",
-      ),
-      "x-fb-friendly-name: usePolarisFollowMutation",
-    ];
-
-    const targetEndpoint =
-      docId === "26508036048874888"
-        ? "https://www.instagram.com/api/graphql"
-        : "https://www.instagram.com/graphql/query";
-
-    try {
-      const resBody = await executeCurlRequest({
-        url: targetEndpoint,
-        method: "POST",
-        body: bodyParams.toString(),
-        cookie,
-        headers,
-        proxy,
-      });
-      lastResult = resBody.trim();
-      const parsed = parseIgResult(lastResult, "Follow");
-      if (parsed.isSuccess) {
-        return parsed;
-      }
-      if (!lastResult.includes("1357004") && lastResult) {
-        return parsed;
-      }
-    } catch (e: unknown) {
-      lastResult = JSON.stringify({
-        status: "error",
-        message: e instanceof Error ? e.message : String(e),
-      });
+    if (isGraphQLSuccess(res1)) {
+      return { isSuccess: true, httpCode: 200, rawBody: res1 };
     }
+  } catch {
+    // thử tiếp fallback
   }
 
-  return parseIgResult(lastResult, "Follow");
+  // 2. Fallback GraphQL dự phòng (GoMax Doc ID 9663809173698092)
+  try {
+    const res2 = await executeCurlRequest({
+      url: GRAPHQL_URL,
+      method: "POST",
+      body: buildBody(DOC_FOLLOW_FALLBACK, "15"),
+      cookie,
+      headers: baseHeaders,
+      proxy,
+      timeoutSecs: 20,
+    });
+
+    if (isGraphQLSuccess(res2)) {
+      return { isSuccess: true, httpCode: 200, rawBody: res2 };
+    }
+
+    return {
+      isSuccess: false,
+      httpCode: 400,
+      rawBody: res2,
+      errorMessage: "Follow thất bại từ Instagram",
+    };
+  } catch (err: unknown) {
+    return {
+      isSuccess: false,
+      httpCode: 0,
+      rawBody: "",
+      errorMessage: err instanceof Error ? err.message : "Lỗi kết nối",
+    };
+  }
 }
 
 /**
- * 4. HÀM TYM / LIKE INSTAGRAM (Ưu tiên REST API Web Like + Dự phòng GraphQL)
+ * 3. LIKE MEDIA INSTAGRAM (Chuẩn GoMaxInstagramEngine.kt - DOC_LIKE = 9595477160535898 + REST Fallback)
  */
 export async function doLike(options: {
   cookie: string;
   mediaIdOrUrl: string;
   linkJob?: string;
-  tokens?: IgPageTokens;
   proxy?: string;
-  userId?: string;
+  tokens?: IgPageTokens;
 }): Promise<IgActionResult> {
   const {
-    cookie,
+    cookie: rawCookie,
     mediaIdOrUrl,
     linkJob = "",
-    tokens: inputTokens,
     proxy,
-    userId,
+    tokens: inputTokens,
   } = options;
 
+  const cookie = normalizeCookie(rawCookie);
   let mediaId = mediaIdOrUrl.trim();
-  if (!mediaId || !/^\d+$/.test(mediaId)) {
-    const sc = extractShortcode(linkJob) || extractShortcode(mediaIdOrUrl);
-    if (sc) {
-      mediaId = shortcodeToMediaId(sc) || mediaId;
+
+  // Giải mã shortcode bằng BigInt nếu chưa phải số
+  if (!/^\d+$/.test(mediaId)) {
+    const targetLink = linkJob || mediaIdOrUrl;
+    const shortcode = extractShortcode(targetLink);
+    if (shortcode) {
+      const decoded = shortcodeToMediaId(shortcode);
+      if (decoded) mediaId = decoded;
     }
-  }
-  if (!mediaId || !/^\d+$/.test(mediaId)) {
-    const targetLink =
-      linkJob ||
-      (mediaIdOrUrl.startsWith("http")
-        ? mediaIdOrUrl
-        : `https://www.instagram.com/p/${mediaIdOrUrl}/`);
-    const extracted = await extractMediaIdFromPage(cookie, targetLink, proxy);
-    if (extracted) mediaId = extracted;
   }
 
   if (!mediaId || !/^\d+$/.test(mediaId)) {
@@ -543,13 +622,95 @@ export async function doLike(options: {
       isSuccess: false,
       httpCode: 400,
       rawBody: "",
-      errorMessage: "Không tìm thấy Media ID để Like",
+      errorMessage: "Lỗi Media ID đối tượng",
     };
   }
 
-  const csrftoken = getCsrfToken(cookie);
+  const csrf = getCsrfToken(cookie);
+  let fbDtsg = inputTokens?.dtsg || "";
+  let lsd = inputTokens?.lsd || "";
 
-  // 1. Thử REST API Web Like
+  if (!fbDtsg || !lsd) {
+    const check = await checkCookieIg(cookie, proxy);
+    if (check.fbDtsg) fbDtsg = check.fbDtsg;
+    if (check.lsd) lsd = check.lsd;
+  }
+
+  const realJazoest = computeJazoest(fbDtsg);
+
+  // 1. Thử GraphQL chính (GoMax Doc ID 9595477160535898)
+  const vars = JSON.stringify({
+    media_id: mediaId,
+    container_module: "feed_timeline",
+  });
+
+  const headers = [
+    "Accept: */*",
+    "Accept-Language: vi,en;q=0.9",
+    "Content-Type: application/x-www-form-urlencoded",
+    "Origin: https://www.instagram.com",
+    `Referer: ${linkJob || "https://www.instagram.com/"}`,
+    'Sec-Ch-Ua: "Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"',
+    "Sec-Ch-Ua-Mobile: ?0",
+    'Sec-Ch-Ua-Platform: "Windows"',
+    "Sec-Fetch-Dest: empty",
+    "Sec-Fetch-Mode: cors",
+    "Sec-Fetch-Site: same-origin",
+    `User-Agent: ${BROWSER_UA}`,
+    `X-ASBD-ID: ${ASBD_ID}`,
+    `X-Bloks-Version-Id: ${BLOKS_VER}`,
+    `X-CSRFToken: ${csrf}`,
+    `X-IG-App-ID: ${APP_ID}`,
+    "X-FB-Friendly-Name: usePolarisLikeMediaLikeMutation",
+  ];
+  if (fbDtsg) headers.push(`X-FB-DTSG: ${fbDtsg}`);
+  if (lsd) headers.push(`X-FB-LSD: ${lsd}`);
+
+  const bodyParams = new URLSearchParams({
+    av: "178414",
+    __d: "www",
+    __user: "0",
+    __a: "1",
+    __req: "1j",
+    __hs: "20519.HYP:instagram_web_pkg.2.1...0",
+    dpr: "1",
+    __ccg: "EXCELLENT",
+    __comet_req: "7",
+    jazoest: realJazoest,
+    fb_api_caller_class: "RelayModern",
+    fb_api_req_friendly_name: "usePolarisLikeMediaLikeMutation",
+    variables: vars,
+    server_timestamps: "true",
+    doc_id: DOC_LIKE,
+  });
+  if (fbDtsg) bodyParams.append("fb_dtsg", fbDtsg);
+  if (lsd) bodyParams.append("lsd", lsd);
+
+  try {
+    const res = await executeCurlRequest({
+      url: GRAPHQL_URL,
+      method: "POST",
+      body: bodyParams.toString(),
+      cookie,
+      headers,
+      proxy,
+      timeoutSecs: 20,
+    });
+
+    if (
+      res &&
+      (res.includes('"status":"ok"') ||
+        res.includes('"viewer_has_liked":true') ||
+        res.includes('"success":true') ||
+        res.includes("xdt_like_media"))
+    ) {
+      return { isSuccess: true, httpCode: 200, rawBody: res };
+    }
+  } catch {
+    // fallback sang REST
+  }
+
+  // 2. Fallback REST API đúng chuẩn GoMax
   try {
     const restRes = await executeCurlRequest({
       url: `https://www.instagram.com/api/v1/web/likes/${mediaId}/like/`,
@@ -557,541 +718,158 @@ export async function doLike(options: {
       cookie,
       proxy,
       headers: [
-        `User-Agent: ${USER_AGENT}`,
-        `X-CSRFToken: ${csrftoken}`,
+        `User-Agent: ${BROWSER_UA}`,
+        `X-CSRFToken: ${csrf}`,
         "X-Instagram-AJAX: 1006309104",
         "X-Requested-With: XMLHttpRequest",
-        "X-IG-App-ID: 936619743392459",
-        "X-ASBD-ID: 129477",
-        `Referer: ${linkJob || "https://www.instagram.com/"}`,
+        `X-IG-App-ID: ${APP_ID}`,
       ],
+      timeoutSecs: 15,
     });
 
     if (
       restRes &&
-      (restRes.includes('"status":"ok"') ||
-        restRes.includes('"status": "ok"') ||
-        restRes.includes('"viewer_has_liked":true'))
+      (restRes.includes('"status":"ok"') || restRes.includes('"success":true'))
     ) {
       return { isSuccess: true, httpCode: 200, rawBody: restRes };
     }
-  } catch {
-    // fallback sang GraphQL
-  }
 
-  // 2. Trích xuất tracking_token nếu có link_job (chuẩn TA Tool)
-  let trackingToken = "";
-  if (linkJob) {
-    try {
-      const resGet = await executeCurlRequest({
-        url: linkJob,
-        method: "GET",
-        cookie,
-        proxy,
-        headers: [`User-Agent: ${USER_AGENT}`, `sec-ch-ua: ${SEC_CH_UA}`],
-      });
-      const ttMatch = resGet.match(/"tracking_token":"([^"]+)"/);
-      if (ttMatch?.[1]) {
-        trackingToken = ttMatch[1];
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  // 3. Thực hiện GraphQL Like (Chuẩn TA Tool - usePolarisLikeMediaXIGLikeMutation)
-  const tokens =
-    inputTokens?.dtsg && inputTokens.lsd
-      ? inputTokens
-      : await extractPageTokens(
-          cookie,
-          linkJob || "https://www.instagram.com/",
-          proxy,
-          inputTokens?.dtsg,
-          inputTokens?.lsd,
-        );
-
-  const actorId = userId?.trim() || getActorId(cookie);
-
-  const variablesObj: {
-    input: {
-      actor_id: string;
-      client_mutation_id: string;
-      container_module: string;
-      media_id: string;
-      tracking_token?: string;
+    return {
+      isSuccess: false,
+      httpCode: 400,
+      rawBody: restRes,
+      errorMessage: "Like thất bại từ Instagram",
     };
-  } = {
-    input: {
-      actor_id: actorId,
-      client_mutation_id: String(Math.floor(1000000 + Math.random() * 9000000)),
-      container_module: "single_post",
-      media_id: String(mediaId),
-    },
-  };
-  if (trackingToken) {
-    variablesObj.input.tracking_token = trackingToken;
-  }
-
-  const bodyParams = new URLSearchParams({
-    av: actorId,
-    __d: "www",
-    __user: "0",
-    __a: "1",
-    __req: "h",
-    __hs: "20702.HYP:instagram_web_pkg.2.1...0",
-    dpr: "1",
-    __ccg: "EXCELLENT",
-    __rev: "1046913831",
-    __comet_req: "7",
-    fb_dtsg: tokens.dtsg,
-    jazoest: tokens.jazoest || "26492",
-    lsd: tokens.lsd || "GyeZl-huflHZ0K5L3-pzBi",
-    fb_api_caller_class: "RelayModern",
-    fb_api_req_friendly_name: "usePolarisLikeMediaXIGLikeMutation",
-    server_timestamps: "true",
-    doc_id: "27182485238052618",
-    variables: JSON.stringify(variablesObj),
-  });
-
-  const headers = [
-    ...buildIgHeaders(
-      cookie,
-      csrftoken,
-      tokens.lsd || "GyeZl-huflHZ0K5L3-pzBi",
-      linkJob || "https://www.instagram.com/",
-    ),
-    "x-fb-friendly-name: usePolarisLikeMediaXIGLikeMutation",
-  ];
-
-  try {
-    const resBody = await executeCurlRequest({
-      url: "https://www.instagram.com/api/graphql",
-      method: "POST",
-      body: bodyParams.toString(),
-      cookie,
-      headers,
-      proxy,
-    });
-    return parseIgResult(resBody.trim(), "Tym");
-  } catch (e: unknown) {
+  } catch (err: unknown) {
     return {
       isSuccess: false,
       httpCode: 0,
       rawBody: "",
-      errorMessage: e instanceof Error ? e.message : String(e),
+      errorMessage: err instanceof Error ? err.message : "Lỗi kết nối",
     };
   }
 }
 
 /**
- * 5. HÀM BÌNH LUẬN INSTAGRAM (PolarisPostCommentInputRevampedMutation)
+ * 4. COMMENT INSTAGRAM (Chuẩn GoMaxInstagramEngine.kt - DOC_COMMENT = 7755358241198424)
  */
 export async function doComment(options: {
   cookie: string;
   mediaIdOrUrl: string;
   text: string;
   linkJob?: string;
-  tokens?: IgPageTokens;
   proxy?: string;
-  userId?: string;
+  tokens?: IgPageTokens;
 }): Promise<IgActionResult> {
   const {
-    cookie,
+    cookie: rawCookie,
     mediaIdOrUrl,
     text,
     linkJob = "",
-    tokens: inputTokens,
     proxy,
-    userId,
+    tokens: inputTokens,
   } = options;
 
+  const cookie = normalizeCookie(rawCookie);
   let mediaId = mediaIdOrUrl.trim();
-  if (!mediaId || !/^\d+$/.test(mediaId)) {
-    const sc = extractShortcode(linkJob) || extractShortcode(mediaIdOrUrl);
-    if (sc) {
-      mediaId = shortcodeToMediaId(sc) || mediaId;
+
+  if (!/^\d+$/.test(mediaId)) {
+    const targetLink = linkJob || mediaIdOrUrl;
+    const shortcode = extractShortcode(targetLink);
+    if (shortcode) {
+      const decoded = shortcodeToMediaId(shortcode);
+      if (decoded) mediaId = decoded;
     }
   }
-  if (!mediaId || !/^\d+$/.test(mediaId)) {
-    const targetLink =
-      linkJob ||
-      (mediaIdOrUrl.startsWith("http")
-        ? mediaIdOrUrl
-        : `https://www.instagram.com/p/${mediaIdOrUrl}/`);
-    const extracted = await extractMediaIdFromPage(cookie, targetLink, proxy);
-    if (extracted) mediaId = extracted;
-  }
 
   if (!mediaId || !/^\d+$/.test(mediaId)) {
     return {
       isSuccess: false,
       httpCode: 400,
       rawBody: "",
-      errorMessage: "Không tìm thấy Media ID để Comment",
+      errorMessage: "Lỗi Media ID đối tượng",
     };
   }
 
-  const tokens =
-    inputTokens?.dtsg && inputTokens.lsd
-      ? inputTokens
-      : await extractPageTokens(
-          cookie,
-          linkJob || "https://www.instagram.com/",
-          proxy,
-          inputTokens?.dtsg,
-          inputTokens?.lsd,
-        );
+  const csrf = getCsrfToken(cookie);
+  let fbDtsg = inputTokens?.dtsg || "";
+  let lsd = inputTokens?.lsd || "";
 
-  if (!tokens.dtsg || !tokens.lsd) {
-    return {
-      isSuccess: false,
-      httpCode: 400,
-      rawBody: "",
-      errorMessage: "Không lấy được fb_dtsg/lsd của Instagram",
-    };
+  if (!fbDtsg || !lsd) {
+    const check = await checkCookieIg(cookie, proxy);
+    if (check.fbDtsg) fbDtsg = check.fbDtsg;
+    if (check.lsd) lsd = check.lsd;
   }
 
-  const csrftoken = getCsrfToken(cookie);
-  const actorId = userId?.trim() || getActorId(cookie);
-
-  const variables = JSON.stringify({
-    connections: [
-      `client:root:__PolarisPostComments__xdt_api__v1__media__media_id__comments__connection_connection(data:{},media_id:"${mediaId}",sort_order:"popular")`,
-    ],
-    data: {
-      comment_text: text,
-      media_id: mediaId,
-    },
-  });
-
-  const bodyParams = new URLSearchParams({
-    av: actorId,
-    __d: "www",
-    __user: "0",
-    __a: "1",
-    __req: "10",
-    __hs: "20702.HYP:instagram_web_pkg.2.1...0",
-    dpr: "1",
-    __ccg: "EXCELLENT",
-    __rev: "1046917461",
-    __comet_req: "7",
-    fb_dtsg: tokens.dtsg,
-    jazoest: tokens.jazoest || "26312",
-    lsd: tokens.lsd || "9zei3OjvTBQ-9YG6E0OMzm",
-    fb_api_caller_class: "RelayModern",
-    fb_api_req_friendly_name: "PolarisPostCommentInputRevampedMutation",
-    server_timestamps: "true",
-    doc_id: "27261905640092552",
-    variables,
+  const vars = JSON.stringify({
+    id: mediaId,
+    comment_text: text,
+    container_module: "self_comments_v2",
   });
 
   const headers = [
-    ...buildIgHeaders(
+    "Accept: */*",
+    "Accept-Language: vi,en;q=0.9",
+    "Content-Type: application/x-www-form-urlencoded",
+    "Origin: https://www.instagram.com",
+    `Referer: ${linkJob || "https://www.instagram.com/"}`,
+    `User-Agent: ${BROWSER_UA}`,
+    `X-ASBD-ID: ${ASBD_ID}`,
+    `X-Bloks-Version-Id: ${BLOKS_VER}`,
+    `X-CSRFToken: ${csrf}`,
+    `X-IG-App-ID: ${APP_ID}`,
+    "X-FB-Friendly-Name: usePolarisCommentDirectMutation",
+  ];
+  if (fbDtsg) headers.push(`X-FB-DTSG: ${fbDtsg}`);
+  if (lsd) headers.push(`X-FB-LSD: ${lsd}`);
+
+  const bodyParams = new URLSearchParams({
+    av: "178414",
+    __d: "www",
+    __user: "0",
+    __a: "1",
+    __req: "1j",
+    __hs: "20519.HYP:instagram_web_pkg.2.1...0",
+    dpr: "1",
+    __ccg: "EXCELLENT",
+    __comet_req: "7",
+    jazoest: computeJazoest(fbDtsg),
+    fb_api_caller_class: "RelayModern",
+    fb_api_req_friendly_name: "usePolarisCommentDirectMutation",
+    variables: vars,
+    server_timestamps: "true",
+    doc_id: DOC_COMMENT,
+  });
+  if (fbDtsg) bodyParams.append("fb_dtsg", fbDtsg);
+  if (lsd) bodyParams.append("lsd", lsd);
+
+  try {
+    const res = await executeCurlRequest({
+      url: GRAPHQL_URL,
+      method: "POST",
+      body: bodyParams.toString(),
       cookie,
-      csrftoken,
-      tokens.lsd || "9zei3OjvTBQ-9YG6E0OMzm",
-      linkJob || "https://www.instagram.com/",
-    ),
-    "x-fb-friendly-name: PolarisPostCommentInputRevampedMutation",
-  ];
+      headers,
+      proxy,
+      timeoutSecs: 20,
+    });
 
-  const endpoints = [
-    "https://www.instagram.com/api/graphql",
-    "https://www.instagram.com/graphql/query",
-  ];
-  let lastResult = "";
-  for (const ep of endpoints) {
-    try {
-      const resBody = await executeCurlRequest({
-        url: ep,
-        method: "POST",
-        body: bodyParams.toString(),
-        cookie,
-        headers,
-        proxy,
-      });
-      lastResult = resBody.trim();
-      const parsed = parseIgResult(lastResult, "Comment");
-      if (parsed.isSuccess) return parsed;
-      if (!lastResult.includes("1357004") && lastResult) return parsed;
-    } catch (e: unknown) {
-      lastResult = JSON.stringify({
-        status: "error",
-        message: e instanceof Error ? e.message : String(e),
-      });
+    if (res && !res.includes('"errors":') && res.includes('"id":')) {
+      return { isSuccess: true, httpCode: 200, rawBody: res };
     }
-  }
 
-  return parseIgResult(lastResult, "Comment");
-}
-
-/**
- * 6. PHÂN TÍCH PHẢN HỒI INSTAGRAM (Bóc tách mã lỗi Meta chuẩn xác 100%)
- */
-export function parseIgResult(
-  rawBody: string,
-  defaultActionName: string,
-): IgActionResult {
-  if (!rawBody?.trim()) {
+    return {
+      isSuccess: false,
+      httpCode: 400,
+      rawBody: res,
+      errorMessage: "Bình luận thất bại",
+    };
+  } catch (err: unknown) {
     return {
       isSuccess: false,
       httpCode: 0,
       rawBody: "",
-      errorMessage: "Phản hồi rỗng từ Instagram",
+      errorMessage: err instanceof Error ? err.message : "Lỗi kết nối",
     };
   }
-
-  let cleanBody = rawBody.trim();
-  if (cleanBody.startsWith("for (;;);")) {
-    cleanBody = cleanBody.replace(/^for \(;;\);/, "").trim();
-  }
-
-  try {
-    const root = JSON.parse(cleanBody);
-
-    // 0. Bóc tách lỗi 1357004 của Meta
-    if (root.error === 1357004) {
-      const summary = root.errorSummary || "Rất tiếc, đã xảy ra lỗi";
-      const desc =
-        root.errorDescription || "Vui lòng thử lại với một trình duyệt khác.";
-      return {
-        isSuccess: false,
-        httpCode: 400,
-        rawBody,
-        errorMessage: `${summary}: ${desc} (Mã lỗi 1357004 - Meta từ chối phiên)`,
-      };
-    }
-
-    // 1. Kiểm tra mảng lỗi GraphQL
-    if (Array.isArray(root.errors) && root.errors.length > 0) {
-      const firstErr = root.errors[0];
-      const msg = firstErr.message || "";
-      if (msg.toLowerCase().includes("already")) {
-        return { isSuccess: true, httpCode: 200, rawBody };
-      }
-      const summary = firstErr.summary || "";
-      const desc = firstErr.description || "";
-      const errorText = [summary, desc, msg].filter(Boolean).join(": ");
-      return {
-        isSuccess: false,
-        httpCode: 400,
-        rawBody,
-        errorMessage: errorText || "Lỗi GraphQL Instagram",
-      };
-    }
-
-    // 2. Kiểm tra các mã lỗi nghiệp vụ
-    const msg = root.message || "";
-    const statusStr = root.status || "";
-    const spam = Boolean(root.spam);
-    const feedbackTitle = root.feedback_title || "";
-    const feedbackMessage = root.feedback_message || "";
-
-    if (
-      statusStr.toLowerCase() === "fail" ||
-      spam ||
-      (statusStr.toLowerCase() !== "ok" && msg && msg.toLowerCase() !== "ok")
-    ) {
-      let friendlyMsg = `${defaultActionName} thất bại`;
-      if (msg.toLowerCase() === "feedback_required" || spam) {
-        friendlyMsg =
-          feedbackMessage ||
-          feedbackTitle ||
-          "Chặn tính năng (feedback_required / spam)";
-      } else if (msg.toLowerCase() === "checkpoint_required") {
-        friendlyMsg = "Dính Checkpoint xác minh tài khoản";
-      } else if (msg.toLowerCase() === "login_required") {
-        friendlyMsg = "Hết phiên đăng nhập (Cookie DIE)";
-      } else if (msg.toLowerCase() === "rate_limit_exceeded") {
-        friendlyMsg = "Quá giới hạn thao tác Instagram (Rate limit)";
-      } else if (feedbackMessage) {
-        friendlyMsg = feedbackMessage;
-      } else if (feedbackTitle) {
-        friendlyMsg = feedbackTitle;
-      } else if (msg) {
-        friendlyMsg = msg;
-      }
-      return {
-        isSuccess: false,
-        httpCode: spam ? 429 : 400,
-        rawBody,
-        errorMessage: friendlyMsg,
-      };
-    }
-
-    // 3. Kiểm tra thành công cụ thể
-    const data = root.data;
-    const friendship = data?.xdt_create_friendship;
-    const fStatus = friendship?.friendship_status;
-    if (fStatus?.following === true || fStatus?.outgoing_request === true) {
-      return { isSuccess: true, httpCode: 200, rawBody };
-    }
-    const likeMedia = data?.xdt_like_media;
-    if (
-      likeMedia &&
-      (likeMedia.status === "ok" || likeMedia.client_mutation_id)
-    ) {
-      return { isSuccess: true, httpCode: 200, rawBody };
-    }
-    const commentData = data?.comment || data?.xdt_comment;
-    if (
-      commentData ||
-      root.comment ||
-      (root.id !== undefined && root.text !== undefined)
-    ) {
-      return { isSuccess: true, httpCode: 200, rawBody };
-    }
-    if (root.status === "ok" || root.viewer_has_liked === true) {
-      return { isSuccess: true, httpCode: 200, rawBody };
-    }
-  } catch {
-    // ignore json parse error
-  }
-
-  // Fallback kiểm tra chuỗi
-  const hasFail =
-    cleanBody.includes('"status":"fail"') ||
-    cleanBody.includes('"status": "fail"');
-  if (
-    !hasFail &&
-    (cleanBody.includes('"following":true') ||
-      cleanBody.includes('"viewer_has_liked":true') ||
-      cleanBody.includes('"status":"ok"') ||
-      cleanBody.includes('"status": "ok"'))
-  ) {
-    return { isSuccess: true, httpCode: 200, rawBody };
-  }
-  if (cleanBody.toLowerCase().includes("feedback_required")) {
-    return {
-      isSuccess: false,
-      httpCode: 429,
-      rawBody,
-      errorMessage: "Chặn tính năng (feedback_required)",
-    };
-  }
-  if (cleanBody.toLowerCase().includes("checkpoint")) {
-    return {
-      isSuccess: false,
-      httpCode: 403,
-      rawBody,
-      errorMessage: "Dính Checkpoint Instagram",
-    };
-  }
-  if (cleanBody.toLowerCase().includes("login_required")) {
-    return {
-      isSuccess: false,
-      httpCode: 401,
-      rawBody,
-      errorMessage: "Cookie DIE / Yêu cầu đăng nhập",
-    };
-  }
-
-  return {
-    isSuccess: false,
-    httpCode: 400,
-    rawBody,
-    errorMessage: `Instagram từ chối (${defaultActionName})`,
-  };
-}
-
-/**
- * Tra cứu Numeric UID đối tượng từ Instagram Username qua topsearch API
- */
-export async function resolveTargetUid(
-  cookie: string,
-  username: string,
-  proxy?: string,
-): Promise<string | null> {
-  const clean = username.trim().replace(/^@/, "").replace(/\/+$/, "");
-  if (!clean) return null;
-  const url = `https://www.instagram.com/web/search/topsearch/?context=blended&query=${encodeURIComponent(clean)}`;
-  try {
-    const raw = await executeCurlRequest({
-      url,
-      method: "GET",
-      cookie,
-      proxy,
-      headers: [`User-Agent: ${USER_AGENT}`, "X-IG-App-ID: 936619743392459"],
-    });
-    const root = JSON.parse(raw);
-    const users = root.users;
-    if (Array.isArray(users)) {
-      for (const item of users) {
-        const u = item.user;
-        if (u && String(u.username).toLowerCase() === clean.toLowerCase()) {
-          if (u.pk) return String(u.pk);
-          if (u.id) return String(u.id);
-        }
-      }
-    }
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-/**
- * Trích xuất Media ID từ mã nguồn trang Instagram bài viết
- */
-export async function extractMediaIdFromPage(
-  cookie: string,
-  url: string,
-  proxy?: string,
-): Promise<string | null> {
-  if (!url?.trim()) return null;
-  try {
-    const html = await executeCurlRequest({
-      url,
-      method: "GET",
-      cookie,
-      proxy,
-      headers: [`User-Agent: ${USER_AGENT}`],
-    });
-    const patterns = [
-      /"media_id":\s*"(\d+)"/,
-      /"post_id":\s*"(\d+)"/,
-      /"shortcode_media":\s*\{[^}]*"id":\s*"(\d+)"/,
-      /\/p\/[^/]+\/\?id=(\d+)/,
-      /"id":\s*"(\d+)_\d+"/,
-    ];
-    for (const p of patterns) {
-      const m = html.match(p);
-      if (m?.[1]) return m[1];
-    }
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-/**
- * Trích xuất UID profile từ trang cá nhân Instagram
- */
-export async function extractTargetIdFromUrl(
-  cookie: string,
-  targetUrl: string,
-  proxy?: string,
-): Promise<string | null> {
-  try {
-    const html = await executeCurlRequest({
-      url: targetUrl,
-      method: "GET",
-      cookie,
-      proxy,
-      headers: [`User-Agent: ${USER_AGENT}`],
-    });
-    const patterns = [
-      /"profile_id":"(\d+)"/,
-      /"user_id":"(\d+)"/,
-      /profilePage_(\d+)/,
-    ];
-    for (const p of patterns) {
-      const m = html.match(p);
-      if (m?.[1]) return m[1];
-    }
-  } catch {
-    // ignore
-  }
-  return null;
 }
