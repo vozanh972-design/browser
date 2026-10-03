@@ -473,6 +473,10 @@ function extractDetailedFacebookError(body: string): string {
         text = desc || summary || msg;
       }
 
+      if (err.sentry_block_user_info || JSON.stringify(err).includes("sentry_block")) {
+        return `(#1675030) Meta Sentry chặn tạo Trang (${text || "Lỗi thực hiện truy vấn"} - Cần đổi Proxy sạch hoặc ngâm nick)`;
+      }
+
       if (code === 1675030) {
         return `(#1675030) ${text || "Lỗi thực hiện truy vấn"} (Bị Meta giới hạn/chặn tạo Trang tạm thời)`;
       }

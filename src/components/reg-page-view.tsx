@@ -473,23 +473,32 @@ export function RegPageView({
             [acc.uid]: errDetail,
           }));
 
-          // Nếu tài khoản bị checkpoint thật sự (khóa nick / acc die) thì mới dừng
-          const isDeadCheckpoint =
-            errMsg.includes("yêu cầu xác thực Số điện thoại") ||
-            errMsg.includes("xác thực sms") ||
-            errMsg.includes("Checkpoint yêu cầu xác minh") ||
+          // Nếu bị Meta chặn (Sentry Block / 1675030 / Action Block / Giới hạn / Checkpoint) thì DỪNG NGAY!
+          const isMetaBlocked =
+            errMsg.includes("1675030") ||
+            errMsg.includes("Sentry") ||
+            errMsg.includes("sentry") ||
+            errMsg.includes("giới hạn") ||
+            errMsg.includes("quá nhiều") ||
+            errMsg.includes("chặn") ||
+            errMsg.includes("blocked") ||
+            errMsg.includes("Checkpoint") ||
+            errMsg.includes("checkpoint") ||
+            errMsg.includes("limit") ||
+            Boolean(res.rawResponse?.includes("sentry_block")) ||
+            Boolean(res.rawResponse?.includes('"allow_user_retry":false')) ||
             acc.status === "die" ||
             acc.status === "checkpoint";
 
-          if (isDeadCheckpoint) {
+          if (isMetaBlocked) {
             setAccountStatuses((prev) => ({
               ...prev,
-              [acc.uid]: `Dừng (Checkpoint): ${errMsg}`,
+              [acc.uid]: `Dừng: ${errMsg}`,
             }));
-            break;
+            break; // DỪNG VÒNG LẶP NGAY LẬP TỨC, KHÔNG CỐ TẠO TIẾP VÔ VỌNG!
           }
 
-          // NẾU CÒN LẦN TẠO TIẾP: ĐỢI ĐÚNG SỐ GIÂY ĐÃ CÀI ĐẶT RỒI MỚI REG TIẾP, BÁO RÕ LỖI CHỨ KHÔNG GHI ĐÈ BỎ QUA LỖI
+          // CHỈ KHI LỖI MẠNG TẠM THỜI THÌ MỚI ĐỢI DELAY ĐỂ THỬ LẠI LẦN TIẾP THEO
           if (step < regCount && !stopRequestedRef.current) {
             const delayTime = Math.max(delayMs, 500);
             for (let rem = Math.ceil(delayTime / 1000); rem > 0; rem--) {
@@ -1018,7 +1027,7 @@ export function RegPageView({
                       </div>
 
                       {/* Tiến độ Reg Page của Acc chủ */}
-                      <div className="min-w-0 pr-2 flex items-center gap-1.5">
+                      <div className="min-w-0 pr-2">
                         {isCheckpointOrDie ? (
                           <span className="text-[11px] font-semibold text-rose-500/80">
                             {acc.status === "checkpoint"
@@ -1026,38 +1035,23 @@ export function RegPageView({
                               : "Die (Vô hiệu)"}
                           </span>
                         ) : (
-                          <>
-                            <span
-                              className={cn(
-                                "text-[11px] truncate block font-medium flex-1",
-                                statusText.includes("Đang tạo")
-                                  ? "text-amber-400 animate-pulse font-semibold"
-                                  : statusText.includes("Đã tạo") ||
-                                      statusText.includes("Hoàn tất")
-                                    ? "text-emerald-400 font-semibold"
-                                    : statusText.includes("Lỗi") ||
-                                        statusText.includes("Dừng")
-                                      ? "text-rose-400 font-semibold"
-                                      : "text-muted-foreground",
-                              )}
-                              title={statusText}
-                            >
-                              {statusText}
-                            </span>
-                            {/* Dấu chấm than màu đỏ khi có lỗi tạo Page */}
-                            {accountErrors[acc.uid] && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setSelectedErrorDetail(accountErrors[acc.uid])
-                                }
-                                title="Bấm để xem chi tiết lỗi tạo Page từ Facebook"
-                                className="size-5 rounded-full bg-rose-500/15 text-rose-500 hover:bg-rose-500/25 border border-rose-500/40 flex items-center justify-center cursor-pointer transition-transform hover:scale-115 shrink-0 animate-pulse shadow-2xs"
-                              >
-                                <AlertCircle className="size-3.5" />
-                              </button>
+                          <span
+                            className={cn(
+                              "text-[11px] truncate block font-medium",
+                              statusText.includes("Đang tạo")
+                                ? "text-amber-400 animate-pulse font-semibold"
+                                : statusText.includes("Đã tạo") ||
+                                    statusText.includes("Hoàn tất")
+                                  ? "text-emerald-400 font-semibold"
+                                  : statusText.includes("Lỗi") ||
+                                      statusText.includes("Dừng")
+                                    ? "text-rose-400 font-semibold"
+                                    : "text-muted-foreground",
                             )}
-                          </>
+                            title={statusText}
+                          >
+                            {statusText}
+                          </span>
                         )}
                       </div>
 
