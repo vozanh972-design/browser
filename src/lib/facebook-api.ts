@@ -1232,7 +1232,7 @@ export interface UploadMediaResult {
   rawResponse?: string;
 }
 
-function safeJsonParse<T = Record<string, any>>(str: string): T | null {
+function safeJsonParse<T = any>(str: string): T | null {
   if (!str || !str.trim()) return null;
   try {
     return JSON.parse(str) as T;
@@ -1551,7 +1551,7 @@ export async function uploadFacebookPageAvatar(params: {
         timeoutSecs: 20,
       });
 
-      const picJson = safeJsonParse(picRes);
+      const picJson = safeJsonParse<any>(picRes);
       if (
         picRes?.trim() === "true" ||
         picJson === true ||
@@ -1720,7 +1720,7 @@ export async function uploadFacebookPageCover(params: {
       timeoutSecs: 20,
     });
 
-    const json1 = safeJsonParse(res1);
+    const json1 = safeJsonParse<any>(res1);
     if (
       res1?.trim() === "true" ||
       json1 === true ||
@@ -1760,7 +1760,7 @@ export async function uploadFacebookPageCover(params: {
       timeoutSecs: 20,
     });
 
-    const json2 = safeJsonParse(res2);
+    const json2 = safeJsonParse<any>(res2);
     if (
       res2?.trim() === "true" ||
       json2 === true ||
