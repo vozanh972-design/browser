@@ -741,20 +741,6 @@ export async function facebookLogin(
 }
 
 /**
- * 5. KIỂM TRA TÀI KHOẢN THEO CHUẨN 100% FacebookLoginBottomSheet.kt:
- * 1. Ưu tiên: Nếu dòng bắt đầu bằng EAA hoặc có Token -> gọi fetchAccountDetailsWithToken
- * 2. Nếu có UID|PASS -> gọi facebookLogin lấy Token EAAAA rồi fetchAccountDetailsWithToken
- * 3. Nếu có Cookie -> gọi getTokenFromCookie (auth.getSessionForApp) lấy Token EAAAA rồi fetchAccountDetailsWithToken
- * 4. Fallback: Nếu không lấy được Token từ Cookie nhưng có c_user, vẫn giữ lại UID và ảnh đại diện Graph
- */
-export async function checkFacebookAccountFull(params: {
-  uid?: string;
-  pass?: string;
-  twoFactor?: string;
-  cookie?: string;
-  token?: string;
-  proxy?: string;
-/**
  * Kiểm tra UID trực tiếp bằng Facebook Graph API v21.0
  * Không cần token, không cần cookie, không bị chặn.
  * Trả về 302 Found kèm CDN avatar nếu tài khoản đang LIVE.

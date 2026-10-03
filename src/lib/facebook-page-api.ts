@@ -20,7 +20,7 @@ export interface FacebookPageItem {
 }
 
 const KATANA_USER_AGENT =
-  "[FBAN/FB4A;FBAV/537.0.0.47.77;FBPN/com.facebook.katana;]";
+  "[FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]";
 
 export const AUTO_CATEGORIES = [
   { id: "180164648685982", name: "Blog cá nhân" },
@@ -269,7 +269,7 @@ export async function createFacebookPageApi({
   });
 
   const headers = [
-    "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
+    `User-Agent: ${KATANA_USER_AGENT}`,
     `Authorization: OAuth ${cleanToken}`,
     "X-FB-Friendly-Name: AdditionalProfilePlusCreation",
     "Content-Type: application/x-www-form-urlencoded",

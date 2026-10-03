@@ -32,10 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  facebookLogin,
-  getTokenAndInfoFromCookie,
-} from "@/lib/facebook-api";
+import { facebookLogin, getTokenAndInfoFromCookie } from "@/lib/facebook-api";
 import {
   createFacebookPageApi,
   generateRandomName,
