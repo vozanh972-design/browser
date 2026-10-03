@@ -37,7 +37,11 @@ export async function executeCurlRequest(options: {
 }): Promise<string> {
   const timeoutLimit = options.timeoutSecs || 15;
 
-  try {
+  const isTauri =
+    typeof window !== "undefined" &&
+    ("__TAURI_INTERNALS__" in window || "__TAURI__" in window);
+
+  if (isTauri) {
     return await invoke<string>("curl_request", {
       url: options.url,
       method: options.method ?? "GET",
@@ -49,22 +53,22 @@ export async function executeCurlRequest(options: {
       timeoutSecs: timeoutLimit,
       formFields: options.formFields ?? null,
     });
-  } catch {
-    // Web fallback if outside Tauri
-    const headersObj: Record<string, string> = {};
-    if (options.headers) {
-      for (const h of options.headers) {
-        const [k, ...v] = h.split(":");
-        if (k && v.length) headersObj[k.trim()] = v.join(":").trim();
-      }
-    }
-    const res = await fetch(options.url, {
-      method: options.method ?? "GET",
-      headers: headersObj,
-      body: options.body,
-    });
-    return await res.text();
   }
+
+  // Web fallback if outside Tauri
+  const headersObj: Record<string, string> = {};
+  if (options.headers) {
+    for (const h of options.headers) {
+      const [k, ...v] = h.split(":");
+      if (k && v.length) headersObj[k.trim()] = v.join(":").trim();
+    }
+  }
+  const res = await fetch(options.url, {
+    method: options.method ?? "GET",
+    headers: headersObj,
+    body: options.body,
+  });
+  return await res.text();
 }
 
 // -------------------------------------------------------------
@@ -1270,8 +1274,130 @@ export async function getPhotoDirectUrl(
 }
 
 /**
+ * Lấy Real Graph Page ID và Page Access Token đối ứng cho UID 615
+ * Chuẩn 100% từ QuanLyPageEngine.kt (resolveGraphPageId + resolvePageAccessToken)
+ */
+export async function resolvePageInfo615(params: {
+  pageUidOrId: string;
+  token: string;
+  proxy?: string;
+}): Promise<{ realPageId: string; pageToken: string }> {
+  const { pageUidOrId, token, proxy } = params;
+  const cleanId = pageUidOrId.trim();
+  const cleanToken = token.replace(/^(OAuth|Bearer)\s+/i, "").trim();
+
+  let realPageId = cleanId;
+  let pageToken = cleanToken;
+
+  if (cleanToken) {
+    // 1. Thử truy vấn direct UID nếu là 615 để lấy delegate_page_id
+    if (cleanId.startsWith("615")) {
+      try {
+        const rawDirect = await executeCurlRequest({
+          url: `https://graph.facebook.com/v21.0/${cleanId}?fields=id,name,delegate_page_id&access_token=${cleanToken}`,
+          method: "GET",
+          headers: [
+            "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
+            `Authorization: OAuth ${cleanToken}`,
+          ],
+          proxy,
+          timeoutSecs: 10,
+        });
+        const jsonDirect = safeJsonParse(rawDirect);
+        const delId = String(jsonDirect?.delegate_page_id || "").trim();
+        const dirId = String(jsonDirect?.id || "").trim();
+        if (delId && !delId.startsWith("615")) {
+          realPageId = delId;
+        } else if (dirId && !dirId.startsWith("615")) {
+          realPageId = dirId;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // 2. Truy vấn /me/accounts để tìm Page Token và Real Page ID
+    try {
+      const raw = await executeCurlRequest({
+        url: `https://graph.facebook.com/v21.0/me/accounts?fields=id,access_token,additional_profile_id,delegate_page_id&limit=100&access_token=${cleanToken}`,
+        method: "GET",
+        headers: [
+          "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
+          `Authorization: OAuth ${cleanToken}`,
+        ],
+        proxy,
+        timeoutSecs: 15,
+      });
+
+      const json = safeJsonParse(raw);
+      if (Array.isArray(json?.data)) {
+        for (const item of json.data) {
+          const pid = String(item.id || "").trim();
+          const addId = String(item.additional_profile_id || "").trim();
+          const delId = String(item.delegate_page_id || "").trim();
+          const tok = String(item.access_token || "").trim();
+
+          const isMatch =
+            cleanId === pid ||
+            cleanId === addId ||
+            cleanId === delId ||
+            (realPageId && realPageId === pid) ||
+            (realPageId && realPageId === delId) ||
+            (!cleanId.startsWith("615") && cleanId === pid);
+
+          if (isMatch) {
+            if (delId && !delId.startsWith("615")) {
+              realPageId = delId;
+            } else if (pid && !pid.startsWith("615")) {
+              realPageId = pid;
+            } else {
+              realPageId = pid || cleanId;
+            }
+            if (tok) {
+              pageToken = tok;
+            }
+            break;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3. Fallback: Nếu chưa lấy được pageToken riêng và realPageId khác 615
+    if (
+      pageToken === cleanToken &&
+      realPageId &&
+      !realPageId.startsWith("615") &&
+      realPageId !== "me"
+    ) {
+      try {
+        const rawTok = await executeCurlRequest({
+          url: `https://graph.facebook.com/v21.0/${realPageId}?fields=access_token&access_token=${cleanToken}`,
+          method: "GET",
+          headers: [
+            "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
+            `Authorization: OAuth ${cleanToken}`,
+          ],
+          proxy,
+          timeoutSecs: 10,
+        });
+        const jsonTok = safeJsonParse(rawTok);
+        if (jsonTok?.access_token) {
+          pageToken = String(jsonTok.access_token).trim();
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  return { realPageId, pageToken };
+}
+
+/**
  * Cập nhật Avatar cho Page 615 / Fanpage qua Graph API
- * Chuẩn 100% logic từ FacebookMediaEngine.kt
+ * Chuẩn 100% logic từ FacebookMediaEngine.kt & QuanLyPageEngine.kt
  */
 export async function uploadFacebookPageAvatar(params: {
   pageId: string;
@@ -1289,17 +1415,27 @@ export async function uploadFacebookPageAvatar(params: {
     return { success: false, message: "Cần cung cấp file ảnh hoặc link ảnh" };
   }
 
+  // Tự động phân giải ID và Token chính xác của Page từ /me/accounts nếu là Page 615
+  const { realPageId, pageToken: resolvedToken } = await resolvePageInfo615({
+    pageUidOrId: pageId,
+    token: cleanToken,
+    proxy,
+  });
+
+  const activeToken = resolvedToken || cleanToken;
   // Chuẩn hóa đường dẫn file trên Windows: đổi \ thành / để curl đọc không bị lỗi escape / port syntax
   const cleanPath = filePath ? filePath.replace(/\\/g, "/") : "";
 
   const headers = [
     "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
-    `Authorization: OAuth ${cleanToken}`,
+    `Authorization: OAuth ${activeToken}`,
   ];
 
+  // Danh sách endpoint thử nghiệm:
+  // TUYỆT ĐỐI KHÔNG DÙNG ID bắt đầu bằng 615 vì Graph API sẽ báo lỗi (#100) The global id 615... is not allowed
   const candidateEndpoints: string[] = [];
-  if (pageId && pageId !== "me") {
-    candidateEndpoints.push(pageId);
+  if (realPageId && realPageId !== "me" && !realPageId.startsWith("615")) {
+    candidateEndpoints.push(realPageId);
   }
   candidateEndpoints.push("me");
 
@@ -1317,7 +1453,7 @@ export async function uploadFacebookPageAvatar(params: {
           method: "POST",
           headers,
           formFields: [
-            `access_token=${cleanToken}`,
+            `access_token=${activeToken}`,
             `source=@${cleanPath}`,
           ],
           proxy,
@@ -1328,14 +1464,14 @@ export async function uploadFacebookPageAvatar(params: {
         if (jsonDirect && !jsonDirect.error) {
           const directId = jsonDirect.id || "";
           const directUrl = directId
-            ? await getPhotoDirectUrl(directId, cleanToken, proxy)
+            ? await getPhotoDirectUrl(directId, activeToken, proxy)
             : null;
           return {
             success: true,
             photoId: directId,
             mediaUrl:
               directUrl ||
-              `https://graph.facebook.com/v21.0/${ep}/picture?type=large&access_token=${cleanToken}`,
+              `https://graph.facebook.com/v21.0/${ep}/picture?type=large&access_token=${activeToken}`,
             message: "Cập nhật ảnh đại diện Page thành công",
             rawResponse: directRes,
           };
@@ -1347,7 +1483,7 @@ export async function uploadFacebookPageAvatar(params: {
           method: "POST",
           headers,
           formFields: [
-            `access_token=${cleanToken}`,
+            `access_token=${activeToken}`,
             "published=true",
             `source=@${cleanPath}`,
           ],
@@ -1356,7 +1492,7 @@ export async function uploadFacebookPageAvatar(params: {
         });
       } else if (imageUrl) {
         const formBody = new URLSearchParams({
-          access_token: cleanToken,
+          access_token: activeToken,
           published: "true",
           url: imageUrl,
         }).toString();
@@ -1389,13 +1525,15 @@ export async function uploadFacebookPageAvatar(params: {
     }
   }
 
-  const targetForPic = successfulEndpoint || pageId || "me";
+  const targetForPic =
+    successfulEndpoint ||
+    (realPageId && !realPageId.startsWith("615") ? realPageId : "me");
 
   // Bước 2: Gán photoId làm Avatar qua /{target}/picture
   if (photoId) {
     try {
       const setPicBody = new URLSearchParams({
-        access_token: cleanToken,
+        access_token: activeToken,
         photo_id: photoId,
         photo: photoId,
         picture: photoId,
@@ -1414,14 +1552,18 @@ export async function uploadFacebookPageAvatar(params: {
       });
 
       const picJson = safeJsonParse(picRes);
-      if (picJson && !picJson.error) {
-        const directUrl = await getPhotoDirectUrl(photoId, cleanToken, proxy);
+      if (
+        picRes?.trim() === "true" ||
+        picJson === true ||
+        (picJson && !picJson.error)
+      ) {
+        const directUrl = await getPhotoDirectUrl(photoId, activeToken, proxy);
         return {
           success: true,
           photoId,
           mediaUrl:
             directUrl ||
-            `https://graph.facebook.com/v21.0/${targetForPic}/picture?type=large&access_token=${cleanToken}`,
+            `https://graph.facebook.com/v21.0/${targetForPic}/picture?type=large&access_token=${activeToken}`,
           message: "Cập nhật ảnh đại diện Page thành công",
           rawResponse: picRes,
         };
@@ -1444,7 +1586,7 @@ export async function uploadFacebookPageAvatar(params: {
 
 /**
  * Cập nhật Ảnh Bìa (Cover Photo) cho Page 615 / Fanpage qua Graph API
- * Chuẩn 100% logic từ FacebookMediaEngine.kt
+ * Chuẩn 100% logic từ FacebookMediaEngine.kt & QuanLyPageEngine.kt
  */
 export async function uploadFacebookPageCover(params: {
   pageId: string;
@@ -1462,17 +1604,25 @@ export async function uploadFacebookPageCover(params: {
     return { success: false, message: "Cần cung cấp file ảnh hoặc link ảnh" };
   }
 
+  // Tự động phân giải ID và Token chính xác của Page từ /me/accounts nếu là Page 615
+  const { realPageId, pageToken: resolvedToken } = await resolvePageInfo615({
+    pageUidOrId: pageId,
+    token: cleanToken,
+    proxy,
+  });
+
+  const activeToken = resolvedToken || cleanToken;
   // Chuẩn hóa đường dẫn file trên Windows: đổi \ thành / để curl đọc không bị lỗi escape / port syntax
   const cleanPath = filePath ? filePath.replace(/\\/g, "/") : "";
 
   const headers = [
     "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
-    `Authorization: OAuth ${cleanToken}`,
+    `Authorization: OAuth ${activeToken}`,
   ];
 
   const candidateEndpoints: string[] = [];
-  if (pageId && pageId !== "me") {
-    candidateEndpoints.push(pageId);
+  if (realPageId && realPageId !== "me" && !realPageId.startsWith("615")) {
+    candidateEndpoints.push(realPageId);
   }
   candidateEndpoints.push("me");
 
@@ -1490,7 +1640,7 @@ export async function uploadFacebookPageCover(params: {
           method: "POST",
           headers,
           formFields: [
-            `access_token=${cleanToken}`,
+            `access_token=${activeToken}`,
             "published=true",
             `source=@${cleanPath}`,
           ],
@@ -1499,7 +1649,7 @@ export async function uploadFacebookPageCover(params: {
         });
       } else if (imageUrl) {
         const formBody = new URLSearchParams({
-          access_token: cleanToken,
+          access_token: activeToken,
           published: "true",
           url: imageUrl,
         }).toString();
@@ -1542,7 +1692,9 @@ export async function uploadFacebookPageCover(params: {
   }
 
   // Bước 2: Set photo này làm cover qua POST /{endpoint}
-  const targetForCover = successfulEndpoint || pageId || "me";
+  const targetForCover =
+    successfulEndpoint ||
+    (realPageId && !realPageId.startsWith("615") ? realPageId : "me");
 
   // Thử cách 1: cover={"cover_id":"<photoId>","offset_x":0,"offset_y":0}
   try {
@@ -1552,7 +1704,7 @@ export async function uploadFacebookPageCover(params: {
       offset_y: 0,
     });
     const formBody1 = new URLSearchParams({
-      access_token: cleanToken,
+      access_token: activeToken,
       cover: coverJson,
     }).toString();
 
@@ -1569,8 +1721,12 @@ export async function uploadFacebookPageCover(params: {
     });
 
     const json1 = safeJsonParse(res1);
-    if (json1 && !json1.error) {
-      const directUrl = await getPhotoDirectUrl(photoId, cleanToken, proxy);
+    if (
+      res1?.trim() === "true" ||
+      json1 === true ||
+      (json1 && !json1.error)
+    ) {
+      const directUrl = await getPhotoDirectUrl(photoId, activeToken, proxy);
       return {
         success: true,
         photoId,
@@ -1586,7 +1742,7 @@ export async function uploadFacebookPageCover(params: {
   // Thử cách 2: cover=<photoId> string đơn giản
   try {
     const formBody2 = new URLSearchParams({
-      access_token: cleanToken,
+      access_token: activeToken,
       cover: photoId,
       offset_x: "0",
       offset_y: "0",
@@ -1605,8 +1761,12 @@ export async function uploadFacebookPageCover(params: {
     });
 
     const json2 = safeJsonParse(res2);
-    if (json2 && !json2.error) {
-      const directUrl = await getPhotoDirectUrl(photoId, cleanToken, proxy);
+    if (
+      res2?.trim() === "true" ||
+      json2 === true ||
+      (json2 && !json2.error)
+    ) {
+      const directUrl = await getPhotoDirectUrl(photoId, activeToken, proxy);
       return {
         success: true,
         photoId,
