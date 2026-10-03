@@ -612,8 +612,7 @@ export default function HomePage() {
       });
 
       const isLive = checked.isLive;
-      let accountStatus: "live" | "checkpoint" | "die" | "unverified" =
-        "unverified";
+      let accountStatus: "live" | "checkpoint" | "die" = "die";
 
       if (isLive) {
         accountStatus = "live";
@@ -623,20 +622,8 @@ export default function HomePage() {
         checked.error?.toLowerCase().includes("xác minh")
       ) {
         accountStatus = "checkpoint";
-      } else if (
-        checked.error?.toLowerCase().includes("die") ||
-        checked.error?.toLowerCase().includes("không tồn tại") ||
-        checked.error?.toLowerCase().includes("does not exist")
-      ) {
-        accountStatus = "die";
       } else {
-        // Giữ trạng thái hiện tại hoặc unverified, TUYỆT ĐỐI không gán bừa checkpoint
-        accountStatus =
-          targetAccount.status &&
-          targetAccount.status !== "checkpoint" &&
-          targetAccount.status !== "die"
-            ? targetAccount.status
-            : "unverified";
+        accountStatus = "die";
       }
 
       const updated = {
