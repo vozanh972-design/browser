@@ -5,11 +5,12 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Flag,
   Key,
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import type { FacebookPageItem } from "@/lib/facebook-api";
 import { showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,7 @@ export interface AccountDetailData {
   platform?: "facebook" | "instagram";
   status: "live" | "checkpoint" | "die" | "unverified";
   rawText: string;
+  pages?: FacebookPageItem[];
 }
 
 interface AccountDetailDialogProps {
@@ -61,6 +64,10 @@ function DialogAvatar({
   isInstagram?: boolean;
 }) {
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setError(false);
+  }, [url]);
 
   if (!url || error) {
     return isInstagram ? (
@@ -114,9 +121,11 @@ export function AccountDetailDialog({
   const isInstagram = account.platform === "instagram";
   const avatarUrl =
     account.avatar ||
-    (account.uid && !account.uid.startsWith("acc_")
-      ? `https://graph.facebook.com/${account.uid}/picture?type=large`
-      : undefined);
+    (account.token
+      ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${account.token}`
+      : account.uid && !account.uid.startsWith("acc_")
+        ? `https://graph.facebook.com/${account.uid}/picture?type=large`
+        : undefined);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -424,6 +433,87 @@ export function AccountDetailDialog({
                 {account.cookie || tr("Chưa có Cookie", "No Cookie")}
               </div>
             </div>
+
+            {/* Danh sách Fanpage / Profile+ của tài khoản */}
+            {account.pages && account.pages.length > 0 && (
+              <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Flag className="size-3.5 text-blue-500" />
+                    <span>
+                      {tr(
+                        `Danh sách Fanpage / Profile+ (${account.pages.length})`,
+                        `Fanpages / Profile+ (${account.pages.length})`,
+                      )}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
+                  {account.pages.map((p) => {
+                    const displayUid = p.additionalProfileId || p.pageId;
+                    return (
+                      <div
+                        key={p.pageId}
+                        className="flex items-center justify-between p-2 rounded bg-background/80 border border-border/50 text-xs"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center">
+                            {p.avatar ? (
+                              // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
+                              <img
+                                src={p.avatar}
+                                alt=""
+                                className="size-full object-cover"
+                              />
+                            ) : (
+                              <FaFacebook className="size-4 text-[#1877F2]" />
+                            )}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-semibold truncate text-foreground">
+                              {p.pageName}
+                            </span>
+                            <span className="text-[10px] font-mono text-muted-foreground">
+                              UID: {displayUid}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleCopy(
+                                displayUid,
+                                `page_uid_${p.pageId}`,
+                                "Page UID",
+                              )
+                            }
+                            className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted/40 hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer"
+                          >
+                            UID
+                          </button>
+                          {p.pageToken && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleCopy(
+                                  p.pageToken,
+                                  `page_tok_${p.pageId}`,
+                                  "Page Token",
+                                )
+                              }
+                              className="text-[10px] px-1.5 py-0.5 rounded border border-blue-500/20 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 cursor-pointer"
+                            >
+                              Token
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Chuỗi định dạng gốc */}
             <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 flex flex-col gap-1.5">

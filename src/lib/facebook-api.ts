@@ -1,5 +1,15 @@
 import { invoke } from "@tauri-apps/api/core";
 
+export interface FacebookPageItem {
+  pageId: string;
+  pageName: string;
+  pageToken?: string;
+  additionalProfileId?: string;
+  avatar?: string;
+  category?: string;
+  isLive?: boolean;
+}
+
 export interface FacebookAccountInfo {
   uid: string;
   name: string;
@@ -11,6 +21,7 @@ export interface FacebookAccountInfo {
   proxy?: string;
   isLive: boolean;
   error?: string;
+  pages?: FacebookPageItem[];
 }
 
 export async function executeCurlRequest(options: {
@@ -346,16 +357,21 @@ export async function fetchAccountDetailsWithToken(
   avatar?: string;
   cover?: string;
   email?: string;
+  pages?: FacebookPageItem[];
   isLive: boolean;
   error?: string;
 }> {
   const cleanToken = token.trim();
-  const url = `https://graph.facebook.com/me?fields=id,name,email&access_token=${cleanToken}`;
+  const url = `https://graph.facebook.com/v21.0/me?fields=id,name,email,picture.width(1024).height(1024){url,is_silhouette},cover{id,source}&access_token=${cleanToken}`;
 
   try {
     const raw = await executeCurlRequest({
       url,
       method: "GET",
+      headers: [
+        "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
+        `Authorization: OAuth ${cleanToken}`,
+      ],
       proxy,
       timeoutSecs: 15,
     });
@@ -363,13 +379,83 @@ export async function fetchAccountDetailsWithToken(
     const json = JSON.parse(raw);
     if (json.id) {
       const uidStr = String(json.id);
-      const avatarUrl = `https://graph.facebook.com/${uidStr}/picture?type=large`;
+
+      // Bóc tách Avatar HD thật từ picture.data.url (chuẩn FacebookMediaEngine.kt)
+      let avatarUrl: string | undefined;
+      const picData = json.picture?.data;
+      if (picData?.url && !picData.url.includes("84628273_176159830277856")) {
+        avatarUrl = picData.url;
+      }
+      if (!avatarUrl) {
+        avatarUrl = `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${cleanToken}`;
+      }
+
+      const coverUrl: string | undefined = json.cover?.source || undefined;
+
+      // Lấy danh sách Pages con của tài khoản (chuẩn FacebookAccountManager.kt & FacebookPageEngine.kt)
+      let pages: FacebookPageItem[] = [];
+      try {
+        const pagesUrl = `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,category,tasks,additional_profile_id,delegate_page_id,picture.width(200).height(200){url}&limit=100&access_token=${cleanToken}`;
+        const pagesRaw = await executeCurlRequest({
+          url: pagesUrl,
+          method: "GET",
+          headers: [
+            "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
+            `Authorization: OAuth ${cleanToken}`,
+          ],
+          proxy,
+          timeoutSecs: 15,
+        });
+        const pagesJson = JSON.parse(pagesRaw);
+        if (Array.isArray(pagesJson.data)) {
+          pages = pagesJson.data.map(
+            (item: {
+              id?: string | number;
+              name?: string;
+              access_token?: string;
+              additional_profile_id?: string;
+              delegate_page_id?: string;
+              category?: string;
+              picture?: { data?: { url?: string } };
+            }) => {
+              const pid = String(item.id || "");
+              const pname = String(item.name || "");
+              const ptoken = String(item.access_token || "");
+              const addId = String(item.additional_profile_id || "").trim();
+              const delegate = String(item.delegate_page_id || "").trim();
+              let uid615 = "";
+              if (addId.startsWith("615")) uid615 = addId;
+              else if (delegate.startsWith("615")) uid615 = delegate;
+              else if (pid.startsWith("615")) uid615 = pid;
+              else uid615 = addId || delegate || pid;
+
+              const pAvatar =
+                item.picture?.data?.url ||
+                `https://graph.facebook.com/v21.0/${pid}/picture?type=large&access_token=${cleanToken}`;
+
+              return {
+                pageId: pid,
+                pageName: pname,
+                pageToken: ptoken,
+                additionalProfileId: uid615,
+                avatar: pAvatar,
+                category: item.category || "",
+                isLive: true,
+              };
+            },
+          );
+        }
+      } catch {
+        // ignore
+      }
 
       return {
         uid: uidStr,
         name: json.name || uidStr,
         email: json.email || undefined,
         avatar: avatarUrl,
+        cover: coverUrl,
+        pages,
         isLive: true,
       };
     }
@@ -438,6 +524,8 @@ export async function getTokenFromCookie(
   uid?: string;
   name?: string;
   avatar?: string;
+  cover?: string;
+  pages?: FacebookPageItem[];
   isLive: boolean;
   error?: string;
 }> {
@@ -485,8 +573,10 @@ export async function getTokenFromCookie(
       // Lấy Profile bằng token EAAAA vừa lấy được qua Graph API /me
       let name = uid || "Facebook User";
       let avatarUrl = uid
-        ? `https://graph.facebook.com/${uid}/picture?type=large`
+        ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${eaaaaToken}`
         : undefined;
+      let coverUrl: string | undefined;
+      let pages: FacebookPageItem[] = [];
 
       try {
         const details = await fetchAccountDetailsWithToken(eaaaaToken, proxy);
@@ -494,6 +584,8 @@ export async function getTokenFromCookie(
           if (details.name) name = details.name;
           if (details.avatar) avatarUrl = details.avatar;
           if (details.uid) uid = details.uid;
+          if (details.cover) coverUrl = details.cover;
+          if (details.pages) pages = details.pages;
         }
       } catch {
         // ignore
@@ -506,6 +598,8 @@ export async function getTokenFromCookie(
         uid: uid || cUser || "N/A",
         name,
         avatar: avatarUrl,
+        cover: coverUrl,
+        pages,
         isLive: true,
       };
     }
@@ -545,6 +639,8 @@ export async function facebookLogin(
   uid?: string;
   name?: string;
   avatar?: string;
+  cover?: string;
+  pages?: FacebookPageItem[];
   error?: string;
 }> {
   const cleanEmail = email.trim();
@@ -693,14 +789,20 @@ export async function facebookLogin(
 
         const finalUid = uid || json.uid || cleanEmail;
         let name = finalUid;
-        let avatar = `https://graph.facebook.com/${finalUid}/picture?type=large`;
+        let avatar = eaaaaToken
+          ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${eaaaaToken}`
+          : `https://graph.facebook.com/${finalUid}/picture?type=large`;
+        let cover: string | undefined;
+        let pages: FacebookPageItem[] = [];
 
         try {
           const details = await fetchAccountDetailsWithToken(eaaaaToken, proxy);
           if (details.isLive) {
             if (details.name) name = details.name;
             if (details.avatar) avatar = details.avatar;
+            if (details.cover) cover = details.cover;
             if (details.uid) uid = details.uid;
+            if (details.pages) pages = details.pages;
           }
         } catch {
           // ignore
@@ -714,6 +816,8 @@ export async function facebookLogin(
           uid: finalUid,
           name,
           avatar,
+          cover,
+          pages,
         };
       }
 
@@ -928,11 +1032,12 @@ export async function checkFacebookAccountFull(params: {
           name: details.name || activeUid,
           avatar:
             details.avatar ||
-            `https://graph.facebook.com/${details.uid || activeUid}/picture?type=large`,
+            `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${activeToken}`,
           cover: details.cover,
           email: details.email,
           token: activeToken,
           cookie: activeCookie,
+          pages: details.pages,
           proxy,
           isLive: true,
         };
@@ -962,9 +1067,11 @@ export async function checkFacebookAccountFull(params: {
           name: tokenRes.name || activeUid,
           avatar:
             tokenRes.avatar ||
-            `https://graph.facebook.com/${activeUid}/picture?type=large`,
+            `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${activeToken}`,
+          cover: tokenRes.cover,
           token: activeToken,
           cookie: activeCookie,
+          pages: tokenRes.pages,
           proxy,
           isLive: true,
         };
@@ -996,7 +1103,9 @@ export async function checkFacebookAccountFull(params: {
           cookie: activeCookie,
           avatar:
             loginRes.avatar ||
-            `https://graph.facebook.com/${activeUid}/picture?type=large`,
+            `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${activeToken}`,
+          cover: loginRes.cover,
+          pages: loginRes.pages,
           proxy,
           isLive: true,
         };

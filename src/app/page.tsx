@@ -31,7 +31,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
-import { checkFacebookAccountFull } from "@/lib/facebook-api";
+import {
+  checkFacebookAccountFull,
+  type FacebookPageItem,
+} from "@/lib/facebook-api";
 import { checkCookieIg, fetchIgUserInfo } from "@/lib/instagram-api";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";
@@ -60,6 +63,7 @@ export interface FacebookAccount {
   platform?: "facebook" | "instagram";
   status: "live" | "checkpoint" | "die" | "unverified";
   rawText: string;
+  pages?: FacebookPageItem[];
 }
 
 function AccountAvatar({
@@ -70,6 +74,10 @@ function AccountAvatar({
   isInstagram?: boolean;
 }) {
   const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setError(false);
+  }, [url]);
 
   return (
     <div className="relative size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
@@ -641,6 +649,7 @@ export default function HomePage() {
         mail: checked.email || targetAccount.mail,
         token: checked.token || targetAccount.token,
         cookie: checked.cookie || targetAccount.cookie,
+        pages: checked.pages || targetAccount.pages,
         status: (isLive ? "live" : accountStatus) as
           | "live"
           | "checkpoint"
@@ -1267,15 +1276,17 @@ export default function HomePage() {
                       const isRunning = runState?.isRunning ?? false;
                       const avatarSrc =
                         acc.avatar ||
-                        (acc.uid && !acc.uid.startsWith("acc_")
-                          ? `https://graph.facebook.com/${acc.uid}/picture?type=large`
-                          : undefined);
+                        (acc.token
+                          ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${acc.token}`
+                          : acc.uid && !acc.uid.startsWith("acc_")
+                            ? `https://graph.facebook.com/${acc.uid}/picture?type=large`
+                            : undefined);
 
                       return (
-                        <div
-                          key={acc.id}
-                          role="row"
-                          tabIndex={0}
+                        <div key={acc.id} className="flex flex-col">
+                          <div
+                            role="row"
+                            tabIndex={0}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
@@ -1542,7 +1553,63 @@ export default function HomePage() {
                             </button>
                           </div>
                         </div>
-                      );
+
+                        {/* Danh sách Pages con của tài khoản bên dưới */}
+                        {acc.pages && acc.pages.length > 0 && (
+                          <div className="pl-12 pr-4 py-2 bg-muted/15 border-t border-border/20 flex flex-col gap-1.5 text-xs">
+                            <div className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
+                              <Flag className="size-3.5 text-blue-500 shrink-0" />
+                              <span>
+                                {tr(
+                                  `Danh sách Page / Profile+ (${acc.pages.length}):`,
+                                  `Pages / Profile+ (${acc.pages.length}):`,
+                                )}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-0.5">
+                              {acc.pages.map((p) => {
+                                const displayUid =
+                                  p.additionalProfileId || p.pageId;
+                                return (
+                                  <div
+                                    key={p.pageId}
+                                    className="flex items-center justify-between p-1.5 rounded-md bg-background/80 border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-colors shadow-2xs"
+                                  >
+                                    <div className="flex items-center gap-2 min-w-0">
+                                      <AccountAvatar url={p.avatar} />
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="font-medium truncate text-foreground leading-tight text-[11.5px]">
+                                          {p.pageName}
+                                        </span>
+                                        <span className="font-mono text-[9.5px] text-muted-foreground truncate leading-tight">
+                                          {displayUid}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {p.pageToken && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCopy(p.pageToken!);
+                                        }}
+                                        className="ml-1 text-[9px] px-1.5 py-0.5 font-mono bg-blue-500/10 text-blue-500 rounded border border-blue-500/20 hover:bg-blue-500/20 shrink-0 cursor-pointer"
+                                        title={tr(
+                                          "Copy Page Token",
+                                          "Copy Page Token",
+                                        )}
+                                      >
+                                        Token
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
                     })}
                   </div>
                 )}
@@ -1685,7 +1752,11 @@ export default function HomePage() {
 
       {/* Account Detail Dialog */}
       <AccountDetailDialog
-        account={detailAccount}
+        account={
+          detailAccount
+            ? accounts.find((a) => a.id === detailAccount.id) || detailAccount
+            : null
+        }
         isOpen={isDetailOpen}
         onClose={() => {
           setIsDetailOpen(false);
