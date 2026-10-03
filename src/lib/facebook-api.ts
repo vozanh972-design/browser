@@ -24,6 +24,24 @@ export interface FacebookAccountInfo {
   pages?: FacebookPageItem[];
 }
 
+export function sanitizeProxy(proxy?: string | null): string | undefined {
+  if (!proxy) return undefined;
+  const p = proxy.trim();
+  if (
+    !p ||
+    p === "Chưa chọn" ||
+    p === "Chua chon" ||
+    p === "—" ||
+    p === "-" ||
+    p === "none" ||
+    p === "null" ||
+    !p.includes(":")
+  ) {
+    return undefined;
+  }
+  return p;
+}
+
 export async function executeCurlRequest(options: {
   url: string;
   method?: string;
@@ -36,6 +54,7 @@ export async function executeCurlRequest(options: {
   formFields?: string[];
 }): Promise<string> {
   const timeoutLimit = options.timeoutSecs || 15;
+  const validProxy = sanitizeProxy(options.proxy);
 
   const isTauri =
     typeof window !== "undefined" &&
@@ -48,7 +67,7 @@ export async function executeCurlRequest(options: {
       headers: options.headers ?? null,
       body: options.body ?? null,
       cookie: options.cookie ?? null,
-      proxy: options.proxy ?? null,
+      proxy: validProxy ?? null,
       includeHeaders: options.includeHeaders ?? false,
       timeoutSecs: timeoutLimit,
       formFields: options.formFields ?? null,

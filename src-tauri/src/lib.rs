@@ -872,8 +872,17 @@ async fn curl_request(
       cmd.arg("-b").arg(c);
     }
     if let Some(p) = proxy {
-      if !p.trim().is_empty() {
-        cmd.arg("-x").arg(p.trim());
+      let pt = p.trim();
+      if !pt.is_empty()
+        && pt != "Chưa chọn"
+        && pt != "Chua chon"
+        && pt != "—"
+        && pt != "-"
+        && pt != "none"
+        && pt != "null"
+        && pt.contains(':')
+      {
+        cmd.arg("-x").arg(pt);
       }
     }
     if let Some(ref b) = body {
