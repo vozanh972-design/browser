@@ -31,6 +31,7 @@ export interface IgCookieInfo {
   avatar?: string;
   fbDtsg?: string;
   lsd?: string;
+  isCheckpoint?: boolean;
 }
 
 export interface IgPageTokens {
@@ -225,94 +226,103 @@ export function computeJazoest(fbDtsg?: string | null): string {
 }
 
 /**
- * 1. CHECK LIVE & TỰ ĐỘNG LẤY USERNAME/ID/AVATAR TỪ COOKIE (GoMaxInstagramEngine.kt + InstagramApiClient.kt)
+ * 1. CHECK LIVE & TỰ ĐỘNG LẤY USERNAME/ID/AVATAR TỪ COOKIE CHUẨN TA TOOL / XSMM
+ * Endpoint: https://www.instagram.com/api/v1/accounts/edit/web_form_data/
  */
 export async function checkCookieIg(
   cookieStr: string,
   proxy?: string,
 ): Promise<IgCookieInfo> {
   const cookie = normalizeCookie(cookieStr);
-  const cookies = parseCookie(cookie);
-
-  const uid = cookies.ds_user_id || "";
-  const csrf = cookies.csrftoken || "";
-  const sessionid = cookies.sessionid || "";
-
-  if (!uid || !csrf || !sessionid) {
-    return { isLive: false, username: "", userId: uid };
+  if (!cookie.trim()) {
+    return { isLive: false, username: "", userId: "" };
   }
 
+  const cookies = parseCookie(cookie);
+  const dsMatch = cookie.match(/ds_user_id=(\d+)/);
+  let userId = dsMatch?.[1] || cookies.ds_user_id || "";
+
   try {
-    const html = await executeCurlRequest({
-      url: "https://www.instagram.com/",
+    const raw = await executeCurlRequest({
+      url: "https://www.instagram.com/api/v1/accounts/edit/web_form_data/",
       method: "GET",
       cookie,
       proxy,
       headers: [
         `User-Agent: ${BROWSER_UA}`,
-        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+        `X-IG-App-ID: ${APP_ID}`,
+        "X-Requested-With: XMLHttpRequest",
+        "Referer: https://www.instagram.com/accounts/edit/",
+        'sec-ch-ua: "Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "sec-ch-ua-mobile: ?0",
+        'sec-ch-ua-platform: "Windows"',
+        "Accept: */*",
+        "Accept-Language: vi-VN,vi;q=0.9,fr-FR;q=0.8,fr;q=0.7,en-US;q=0.6,en;q=0.5",
       ],
-      timeoutSecs: 15,
+      timeoutSecs: 25,
     });
 
-    const lower = html.toLowerCase();
-    // Kiểm tra die / checkpoint (GoMax checkLiveCookie)
-    if (
-      lower.includes("login_required") ||
-      lower.includes("checkpoint_required") ||
-      lower.includes("challenge_required") ||
-      lower.includes('"is_logged_in":false') ||
-      lower.includes("accounts/suspended") ||
-      lower.includes("1357031")
-    ) {
-      return { isLive: false, username: "", userId: uid };
-    }
+    let isLive = false;
+    let username = "";
+    let isCheckpoint = false;
+    let fullName = "";
 
-    // Bóc username bằng regex
-    let usernameMatch = html.match(/"username"\s*:\s*"([^"]+)"/);
-    if (!usernameMatch) {
-      usernameMatch = html.match(/username":"([^"]+)"/);
-    }
-    let username = usernameMatch?.[1] || "";
-
-    // Fallback bóc username qua REST API
-    if (!username || /^\d+$/.test(username)) {
-      try {
-        const restRes = await executeCurlRequest({
-          url: "https://www.instagram.com/api/v1/accounts/current_user/?edit=true",
-          method: "GET",
-          cookie,
-          proxy,
-          headers: [`User-Agent: ${BROWSER_UA}`, `X-IG-App-ID: ${APP_ID}`],
-          timeoutSecs: 8,
-        });
-        const restJson = JSON.parse(restRes);
-        if (restJson.user?.username) {
-          username = String(restJson.user.username).trim();
+    try {
+      const configdata = JSON.parse(raw);
+      if (
+        configdata &&
+        typeof configdata === "object" &&
+        configdata.form_data &&
+        configdata.form_data.username
+      ) {
+        isLive = true;
+        username = String(configdata.form_data.username).trim();
+        fullName =
+          configdata.form_data.first_name ||
+          configdata.form_data.full_name ||
+          "";
+        if (configdata.form_data.id) {
+          userId = String(configdata.form_data.id);
         }
-      } catch {
-        // ignore
+      } else {
+        const msg = String(configdata?.message || "").toLowerCase();
+        const errType = String(configdata?.error_type || "").toLowerCase();
+        if (
+          msg.includes("checkpoint") ||
+          msg.includes("challenge") ||
+          errType.includes("checkpoint") ||
+          configdata?.checkpoint_url
+        ) {
+          isCheckpoint = true;
+        }
+      }
+    } catch {
+      const lower = raw.toLowerCase();
+      if (
+        lower.includes("checkpoint_required") ||
+        lower.includes("challenge_required") ||
+        lower.includes("accounts/suspended") ||
+        lower.includes("1357031")
+      ) {
+        isCheckpoint = true;
       }
     }
 
-    // Bóc fb_dtsg và lsd
-    let fbDtsgMatch = html.match(/"fb_dtsg":"([^"]+)"/);
-    if (!fbDtsgMatch) {
-      fbDtsgMatch = html.match(/DTSGInitialData[^"]*"token":"([^"]+)"/);
+    if (!isLive) {
+      return {
+        isLive: false,
+        isCheckpoint,
+        username: "",
+        userId,
+      };
     }
-    const fbDtsg = fbDtsgMatch?.[1] || "";
 
-    const lsdMatch = html.match(/"lsd":"([^"]+)"/);
-    const lsd = lsdMatch?.[1] || "";
-
-    // Lấy thông tin chi tiết qua App Native REST API (/api/v1/users/{actorId}/info/)
-    let fullName = "";
+    // Nếu Live, lấy thêm avatar từ API /api/v1/users/{userId}/info/ nếu có userId
     let avatarUrl = "";
-    if (uid && uid !== "0") {
+    if (userId && userId !== "0") {
       try {
         const userRes = await executeCurlRequest({
-          url: `https://i.instagram.com/api/v1/users/${uid}/info/`,
+          url: `https://i.instagram.com/api/v1/users/${userId}/info/`,
           method: "GET",
           cookie,
           proxy,
@@ -322,13 +332,13 @@ export async function checkCookieIg(
             "X-IG-Connection-Type: WIFI",
             "X-IG-Capabilities: 3brBvw==",
           ],
-          timeoutSecs: 10,
+          timeoutSecs: 8,
         });
         const userJson = JSON.parse(userRes);
         const userObj = userJson.user;
         if (userObj) {
           if (!username) username = userObj.username || "";
-          fullName = userObj.full_name || "";
+          if (!fullName) fullName = userObj.full_name || "";
           const hdPic = userObj.hd_profile_pic_url_info?.url;
           const regPic = userObj.profile_pic_url;
           avatarUrl = hdPic || regPic || "";
@@ -340,15 +350,14 @@ export async function checkCookieIg(
 
     return {
       isLive: true,
-      username: username || uid,
-      userId: uid,
+      isCheckpoint: false,
+      username: username || userId,
+      userId,
       fullName: fullName || undefined,
       avatar: avatarUrl || undefined,
-      fbDtsg: fbDtsg || undefined,
-      lsd: lsd || undefined,
     };
   } catch {
-    return { isLive: false, username: "", userId: uid };
+    return { isLive: false, username: "", userId };
   }
 }
 
@@ -539,9 +548,13 @@ export async function doFollow(options: {
   let fbDtsg = inputTokens?.dtsg || "";
   let lsd = inputTokens?.lsd || "";
   if (!fbDtsg || !lsd) {
-    const check = await checkCookieIg(cookie, proxy);
-    if (check.fbDtsg) fbDtsg = check.fbDtsg;
-    if (check.lsd) lsd = check.lsd;
+    const pageTokens = await extractPageTokens(
+      cookie,
+      "https://www.instagram.com/",
+      proxy,
+    );
+    if (pageTokens.dtsg) fbDtsg = pageTokens.dtsg;
+    if (pageTokens.lsd) lsd = pageTokens.lsd;
   }
 
   const realJazoest = computeJazoest(fbDtsg);
@@ -706,9 +719,13 @@ export async function doLike(options: {
   let lsd = inputTokens?.lsd || "";
 
   if (!fbDtsg || !lsd) {
-    const check = await checkCookieIg(cookie, proxy);
-    if (check.fbDtsg) fbDtsg = check.fbDtsg;
-    if (check.lsd) lsd = check.lsd;
+    const pageTokens = await extractPageTokens(
+      cookie,
+      "https://www.instagram.com/",
+      proxy,
+    );
+    if (pageTokens.dtsg) fbDtsg = pageTokens.dtsg;
+    if (pageTokens.lsd) lsd = pageTokens.lsd;
   }
 
   const realJazoest = computeJazoest(fbDtsg);
@@ -874,9 +891,13 @@ export async function doComment(options: {
   let lsd = inputTokens?.lsd || "";
 
   if (!fbDtsg || !lsd) {
-    const check = await checkCookieIg(cookie, proxy);
-    if (check.fbDtsg) fbDtsg = check.fbDtsg;
-    if (check.lsd) lsd = check.lsd;
+    const pageTokens = await extractPageTokens(
+      cookie,
+      "https://www.instagram.com/",
+      proxy,
+    );
+    if (pageTokens.dtsg) fbDtsg = pageTokens.dtsg;
+    if (pageTokens.lsd) lsd = pageTokens.lsd;
   }
 
   const vars = JSON.stringify({

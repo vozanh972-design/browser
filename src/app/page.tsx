@@ -523,13 +523,18 @@ export default function HomePage() {
             finalUsername = targetAccount.name.replace(/^@/, "").trim();
           }
 
+          let accountStatus: "live" | "checkpoint" | "die" = "die";
+          if (info.isLive) {
+            accountStatus = "live";
+          } else if (info.isCheckpoint) {
+            accountStatus = "checkpoint";
+          } else {
+            accountStatus = "die";
+          }
+
           const updated: Partial<FacebookAccount> = {
             cookie,
-            status: (info.isLive ? "live" : "unverified") as
-              | "live"
-              | "checkpoint"
-              | "die"
-              | "unverified",
+            status: accountStatus,
             name: finalUsername ? `@${finalUsername}` : targetAccount.name,
             uid: info.userId || realUid,
             avatar: finalAvatar,
@@ -556,7 +561,7 @@ export default function HomePage() {
         } else {
           // Tài khoản Instagram không có cookie: kiểm tra xem UID / Username có tồn tại
           const cleanId = realUid?.replace(/^@/, "").trim() || "";
-          if (cleanId && /^\d+$/.test(cleanId)) {
+          if (cleanId) {
             const uInfo = await fetchIgUserInfo(cleanId, proxyParam);
             const finalUsername =
               uInfo.username?.replace(/^@/, "").trim() ||
