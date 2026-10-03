@@ -729,7 +729,8 @@ export async function facebookLogin(
       if (i < passwords.length - 1) continue;
       return {
         isSuccess: false,
-        error: err instanceof Error ? err.message : "Lỗi kết nối Facebook login",
+        error:
+          err instanceof Error ? err.message : "Lỗi kết nối Facebook login",
       };
     }
   }
@@ -1031,8 +1032,6 @@ export async function checkFacebookAccountFull(params: {
             `https://graph.facebook.com/${activeUid}/picture?type=large`,
           token: activeToken,
           cookie: activeCookie,
-          cover: activeCover,
-          email: activeEmail,
           proxy,
           isLive: true,
         };
@@ -1058,15 +1057,13 @@ export async function checkFacebookAccountFull(params: {
 
   return {
     uid: fallbackUid,
-    name: activeName || fallbackUid,
+    name: fallbackUid,
     token: activeToken,
     cookie: activeCookie,
     avatar:
       fallbackUid !== "N/A"
         ? `https://graph.facebook.com/${fallbackUid}/picture?type=large`
         : undefined,
-    cover: activeCover,
-    email: activeEmail,
     proxy,
     isLive: false,
     error: "Chưa thể lấy Access Token từ tài khoản",
