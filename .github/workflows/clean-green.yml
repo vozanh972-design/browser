@@ -21,7 +21,7 @@ jobs:
       contents: read
     steps:
       - name: Xóa các run đã chọn
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const target = '${{ github.event.inputs.target }}';
