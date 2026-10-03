@@ -418,7 +418,104 @@ export async function createFacebookPageApi({
  * Bóc tách thông điệp lỗi chi tiết từ Facebook (Chuẩn FacebookPageService.kt)
  */
 function extractDetailedFacebookError(body: string): string {
+  // 1. Tìm thông báo Toast trong Bloks Action: (bk.action.io.Toast, "..." (Chuẩn Bước 2 FacebookPageService.kt)
+  const toastRegex = body.match(/\(bk\.action\.io\.Toast,\s*"([^"]+)"/);
+  if (toastRegex?.[1]?.trim()) {
+    return toastRegex[1].trim();
+  }
+  const genericToast = body.match(/Toast,\s*["']([^"']+)["']/i);
+  if (genericToast?.[1]?.trim()) {
+    return genericToast[1].trim();
+  }
+
+  // 2. Phân tích cấu trúc JSON errors / error (Chuẩn Bước 3 FacebookPageService.kt & QuanLyPageEngine.kt)
+  try {
+    const json = JSON.parse(body);
+
+    if (json.error && typeof json.error === "object") {
+      const err = json.error;
+      const code = err.code || 0;
+      const subcode = err.error_subcode || 0;
+      const title = (err.error_user_title || "").trim();
+      const userMsg = (err.error_user_msg || "").trim();
+
+      // Nếu Facebook trả về tiêu đề và thông điệp người dùng cụ thể (ví dụ: Bị chặn tạm thời)
+      if (title || userMsg) {
+        const fullMsg = [title, userMsg].filter(Boolean).join(": ");
+        return code !== 0 ? `(#${code}) ${fullMsg}` : fullMsg;
+      }
+
+      if (code === 368 || subcode === 1390008) {
+        return "Tài khoản bị Facebook giới hạn tính năng tạm thời (Spam Block - Mã 368)";
+      }
+      if (code === 100 && subcode === 33) {
+        return "Đối tượng không tồn tại hoặc tài khoản không có quyền thao tác";
+      }
+      if (code === 200) {
+        return "Không đủ quyền quản trị đối với Page này";
+      }
+
+      const msg = (err.message || "").trim();
+      if (msg) return code !== 0 ? `(#${code}) ${msg}` : msg;
+    }
+
+    if (Array.isArray(json.errors) && json.errors.length > 0) {
+      const err = json.errors[0];
+      const desc = (err.description || "").trim();
+      const summary = (err.summary || "").trim();
+      const msg = (err.message || "").trim();
+      const code = err.code || 0;
+
+      let text = "";
+      if (summary && desc && summary.toLowerCase() !== desc.toLowerCase()) {
+        text = `${summary}: ${desc}`;
+      } else {
+        text = desc || summary || msg;
+      }
+
+      if (code === 1675030) {
+        return `(#1675030) ${text || "Lỗi thực hiện truy vấn"} (Bị Meta giới hạn/chặn tạo Trang tạm thời)`;
+      }
+
+      if (text) {
+        return code !== 0 ? `(#${code}) ${text}` : text;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 3. Tìm các thuộc tính lỗi trong chuỗi JSON qua Regex (Chuẩn Bước 4 FacebookPageService.kt)
+  const messageRegexes = [
+    /["']error_user_msg["']\s*:\s*["']([^"']+)["']/,
+    /["']error_description["']\s*:\s*["']([^"']+)["']/,
+    /["']error_message["']\s*:\s*["']([^"']+)["']/,
+    /["']description["']\s*:\s*["']([^"']+)["']/,
+    /["']message["']\s*:\s*["']([^"']+)["']/,
+  ];
+  for (const regex of messageRegexes) {
+    const match = body.match(regex);
+    if (match?.[1]?.trim()) {
+      const found = match[1].trim();
+      if (
+        found.toLowerCase() !== "null" &&
+        !found.startsWith("http") &&
+        !found.toLowerCase().includes("graphql")
+      ) {
+        return found;
+      }
+    }
+  }
+
+  // 4. Kiểm tra các lỗi phổ biến đặc trưng của Meta (Chuẩn Bước 1 FacebookPageService.kt)
   const lowerBody = body.toLowerCase();
+  if (
+    lowerBody.includes("bị chặn tạm thời") ||
+    lowerBody.includes("tạm thời bị chặn") ||
+    lowerBody.includes("temporarily blocked")
+  ) {
+    return "Tài khoản bị Facebook chặn thao tác tạm thời";
+  }
   if (
     lowerBody.includes("phone_verification") ||
     lowerBody.includes("confirm_phone") ||
@@ -450,31 +547,13 @@ function extractDetailedFacebookError(body: string): string {
     return "Tên Page không hợp lệ hoặc chứa ký tự/từ khóa bị Meta từ chối";
   }
   if (lowerBody.includes("1675030")) {
-    return "(#1675030) Lỗi thực hiện truy vấn (Yêu cầu Token EAAAA Katana hoặc đổi Proxy sạch)";
+    return "(#1675030) Bị Meta giới hạn tạo Trang tạm thời (Cần đổi Proxy hoặc cho acc nghỉ)";
   }
 
-  try {
-    const json = JSON.parse(body);
-    if (Array.isArray(json.errors) && json.errors.length > 0) {
-      const err = json.errors[0];
-      const desc = err.description || err.summary || err.message || "";
-      const code = err.code || 0;
-      if (desc) return code !== 0 ? `(#${code}) ${desc}` : desc;
-    }
-    if (json.error) {
-      const err = json.error;
-      const desc =
-        err.error_user_msg || err.error_user_title || err.message || "";
-      const code = err.code || 0;
-      if (desc) return code !== 0 ? `(#${code}) ${desc}` : desc;
-    }
-  } catch {
-    // ignore
-  }
-
-  const clean = body.replace(/[\r\n\t]+/g, " ").trim();
-  return clean.length > 120
-    ? `${clean.slice(0, 120)}...`
+  // 5. Chuỗi lỗi trực tiếp từ Facebook (Chuẩn Bước 5 FacebookPageService.kt)
+  const clean = body.replace(/[\r\n\t]+/g, " ").replace(/\\/g, "").trim();
+  return clean.length > 150
+    ? `${clean.slice(0, 150)}...`
     : clean || "Lỗi không xác định từ Facebook";
 }
 

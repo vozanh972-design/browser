@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AlertCircle,
   ChevronDown,
   ChevronRight,
   Copy,
@@ -88,6 +89,17 @@ export interface CreatedPageItem {
   rawResponse?: string;
 }
 
+export interface AccountErrorDetail {
+  accountUid: string;
+  accountName?: string;
+  pageName: string;
+  errorMessage: string;
+  rawResponse?: string;
+  timestamp: string;
+  step: number;
+  total: number;
+}
+
 const STORAGE_KEY_PAGES = "autolunex_created_pages_v1";
 
 export function RegPageView({
@@ -128,6 +140,14 @@ export function RegPageView({
   const [accountSuccessCounts, setAccountSuccessCounts] = useState<
     Record<string, number>
   >({});
+
+  // Lưu chi tiết lỗi từng tài khoản khi reg thất bại để bấm dấu chấm than đỏ xem
+  const [accountErrors, setAccountErrors] = useState<
+    Record<string, AccountErrorDetail>
+  >({});
+  const [selectedErrorDetail, setSelectedErrorDetail] =
+    useState<AccountErrorDetail | null>(null);
+  const [copiedRawError, setCopiedRawError] = useState(false);
 
   // Dialog states for Account and Page info modal
   const [selectedAccountForDetail, setSelectedAccountForDetail] =
@@ -418,46 +438,89 @@ export function RegPageView({
           } catch {
             // ignore
           }
+          // Delay sau khi tạo thành công trước khi tạo trang kế tiếp
+          if (step < regCount && !stopRequestedRef.current) {
+            const delayTime = Math.max(delayMs, 500);
+            for (let rem = Math.ceil(delayTime / 1000); rem > 0; rem--) {
+              if (stopRequestedRef.current) break;
+              setAccountStatuses((prev) => ({
+                ...prev,
+                [acc.uid]: `Đã tạo ${createdCount}/${regCount} • Chờ ${rem}s để tiếp tục...`,
+              }));
+              await new Promise((r) => setTimeout(r, 1000));
+            }
+          }
         } else {
           const errMsg = res.errorMessage || "Không thể tạo trang";
-          setAccountStatuses((prev) => ({
+          const errDetail: AccountErrorDetail = {
+            accountUid: acc.uid,
+            accountName: acc.name,
+            pageName,
+            errorMessage: errMsg,
+            rawResponse: res.rawResponse,
+            timestamp: new Date().toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+            step,
+            total: regCount,
+          };
+
+          // Lưu chi tiết lỗi để bấm vô dấu chấm than đỏ xem
+          setAccountErrors((prev) => ({
             ...prev,
-            [acc.uid]: `Lỗi: ${errMsg} (${createdCount}/${regCount})`,
+            [acc.uid]: errDetail,
           }));
 
-          if (
-            errMsg.includes("giới hạn") ||
-            errMsg.includes("quá nhiều") ||
-            errMsg.includes("Checkpoint") ||
-            errMsg.includes("limit")
-          ) {
+          // Nếu tài khoản bị checkpoint thật sự (khóa nick / acc die) thì mới dừng
+          const isDeadCheckpoint =
+            errMsg.includes("yêu cầu xác thực Số điện thoại") ||
+            errMsg.includes("xác thực sms") ||
+            errMsg.includes("Checkpoint yêu cầu xác minh") ||
+            acc.status === "die" ||
+            acc.status === "checkpoint";
+
+          if (isDeadCheckpoint) {
             setAccountStatuses((prev) => ({
               ...prev,
-              [acc.uid]: `Dừng: Bị giới hạn tạo trang (${createdCount} Page)`,
+              [acc.uid]: `Dừng (Checkpoint): ${errMsg}`,
             }));
             break;
           }
-        }
 
-        // Delay giữa các lần tạo
-        if (step < regCount && !stopRequestedRef.current) {
-          const delayTime = Math.max(delayMs, 500);
-          for (let rem = Math.ceil(delayTime / 1000); rem > 0; rem--) {
-            if (stopRequestedRef.current) break;
+          // NẾU CÒN LẦN TẠO TIẾP: ĐỢI ĐÚNG SỐ GIÂY ĐÃ CÀI ĐẶT RỒI MỚI REG TIẾP, BÁO RÕ LỖI CHỨ KHÔNG GHI ĐÈ BỎ QUA LỖI
+          if (step < regCount && !stopRequestedRef.current) {
+            const delayTime = Math.max(delayMs, 500);
+            for (let rem = Math.ceil(delayTime / 1000); rem > 0; rem--) {
+              if (stopRequestedRef.current) break;
+              setAccountStatuses((prev) => ({
+                ...prev,
+                [acc.uid]: `Lỗi (${step}/${regCount}): ${errMsg} • Đợi ${rem}s để thử tiếp...`,
+              }));
+              await new Promise((r) => setTimeout(r, 1000));
+            }
+          } else {
+            // Lần reg cuối cùng
             setAccountStatuses((prev) => ({
               ...prev,
-              [acc.uid]: `Chờ ${rem}s... [${createdCount}/${regCount}]`,
+              [acc.uid]: `Lỗi (${step}/${regCount}): ${errMsg}`,
             }));
-            await new Promise((r) => setTimeout(r, 1000));
           }
         }
       }
 
       if (!stopRequestedRef.current) {
-        setAccountStatuses((prev) => ({
-          ...prev,
-          [acc.uid]: `Hoàn tất (${createdCount}/${regCount} Page)`,
-        }));
+        setAccountStatuses((prev) => {
+          const current = prev[acc.uid] || "";
+          if (createdCount === 0 && current.startsWith("Lỗi")) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [acc.uid]: `Hoàn tất (${createdCount}/${regCount} Page)`,
+          };
+        });
       }
     };
 
@@ -955,7 +1018,7 @@ export function RegPageView({
                       </div>
 
                       {/* Tiến độ Reg Page của Acc chủ */}
-                      <div className="min-w-0 pr-2">
+                      <div className="min-w-0 pr-2 flex items-center gap-1.5">
                         {isCheckpointOrDie ? (
                           <span className="text-[11px] font-semibold text-rose-500/80">
                             {acc.status === "checkpoint"
@@ -963,28 +1026,55 @@ export function RegPageView({
                               : "Die (Vô hiệu)"}
                           </span>
                         ) : (
-                          <span
-                            className={cn(
-                              "text-[11px] truncate block font-medium",
-                              statusText.includes("Đang tạo")
-                                ? "text-amber-400 animate-pulse font-semibold"
-                                : statusText.includes("Đã tạo") ||
-                                    statusText.includes("Hoàn tất")
-                                  ? "text-emerald-400 font-semibold"
-                                  : statusText.includes("Lỗi") ||
-                                      statusText.includes("Dừng")
-                                    ? "text-rose-400 font-semibold"
-                                    : "text-muted-foreground",
+                          <>
+                            <span
+                              className={cn(
+                                "text-[11px] truncate block font-medium flex-1",
+                                statusText.includes("Đang tạo")
+                                  ? "text-amber-400 animate-pulse font-semibold"
+                                  : statusText.includes("Đã tạo") ||
+                                      statusText.includes("Hoàn tất")
+                                    ? "text-emerald-400 font-semibold"
+                                    : statusText.includes("Lỗi") ||
+                                        statusText.includes("Dừng")
+                                      ? "text-rose-400 font-semibold"
+                                      : "text-muted-foreground",
+                              )}
+                              title={statusText}
+                            >
+                              {statusText}
+                            </span>
+                            {/* Dấu chấm than màu đỏ khi có lỗi tạo Page */}
+                            {accountErrors[acc.uid] && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSelectedErrorDetail(accountErrors[acc.uid])
+                                }
+                                title="Bấm để xem chi tiết lỗi tạo Page từ Facebook"
+                                className="size-5 rounded-full bg-rose-500/15 text-rose-500 hover:bg-rose-500/25 border border-rose-500/40 flex items-center justify-center cursor-pointer transition-transform hover:scale-115 shrink-0 animate-pulse shadow-2xs"
+                              >
+                                <AlertCircle className="size-3.5" />
+                              </button>
                             )}
-                            title={statusText}
-                          >
-                            {statusText}
-                          </span>
+                          </>
                         )}
                       </div>
 
-                      {/* Thao tác: Dấu chấm than xem chi tiết Profile */}
-                      <div className="flex items-center justify-center pr-2">
+                      {/* Thao tác: Dấu chấm than đỏ xem lỗi / Dấu chấm than xem chi tiết Profile */}
+                      <div className="flex items-center justify-center gap-1 pr-2">
+                        {accountErrors[acc.uid] && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedErrorDetail(accountErrors[acc.uid])
+                            }
+                            title="Lỗi tạo Page - Bấm xem chi tiết lỗi từ Facebook"
+                            className="size-7 flex items-center justify-center text-rose-500 bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/40 rounded-full transition-colors cursor-pointer shadow-2xs animate-pulse"
+                          >
+                            <AlertCircle className="size-3.5" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setSelectedAccountForDetail(acc)}
@@ -1322,6 +1412,124 @@ export function RegPageView({
                 variant="secondary"
                 onClick={() => setSelectedPageForDetail(null)}
                 className="w-full h-8.5 text-xs font-semibold cursor-pointer"
+              >
+                Đóng
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Dialog xem chi tiết lỗi Facebook khi bấm dấu chấm than đỏ */}
+      {selectedErrorDetail && (
+        <Dialog
+          open={!!selectedErrorDetail}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedErrorDetail(null);
+              setCopiedRawError(false);
+            }
+          }}
+        >
+          <DialogContent className="max-w-lg p-5">
+            <DialogHeader className="pb-3 border-b border-border/40">
+              <div className="flex items-center gap-2 text-rose-500">
+                <AlertCircle className="size-5 shrink-0" />
+                <DialogTitle className="text-sm font-bold text-foreground">
+                  Chi tiết lỗi tạo Page từ Facebook
+                </DialogTitle>
+              </div>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-3 py-2 text-xs">
+              {/* Thông tin tài khoản & lần tạo */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2 rounded-lg bg-muted/20 border border-border/50">
+                  <span className="text-[10.5px] text-muted-foreground block font-medium">
+                    Tài khoản chủ
+                  </span>
+                  <span className="font-semibold text-foreground truncate block">
+                    {selectedErrorDetail.accountName ||
+                      selectedErrorDetail.accountUid}
+                  </span>
+                  <span className="text-[10px] font-mono text-muted-foreground">
+                    UID: {selectedErrorDetail.accountUid}
+                  </span>
+                </div>
+                <div className="p-2 rounded-lg bg-muted/20 border border-border/50">
+                  <span className="text-[10.5px] text-muted-foreground block font-medium">
+                    Tiến độ & Thời gian
+                  </span>
+                  <span className="font-semibold text-foreground block font-mono">
+                    Lần tạo: {selectedErrorDetail.step}/{selectedErrorDetail.total}
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {selectedErrorDetail.timestamp}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tên page định tạo */}
+              <div className="p-2 rounded-lg bg-muted/20 border border-border/50">
+                <span className="text-[10.5px] text-muted-foreground block font-medium">
+                  Tên Page dự định tạo
+                </span>
+                <span className="font-semibold text-primary">
+                  {selectedErrorDetail.pageName}
+                </span>
+              </div>
+
+              {/* Thông điệp lỗi chi tiết từ Facebook */}
+              <div className="flex flex-col gap-1">
+                <span className="text-[11px] font-semibold text-rose-400">
+                  Thông điệp lỗi Facebook phản hồi:
+                </span>
+                <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 font-medium leading-relaxed break-words">
+                  {selectedErrorDetail.errorMessage}
+                </div>
+              </div>
+
+              {/* Phản hồi gốc từ Meta (Raw Response) */}
+              {selectedErrorDetail.rawResponse && (
+                <div className="flex flex-col gap-1 mt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-muted-foreground">
+                      Phản hồi gốc từ Meta (Raw Response):
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        if (selectedErrorDetail.rawResponse) {
+                          navigator.clipboard.writeText(
+                            selectedErrorDetail.rawResponse,
+                          );
+                          setCopiedRawError(true);
+                          setTimeout(() => setCopiedRawError(false), 2000);
+                        }
+                      }}
+                      className="h-6 px-2 text-[10.5px] gap-1 cursor-pointer text-muted-foreground hover:text-foreground"
+                    >
+                      <Copy className="size-3" />
+                      <span>{copiedRawError ? "Đã chép!" : "Sao chép"}</span>
+                    </Button>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto rounded-lg bg-muted/40 p-2.5 font-mono text-[11px] text-muted-foreground border border-border/60 break-all select-all">
+                    {selectedErrorDetail.rawResponse}
+                  </div>
+                </div>
+              )}
+
+              {/* Nút đóng */}
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setSelectedErrorDetail(null);
+                  setCopiedRawError(false);
+                }}
+                className="w-full h-8 text-xs font-semibold cursor-pointer mt-1"
               >
                 Đóng
               </Button>
