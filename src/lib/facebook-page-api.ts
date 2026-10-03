@@ -233,18 +233,24 @@ export async function createFacebookPageApi({
     };
   }
 
+  // Cấu trúc chuẩn 100% từ FacebookPageService.kt (Li2/n;)
   const innerParams = {
     client_input_params: {
       page_id: "0",
       profile_plus_id: "0",
+      cp_upsell_declined: 0,
+      off_platform_creator_reachout_id: "",
       category_ids: [categoryId],
+      nav_chain: "...",
     },
     server_params: {
       referrer: "pages_tab_launch_point",
+      INTERNAL__latency_qpl_marker_id: 36707139,
       creation_source: "android",
       name: pageName,
       variant: 5,
       screen: "category",
+      INTERNAL__latency_qpl_instance_id: 55098533200051.0,
     },
   };
 
@@ -256,23 +262,49 @@ export async function createFacebookPageApi({
       "com.bloks.www.additional.profile.plus.creation.action.category.submit",
   };
 
+  const ntContext = {
+    using_white_navbar: true,
+    styles_id: "588d028b36bed0e1889e09b60e0f9aea",
+    pixel_ratio: 2,
+    is_push_on: true,
+    debug_tooling_metadata_token: null,
+    is_flipper_enabled: false,
+    theme_params: [
+      {
+        value: [],
+        design_system_name: "FDS",
+      },
+    ],
+    bloks_version:
+      "338f8ead5977a2c41eba3e92584dcf1d132e8b7928f1f5796662ec064023047d",
+  };
+
   const variables = {
     params: level1,
     scale: "2",
+    nt_context: ntContext,
   };
 
   const params = new URLSearchParams({
     method: "post",
+    pretty: "false",
     format: "json",
+    server_timestamps: "true",
+    locale: "vi_VN",
     client_doc_id: "119940804239956818821550724",
     variables: JSON.stringify(variables),
   });
 
   const headers = [
-    `User-Agent: ${KATANA_USER_AGENT}`,
+    "User-Agent: [FBAN/FB4A;FBAV/537.0.0.47.77;FBPN/com.facebook.katana;]",
     `Authorization: OAuth ${cleanToken}`,
-    "X-FB-Friendly-Name: AdditionalProfilePlusCreation",
     "Content-Type: application/x-www-form-urlencoded",
+    "X-Fb-Connection-Type: WIFI",
+    "X-Fb-Http-Engine: Tigon/Liger",
+    "X-Fb-Client-Ip: True",
+    "X-Fb-Server-Cluster: True",
+    "X-Graphql-Request-Purpose: fetch",
+    "X-Graphql-Client-Library: graphservice",
   ];
 
   try {
@@ -285,38 +317,66 @@ export async function createFacebookPageApi({
       timeoutSecs: 30,
     });
 
-    let pageId: string | undefined;
-    let profilePlusId: string | undefined;
+    // 1. Bóc tách Page ID / Profile Plus ID theo 5 mẫu định dạng chuẩn cloneexe (Li2/i0;)
+    let extractedPageId: string | undefined;
+    let extractedProfilePlusId: string | undefined;
 
-    const p615Match = raw.match(/615\d{12,}/);
-    if (p615Match?.[0]) profilePlusId = p615Match[0];
+    // Mẫu 1: WriteGlobalConsistencyStore
+    const p1Page = raw.match(
+      /\(bk\.action\.bloks\.WriteGlobalConsistencyStore,\s*"ADDITIONAL_PROFILE_PLUS_CREATION:page_id"\s*,\s*"(\d+)"/,
+    );
+    if (p1Page?.[1]) extractedPageId = p1Page[1];
 
-    const idRegex =
-      /["'](?:ADDITIONAL_PROFILE_PLUS_CREATION:)?(?:profile_plus_id|page_id)["']\s*,\s*["'](\d+)["']/;
-    const idMatch = raw.match(idRegex);
-    if (idMatch?.[1]) {
-      const foundId = idMatch[1];
-      if (foundId.startsWith("615")) profilePlusId = foundId;
-      else pageId = foundId;
+    const p1Plus = raw.match(
+      /\(bk\.action\.bloks\.WriteGlobalConsistencyStore,\s*"ADDITIONAL_PROFILE_PLUS_CREATION:profile_plus_id"\s*,\s*"(\d+)"/,
+    );
+    if (p1Plus?.[1]) extractedProfilePlusId = p1Plus[1];
+
+    // Mẫu 2: dq8 action
+    if (!extractedPageId) {
+      const p2Page = raw.match(
+        /\(dq8\s+"ADDITIONAL_PROFILE_PLUS_CREATION:page_id"\s+"(\d+)"/,
+      );
+      if (p2Page?.[1]) extractedPageId = p2Page[1];
+    }
+    if (!extractedProfilePlusId) {
+      const p2Plus = raw.match(
+        /\(dq8\s+"ADDITIONAL_PROFILE_PLUS_CREATION:profile_plus_id"\s+"(\d+)"/,
+      );
+      if (p2Plus?.[1]) extractedProfilePlusId = p2Plus[1];
     }
 
-    if (!pageId) {
+    // Mẫu 3: JSON key-value
+    if (!extractedPageId) {
       const p3Page = raw.match(/"page_id"\s*[:=]\s*"?(\d{6,})"?/);
-      if (p3Page?.[1] && p3Page[1] !== "0") pageId = p3Page[1];
+      if (p3Page?.[1] && p3Page[1] !== "0") extractedPageId = p3Page[1];
     }
-    if (!profilePlusId) {
+    if (!extractedProfilePlusId) {
       const p3Plus = raw.match(/"profile_plus_id"\s*[:=]\s*"?(\d{6,})"?/);
-      if (p3Plus?.[1] && p3Plus[1] !== "0") profilePlusId = p3Plus[1];
+      if (p3Plus?.[1] && p3Plus[1] !== "0") extractedProfilePlusId = p3Plus[1];
     }
 
-    const finalId = profilePlusId || pageId;
-    const isSuccess = !!finalId && finalId.length > 0;
+    // Mẫu 4: Word boundary
+    if (!extractedPageId) {
+      const p4Page = raw.match(/\bpage_id\b[^\d]*(\d{6,})/);
+      if (p4Page?.[1] && p4Page[1] !== "0") extractedPageId = p4Page[1];
+    }
+
+    // Mẫu 5: 615 regex
+    if (!extractedProfilePlusId) {
+      const p615Match = raw.match(/615\d{12,}/);
+      if (p615Match?.[0]) extractedProfilePlusId = p615Match[0];
+    }
+
+    const finalId = extractedProfilePlusId || extractedPageId;
+    const isSuccess =
+      raw.includes("create_success") || (!!finalId && finalId !== "0");
 
     if (isSuccess) {
       return {
         isSuccess: true,
         pageId: finalId,
-        profilePlusId,
+        profilePlusId: extractedProfilePlusId,
         pageName,
         category: categoryId,
         rawResponse: raw,
@@ -485,7 +545,7 @@ export async function getFacebookPages(
 
   // 2. Fallback v19.0 me/accounts
   try {
-    const fallbackUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token,additional_profile_id&limit=100&access_token=${cleanToken}`;
+    const fallbackUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=id,name,access_token,additional_profile_id,delegate_page_id&limit=100&access_token=${cleanToken}`;
     const raw = await executeCurlRequest({
       url: fallbackUrl,
       method: "GET",
@@ -497,14 +557,23 @@ export async function getFacebookPages(
     if (Array.isArray(arr) && arr.length > 0) {
       for (const p of arr) {
         if (p.id) {
+          const addId = p.additional_profile_id ? String(p.additional_profile_id) : "";
+          const delId = p.delegate_page_id ? String(p.delegate_page_id) : "";
+          const pid = String(p.id);
+          const p615 = addId.startsWith("615")
+            ? addId
+            : delId.startsWith("615")
+              ? delId
+              : pid.startsWith("615")
+                ? pid
+                : addId || delId || undefined;
+
           list.push({
-            pageId: String(p.id),
+            pageId: pid,
             pageName: String(p.name || ""),
             pageToken: String(p.access_token || ""),
-            additionalProfileId: p.additional_profile_id
-              ? String(p.additional_profile_id)
-              : undefined,
-            avatar: `https://graph.facebook.com/${p.id}/picture?type=large`,
+            additionalProfileId: p615,
+            avatar: `https://graph.facebook.com/${pid}/picture?type=large`,
             isLive: true,
           });
         }

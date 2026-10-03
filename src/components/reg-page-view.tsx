@@ -36,7 +36,9 @@ import { facebookLogin, getTokenAndInfoFromCookie } from "@/lib/facebook-api";
 import {
   createFacebookPageApi,
   generateRandomName,
+  getFacebookPages,
   getRandomCategory,
+  type FacebookPageItem,
 } from "@/lib/facebook-page-api";
 import { showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
@@ -58,12 +60,14 @@ export interface FacebookAccount {
   platform?: "facebook" | "instagram";
   status: "live" | "checkpoint" | "die" | "unverified";
   rawText: string;
+  pages?: FacebookPageItem[];
 }
 
 interface RegPageViewProps {
   onNavigateToNuoiAcc: () => void;
   availableAccountsCount?: number;
   accounts?: FacebookAccount[];
+  onUpdateAccountPages?: (uid: string, pages: FacebookPageItem[]) => void;
 }
 
 export interface CreatedPageItem {
@@ -85,6 +89,7 @@ export function RegPageView({
   onNavigateToNuoiAcc,
   availableAccountsCount = 0,
   accounts = [],
+  onUpdateAccountPages,
 }: RegPageViewProps) {
   // Config States (Tên tự sinh hoàn toàn)
   const [nameType, setNameType] = useState<"vietnamese" | "western">(
@@ -353,6 +358,36 @@ export function RegPageView({
             ...prev,
             [acc.uid]: `Đã tạo ${createdCount}/${regCount}: ${pageName}`,
           }));
+
+          // Cập nhật ngay danh sách Page đang có của tài khoản (chuẩn cloneexe)
+          try {
+            const fetchedPages = await getFacebookPages(token, proxy);
+            const currentPages = [...(acc.pages || [])];
+            let combinedPages =
+              fetchedPages.length > 0 ? fetchedPages : currentPages;
+            const alreadyExists = combinedPages.some(
+              (p) =>
+                p.pageId === finalId || p.additionalProfileId === finalId,
+            );
+            if (!alreadyExists) {
+              combinedPages = [
+                {
+                  pageId: finalId,
+                  pageName: pageName,
+                  pageToken: "",
+                  additionalProfileId:
+                    res.profilePlusId ||
+                    (finalId.startsWith("615") ? finalId : undefined),
+                  avatar: `https://graph.facebook.com/${finalId}/picture?type=large`,
+                  isLive: true,
+                },
+                ...combinedPages,
+              ];
+            }
+            onUpdateAccountPages?.(acc.uid, combinedPages);
+          } catch {
+            // ignore
+          }
         } else {
           const errMsg = res.errorMessage || "Không thể tạo trang";
           setAccountStatuses((prev) => ({
@@ -423,16 +458,24 @@ export function RegPageView({
   const filteredAccounts = accounts.filter((a) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
-    const hasMatchingPage = createdPages.some(
+    const hasMatchingCreatedPage = createdPages.some(
       (p) =>
         p.creatorUid === a.uid &&
         (p.name.toLowerCase().includes(q) ||
           p.pageId.toLowerCase().includes(q)),
     );
+    const hasMatchingExistingPage = (a.pages || []).some(
+      (p) =>
+        p.pageName.toLowerCase().includes(q) ||
+        p.pageId.toLowerCase().includes(q) ||
+        (p.additionalProfileId &&
+          p.additionalProfileId.toLowerCase().includes(q)),
+    );
     return (
       a.uid.toLowerCase().includes(q) ||
       a.name?.toLowerCase().includes(q) ||
-      hasMatchingPage
+      hasMatchingCreatedPage ||
+      hasMatchingExistingPage
     );
   });
 
@@ -645,7 +688,10 @@ export function RegPageView({
                 Danh sách Tài khoản chủ & Fanpage
               </span>
               <Badge variant="outline" className="text-[10px] h-4.5 px-1.5">
-                {accounts.length} Acc chủ • {createdPages.length} Page
+                {accounts.length} Acc chủ •{" "}
+                {accounts.reduce((sum, a) => sum + (a.pages?.length || 0), 0) +
+                  createdPages.length}{" "}
+                Page
               </Badge>
             </div>
 
@@ -743,11 +789,14 @@ export function RegPageView({
                 const isCheckpointOrDie =
                   acc.status === "checkpoint" || acc.status === "die";
                 const statusText = accountStatuses[acc.uid] || "Sẵn sàng";
-                const accPages = createdPages.filter(
+                const accExistingPages = acc.pages || [];
+                const accCreatedPages = createdPages.filter(
                   (p) => p.creatorUid === acc.uid,
                 );
+                const totalAccPages =
+                  accExistingPages.length + accCreatedPages.length;
                 const successCount =
-                  accountSuccessCounts[acc.uid] || accPages.length;
+                  accountSuccessCounts[acc.uid] || accCreatedPages.length;
 
                 return (
                   <div key={acc.id} className="flex flex-col">
@@ -772,7 +821,7 @@ export function RegPageView({
 
                       {/* Tên Profile chủ (Thuần, không có chữ Page) */}
                       <div className="flex items-center gap-2 min-w-0 pr-2">
-                        {accPages.length > 0 ? (
+                        {totalAccPages > 0 ? (
                           <button
                             type="button"
                             onClick={() => handleToggleExpandAccount(acc.uid)}
@@ -831,8 +880,8 @@ export function RegPageView({
                               </span>
                             )}
                           </div>
-                          {/* Nút ẩn/hiện page con: bình thường ẩn đi, bấm vô để xem */}
-                          {accPages.length > 0 ? (
+                          {/* Nút ẩn/hiện page con: hiển thị tổng số page đang có và đã reg */}
+                          {totalAccPages > 0 ? (
                             <button
                               type="button"
                               onClick={() => handleToggleExpandAccount(acc.uid)}
@@ -840,8 +889,8 @@ export function RegPageView({
                             >
                               <span>
                                 {isExpanded
-                                  ? `Ẩn ${accPages.length} Page`
-                                  : `Xem ${accPages.length} Page`}
+                                  ? `Ẩn ${totalAccPages} Page`
+                                  : `Xem ${totalAccPages} Page (${accExistingPages.length} đang có, ${accCreatedPages.length} đã reg)`}
                               </span>
                               {isExpanded ? (
                                 <ChevronDown className="size-2.5" />
@@ -851,7 +900,7 @@ export function RegPageView({
                             </button>
                           ) : (
                             <span className="text-[10px] text-muted-foreground truncate">
-                              Đã reg: {successCount} Page
+                              Đang có: 0 Page • Đã reg: 0 Page
                             </span>
                           )}
                         </div>
@@ -917,69 +966,176 @@ export function RegPageView({
                       </div>
                     </div>
 
-                    {/* CÁC DÒNG FANPAGE REG RA TỪ ACC CHỦ (MẶC ĐỊNH ẨN ĐI, BẤM VÔ MỚI HIỆN) */}
-                    {isExpanded &&
-                      accPages.map((page) => (
-                        <div
-                          key={page.id}
-                          className="grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_60px] items-center px-3 py-1.5 text-xs bg-muted/10 hover:bg-muted/20 transition-colors border-b border-border/10"
-                        >
-                          <div className="flex items-center justify-center">
-                            <span className="font-mono text-muted-foreground text-[10px]">
-                              ↳
-                            </span>
-                          </div>
-
-                          {/* Tên Fanpage: Luôn có chữ "Page : " ở trước */}
-                          <div className="flex items-center gap-2 min-w-0 pl-3 pr-2">
-                            <div className="size-5 rounded-md bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
-                              <Flag className="size-3" />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="font-medium text-foreground truncate">
-                                {page.name.startsWith("Page :")
-                                  ? page.name
-                                  : `Page : ${page.name}`}
-                              </span>
-                              <span className="text-[9.5px] text-muted-foreground">
-                                {page.createdAt} • {page.category}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* UID Page (Profile Plus 615) */}
-                          <div className="font-mono text-primary font-semibold text-[11px] truncate pr-2">
-                            {page.pageId}
-                          </div>
-
-                          {/* Phân loại: Page reg ra */}
-                          <div>
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                              <Flag className="size-2.5" />
-                              <span>Fanpage</span>
-                            </span>
-                          </div>
-
-                          {/* Trạng thái Page */}
-                          <div>
-                            <span className="text-[10.5px] text-emerald-400 font-medium">
-                              Thành công
-                            </span>
-                          </div>
-
-                          {/* Thao tác: Dấu chấm than xem chi tiết Page (Avatar, Bìa, UID...) */}
-                          <div className="flex items-center justify-center pr-2">
-                            <button
-                              type="button"
-                              onClick={() => setSelectedPageForDetail(page)}
-                              title="Xem chi tiết Fanpage (Avatar, Bìa, UID)"
-                              className="size-6 flex items-center justify-center text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10 rounded-full transition-colors cursor-pointer border border-border/50 shadow-2xs"
+                    {/* CÁC DÒNG PAGE CON CỦA ACC CHỦ (MẶC ĐỊNH ẨN ĐI, BẤM VÔ MỚI HIỆN) */}
+                    {isExpanded && (
+                      <div className="divide-y divide-border/10 bg-muted/5">
+                        {/* 1. Danh sách Page ĐANG CÓ của tài khoản */}
+                        {accExistingPages.map((page) => {
+                          const displayUid =
+                            page.additionalProfileId || page.pageId;
+                          return (
+                            <div
+                              key={`existing_${acc.id}_${page.pageId}`}
+                              className="grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_60px] items-center px-3 py-1.5 text-xs hover:bg-muted/20 transition-colors"
                             >
-                              <Info className="size-3" />
-                            </button>
+                              <div className="flex items-center justify-center">
+                                <span className="font-mono text-muted-foreground/60 text-[10px]">
+                                  ↳
+                                </span>
+                              </div>
+
+                              {/* Tên Page: Avatar + Tên + Badge 615 */}
+                              <div className="flex items-center gap-2 min-w-0 pl-3 pr-2">
+                                <div className="size-5 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
+                                  {page.avatar ? (
+                                    // biome-ignore lint/performance/noImgElement: avatar
+                                    <img
+                                      src={page.avatar}
+                                      alt=""
+                                      className="size-full object-cover"
+                                    />
+                                  ) : (
+                                    <Flag className="size-3 text-blue-500" />
+                                  )}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <div className="flex items-center gap-1.5 min-w-0">
+                                    <span className="font-medium text-foreground truncate text-[11px]">
+                                      {page.pageName}
+                                    </span>
+                                    <span className="text-[8.5px] font-mono px-1 rounded bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold shrink-0">
+                                      {displayUid.startsWith("615")
+                                        ? "Page 615"
+                                        : "Fanpage"}
+                                    </span>
+                                  </div>
+                                  <span className="text-[9px] font-mono text-muted-foreground truncate">
+                                    UID: {displayUid}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* UID Page */}
+                              <div className="font-mono text-blue-400 font-semibold text-[11px] truncate pr-2">
+                                {displayUid}
+                              </div>
+
+                              {/* Phân loại: Page đang có */}
+                              <div>
+                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                                  <Flag className="size-2.5" />
+                                  <span>Page đang có</span>
+                                </span>
+                              </div>
+
+                              {/* Trạng thái Page */}
+                              <div>
+                                {page.isLive === false ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20">
+                                    Die
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
+                                    Live
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Thao tác */}
+                              <div className="flex items-center justify-center pr-2">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSelectedAccountForDetail({
+                                      id: `page_${acc.id}_${page.pageId}`,
+                                      uid: displayUid,
+                                      name: page.pageName,
+                                      token: page.pageToken || acc.token,
+                                      cookie: acc.cookie,
+                                      proxy: acc.proxy,
+                                      avatar: page.avatar,
+                                      platform: "facebook",
+                                      status:
+                                        page.isLive === false
+                                          ? "die"
+                                          : "live",
+                                      rawText: `Page: ${page.pageName} | UID: ${displayUid}`,
+                                    })
+                                  }
+                                  title="Xem chi tiết Page"
+                                  className="size-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer border border-border/50 shadow-2xs"
+                                >
+                                  <Info className="size-3" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* 2. Danh sách Fanpage VỪA REG RA */}
+                        {accCreatedPages.map((page) => (
+                          <div
+                            key={page.id}
+                            className="grid grid-cols-[40px_1.6fr_1.3fr_110px_1.4fr_60px] items-center px-3 py-1.5 text-xs bg-muted/10 hover:bg-muted/20 transition-colors"
+                          >
+                            <div className="flex items-center justify-center">
+                              <span className="font-mono text-muted-foreground text-[10px]">
+                                ↳
+                              </span>
+                            </div>
+
+                            {/* Tên Fanpage: Luôn có chữ "Page : " ở trước */}
+                            <div className="flex items-center gap-2 min-w-0 pl-3 pr-2">
+                              <div className="size-5 rounded-md bg-indigo-500/10 text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-500/20">
+                                <Flag className="size-3" />
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-medium text-foreground truncate">
+                                  {page.name.startsWith("Page :")
+                                    ? page.name
+                                    : `Page : ${page.name}`}
+                                </span>
+                                <span className="text-[9.5px] text-muted-foreground">
+                                  {page.createdAt} • {page.category}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* UID Page (Profile Plus 615) */}
+                            <div className="font-mono text-primary font-semibold text-[11px] truncate pr-2">
+                              {page.pageId}
+                            </div>
+
+                            {/* Phân loại: Page reg ra */}
+                            <div>
+                              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                <Flag className="size-2.5" />
+                                <span>Page mới reg</span>
+                              </span>
+                            </div>
+
+                            {/* Trạng thái Page */}
+                            <div>
+                              <span className="text-[10.5px] text-emerald-400 font-medium">
+                                Thành công
+                              </span>
+                            </div>
+
+                            {/* Thao tác: Dấu chấm than xem chi tiết Page (Avatar, Bìa, UID...) */}
+                            <div className="flex items-center justify-center pr-2">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPageForDetail(page)}
+                                title="Xem chi tiết Fanpage (Avatar, Bìa, UID)"
+                                className="size-6 flex items-center justify-center text-muted-foreground hover:text-indigo-400 hover:bg-indigo-500/10 rounded-full transition-colors cursor-pointer border border-border/50 shadow-2xs"
+                              >
+                                <Info className="size-3" />
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

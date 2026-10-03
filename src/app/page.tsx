@@ -736,6 +736,29 @@ export default function HomePage() {
     }
   };
 
+  const handleUpdateAccountPages = (
+    uid: string,
+    newPages: FacebookPageItem[],
+  ) => {
+    setAccounts((prev) => {
+      const updated = prev.map((a) => {
+        if (a.uid === uid || a.id === uid) {
+          return { ...a, pages: newPages };
+        }
+        return a;
+      });
+      try {
+        localStorage.setItem(
+          "autolunex_facebook_accounts_v1",
+          JSON.stringify(updated),
+        );
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  };
+
   const handleAddAccounts = (lines: string[], format: string) => {
     const formatKeys = format.split("|").map((f) => f.trim().toLowerCase());
     const newAccounts: FacebookAccount[] = lines.map((line, idx) => {
@@ -987,11 +1010,25 @@ export default function HomePage() {
         a.status !== "checkpoint" &&
         a.status !== "die",
     );
-    if (runnableAccounts.length === 0) {
+    const runnablePages: { acc: FacebookAccount; page: FacebookPageItem }[] =
+      [];
+    for (const a of accounts) {
+      if (a.status === "checkpoint" || a.status === "die") continue;
+      for (const p of a.pages || []) {
+        if (
+          selectedIds.includes(`page_${a.id}_${p.pageId}`) &&
+          p.isLive !== false
+        ) {
+          runnablePages.push({ acc: a, page: p });
+        }
+      }
+    }
+
+    if (runnableAccounts.length === 0 && runnablePages.length === 0) {
       showSuccessToast(
         tr(
-          "Các tài khoản được chọn đều bị Checkpoint/Die, không thể chạy!",
-          "Selected accounts are Checkpoint/Die, cannot run!",
+          "Các tài khoản/page được chọn đều bị Checkpoint/Die, không thể chạy!",
+          "Selected accounts/pages are Checkpoint/Die, cannot run!",
         ),
       );
       return;
@@ -1010,11 +1047,18 @@ export default function HomePage() {
       return;
     }
 
-    xsmmRunner.startAccounts(runnableAccounts, savedToken);
+    if (runnableAccounts.length > 0) {
+      xsmmRunner.startAccounts(runnableAccounts, savedToken);
+    }
+    for (const { acc, page } of runnablePages) {
+      handleRunPage(acc, page);
+    }
+
+    const totalRunning = runnableAccounts.length + runnablePages.length;
     showSuccessToast(
       tr(
-        `Bắt đầu chạy ${runnableAccounts.length} tài khoản hợp lệ trên XSMM!`,
-        `Started running ${runnableAccounts.length} valid accounts on XSMM!`,
+        `Bắt đầu chạy ${totalRunning} mục hợp lệ (Profile & Page)!`,
+        `Started running ${totalRunning} valid items (Profile & Page)!`,
       ),
     );
   };
@@ -1047,14 +1091,23 @@ export default function HomePage() {
     (a) => (a.platform || "facebook") === currentPlatform,
   );
 
+  const getAllSelectableIds = () => {
+    const ids: string[] = [];
+    for (const a of filteredAccounts) {
+      ids.push(a.id);
+      for (const p of a.pages || []) {
+        ids.push(`page_${a.id}_${p.pageId}`);
+      }
+    }
+    return ids;
+  };
+
   const toggleSelectAll = () => {
-    if (
-      selectedIds.length === filteredAccounts.length &&
-      filteredAccounts.length > 0
-    ) {
+    const allIds = getAllSelectableIds();
+    if (selectedIds.length === allIds.length && allIds.length > 0) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(filteredAccounts.map((a) => a.id));
+      setSelectedIds(allIds);
     }
   };
 
@@ -1192,12 +1245,31 @@ export default function HomePage() {
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        const toCheck = filteredAccounts.filter((a) =>
+                        const toCheckAccounts = filteredAccounts.filter((a) =>
                           selectedIds.includes(a.id),
                         );
+                        const toCheckPages: {
+                          acc: FacebookAccount;
+                          page: FacebookPageItem;
+                        }[] = [];
+                        for (const a of filteredAccounts) {
+                          for (const p of a.pages || []) {
+                            if (
+                              selectedIds.includes(`page_${a.id}_${p.pageId}`)
+                            ) {
+                              toCheckPages.push({ acc: a, page: p });
+                            }
+                          }
+                        }
                         void (async () => {
-                          for (const acc of toCheck) {
+                          for (const acc of toCheckAccounts) {
                             await handleCheckAccount(acc);
+                            const safeDelay =
+                              1200 + Math.floor(Math.random() * 800);
+                            await new Promise((r) => setTimeout(r, safeDelay));
+                          }
+                          for (const { acc, page } of toCheckPages) {
+                            await handleCheckPage(acc, page);
                             const safeDelay =
                               1200 + Math.floor(Math.random() * 800);
                             await new Promise((r) => setTimeout(r, safeDelay));
@@ -1215,10 +1287,22 @@ export default function HomePage() {
                       size="sm"
                       variant="destructive"
                       onClick={() => {
+                        const count = selectedIds.length;
                         setAccounts((prev) => {
-                          const updated = prev.filter(
-                            (a) => !selectedIds.includes(a.id),
-                          );
+                          const updated = prev
+                            .filter((a) => !selectedIds.includes(a.id))
+                            .map((a) => {
+                              if (!a.pages?.length) return a;
+                              const remainingPages = a.pages.filter(
+                                (p) =>
+                                  !selectedIds.includes(
+                                    `page_${a.id}_${p.pageId}`,
+                                  ),
+                              );
+                              if (remainingPages.length === a.pages.length)
+                                return a;
+                              return { ...a, pages: remainingPages };
+                            });
                           try {
                             localStorage.setItem(
                               "autolunex_facebook_accounts_v1",
@@ -1232,8 +1316,8 @@ export default function HomePage() {
                         setSelectedIds([]);
                         showSuccessToast(
                           tr(
-                            `Đã xóa vĩnh viễn ${selectedIds.length} tài khoản!`,
-                            `Permanently deleted ${selectedIds.length} accounts!`,
+                            `Đã xóa vĩnh viễn ${count} mục đã chọn!`,
+                            `Permanently deleted ${count} selected items!`,
                           ),
                         );
                       }}
@@ -1263,8 +1347,8 @@ export default function HomePage() {
                   <div className="flex items-center justify-center">
                     <Checkbox
                       checked={
-                        filteredAccounts.length > 0 &&
-                        selectedIds.length === filteredAccounts.length
+                        getAllSelectableIds().length > 0 &&
+                        selectedIds.length === getAllSelectableIds().length
                       }
                       onCheckedChange={toggleSelectAll}
                     />
@@ -1686,23 +1770,53 @@ export default function HomePage() {
                                 const isPageChecking =
                                   checkingIds.includes(pageKey);
 
+                                const isPageSelected =
+                                  selectedIds.includes(pageKey);
+
                                 return (
                                   <div
                                     key={p.pageId}
+                                    tabIndex={0}
+                                    role="button"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        toggleSelectOne(pageKey);
+                                      }
+                                    }}
+                                    onClick={(e) => {
+                                      const target = e.target as HTMLElement;
+                                      if (
+                                        target.closest("button") ||
+                                        target.closest("a") ||
+                                        target.closest('[role="checkbox"]')
+                                      ) {
+                                        return;
+                                      }
+                                      toggleSelectOne(pageKey);
+                                    }}
                                     className={cn(
-                                      "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-1.5 min-h-[44px] text-xs text-foreground hover:bg-muted/30 transition-colors select-none",
+                                      "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-1.5 min-h-[44px] text-xs text-foreground cursor-pointer hover:bg-muted/30 transition-colors select-none outline-none focus-visible:bg-muted/50",
                                       isPageRunning && "bg-emerald-500/5",
+                                      isPageSelected &&
+                                        "bg-primary/10 border-l-2 border-primary",
                                     )}
                                   >
-                                    {/* Cột 0 (40px): Biểu tượng nhánh con */}
-                                    <div className="flex items-center justify-center text-muted-foreground/60">
-                                      <span className="text-[12px] font-mono leading-none">
-                                        ↳
-                                      </span>
+                                    {/* Cột 0 (40px): Checkbox tích chọn như Profile */}
+                                    <div className="flex items-center justify-center">
+                                      <Checkbox
+                                        checked={isPageSelected}
+                                        onCheckedChange={() =>
+                                          toggleSelectOne(pageKey)
+                                        }
+                                      />
                                     </div>
 
                                     {/* Cột 1 (2.8fr): Avatar, Tên Page & UID */}
                                     <div className="flex items-center gap-2 min-w-0 pr-2">
+                                      <span className="text-[12px] font-mono text-muted-foreground/60 shrink-0 ml-1">
+                                        ↳
+                                      </span>
                                       <AccountAvatar url={p.avatar} />
                                       <div className="flex flex-col min-w-0">
                                         <div className="flex items-center gap-1.5">
@@ -1991,6 +2105,7 @@ export default function HomePage() {
                 filteredAccounts.length
               }
               accounts={accounts}
+              onUpdateAccountPages={handleUpdateAccountPages}
             />
           )}
         </main>
