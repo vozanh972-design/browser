@@ -32,7 +32,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getTokenAndInfoFromCookie } from "@/lib/facebook-api";
+import {
+  facebookLogin,
+  getTokenAndInfoFromCookie,
+} from "@/lib/facebook-api";
 import {
   createFacebookPageApi,
   generateRandomName,
@@ -271,6 +274,23 @@ export function RegPageView({
           const info = await getTokenAndInfoFromCookie(acc.cookie, proxy);
           if (info.token) {
             token = info.token;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (!token && acc.uid && acc.pass) {
+        try {
+          const loginRes = await facebookLogin(
+            acc.uid,
+            acc.pass,
+            acc.twoFactor,
+            undefined,
+            proxy,
+          );
+          if (loginRes.isSuccess && loginRes.eaaaaToken) {
+            token = loginRes.eaaaaToken;
           }
         } catch {
           // ignore

@@ -519,10 +519,11 @@ export default function HomePage() {
 
           const updated: Partial<FacebookAccount> = {
             cookie,
-            status: (info.isLive ? "live" : "checkpoint") as
+            status: (info.isLive ? "live" : "unverified") as
               | "live"
               | "checkpoint"
-              | "die",
+              | "die"
+              | "unverified",
             name: finalUsername ? `@${finalUsername}` : targetAccount.name,
             uid: info.userId || realUid,
             avatar: finalAvatar,

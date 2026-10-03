@@ -125,6 +125,206 @@ export function extractUidFromCookie(cookie: string): string | null {
 }
 
 // -------------------------------------------------------------
+// Facebook Password Encryption (RSA PKCS#1 + AES-256-GCM)
+// Chuẩn 100% từ FacebookToken.kt & pwd_key_fetch
+// -------------------------------------------------------------
+function modPow(base: bigint, exp: bigint, mod: bigint): bigint {
+  let res = 1n;
+  base = base % mod;
+  while (exp > 0n) {
+    if (exp % 2n === 1n) res = (res * base) % mod;
+    base = (base * base) % mod;
+    exp = exp / 2n;
+  }
+  return res;
+}
+
+function parseRsaPublicKey(pem: string): { n: bigint; e: bigint } | null {
+  try {
+    const b64 = pem
+      .replace(/-----BEGIN [^-]+-----/g, "")
+      .replace(/-----END [^-]+-----/g, "")
+      .replace(/\s+/g, "");
+    const der = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+
+    let idx = 0;
+    while (idx < der.length && der[idx] !== 0x03) idx++;
+    if (idx >= der.length) return null;
+
+    idx++; // past 0x03
+    if (der[idx] & 0x80) {
+      idx += (der[idx] & 0x7f) + 1;
+    } else {
+      idx++;
+    }
+    idx++; // skip unused bits byte (0x00)
+
+    if (der[idx] !== 0x30) return null;
+    idx++;
+    if (der[idx] & 0x80) {
+      idx += (der[idx] & 0x7f) + 1;
+    } else {
+      idx++;
+    }
+
+    if (der[idx] !== 0x02) return null;
+    idx++;
+    let nLen = der[idx];
+    if (nLen & 0x80) {
+      const lenBytes = nLen & 0x7f;
+      nLen = 0;
+      for (let i = 0; i < lenBytes; i++) {
+        nLen = (nLen << 8) | der[++idx];
+      }
+      idx++;
+    } else {
+      idx++;
+    }
+    const nBytes = der.slice(idx, idx + nLen);
+    idx += nLen;
+
+    if (der[idx] !== 0x02) return null;
+    idx++;
+    let eLen = der[idx];
+    if (eLen & 0x80) {
+      const lenBytes = eLen & 0x7f;
+      eLen = 0;
+      for (let i = 0; i < lenBytes; i++) {
+        eLen = (eLen << 8) | der[++idx];
+      }
+      idx++;
+    } else {
+      idx++;
+    }
+    const eBytes = der.slice(idx, idx + eLen);
+
+    let nHex = "";
+    for (const b of nBytes) nHex += b.toString(16).padStart(2, "0");
+    let eHex = "";
+    for (const b of eBytes) eHex += b.toString(16).padStart(2, "0");
+
+    return { n: BigInt(`0x${nHex}`), e: BigInt(`0x${eHex}`) };
+  } catch {
+    return null;
+  }
+}
+
+function rsaPkcs1Encrypt(
+  messageBytes: Uint8Array,
+  n: bigint,
+  e: bigint,
+): Uint8Array {
+  const k = 256;
+  const mLen = messageBytes.length;
+  const psLen = k - 3 - mLen;
+
+  const ps = new Uint8Array(psLen);
+  crypto.getRandomValues(ps);
+  for (let i = 0; i < ps.length; i++) {
+    if (ps[i] === 0) {
+      ps[i] = Math.floor(Math.random() * 255) + 1;
+    }
+  }
+
+  const em = new Uint8Array(k);
+  em[0] = 0x00;
+  em[1] = 0x02;
+  em.set(ps, 2);
+  em[2 + psLen] = 0x00;
+  em.set(messageBytes, 3 + psLen);
+
+  let emHex = "";
+  for (const b of em) emHex += b.toString(16).padStart(2, "0");
+  const mBig = BigInt(`0x${emHex}`);
+
+  const cBig = modPow(mBig, e, n);
+  const cHex = cBig.toString(16).padStart(k * 2, "0");
+
+  const out = new Uint8Array(k);
+  for (let i = 0; i < k; i++) {
+    out[i] = Number.parseInt(cHex.substring(i * 2, i * 2 + 2), 16);
+  }
+  return out;
+}
+
+export async function encryptPassword(
+  password: string,
+  proxy?: string,
+): Promise<string | null> {
+  try {
+    const url =
+      "https://b-graph.facebook.com/pwd_key_fetch?version=2&flow=CONTROLLER_INITIALIZATION&method=GET&fb_api_req_friendly_name=pwdKeyFetch&fb_api_caller_class=com.facebook.auth.login.AuthOperations&access_token=438142079694454|fc0a7caa49b192f64f6f5a6d9643bb28";
+    const raw = await executeCurlRequest({
+      url,
+      method: "GET",
+      proxy,
+      timeoutSecs: 15,
+    });
+    const data = JSON.parse(raw);
+    if (!data.public_key) return null;
+
+    const keyId = data.key_id ? Number(data.key_id) : 25;
+    const rsaKeys = parseRsaPublicKey(data.public_key);
+    if (!rsaKeys) return null;
+
+    const aesKey = crypto.getRandomValues(new Uint8Array(32));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+
+    const encryptedAesKey = rsaPkcs1Encrypt(aesKey, rsaKeys.n, rsaKeys.e);
+
+    const currentTime = Math.floor(Date.now() / 1000);
+    const aad = String(currentTime);
+
+    const aesCryptoKey = await crypto.subtle.importKey(
+      "raw",
+      aesKey,
+      { name: "AES-GCM" },
+      false,
+      ["encrypt"],
+    );
+
+    const cipherBuf = await crypto.subtle.encrypt(
+      {
+        name: "AES-GCM",
+        iv,
+        additionalData: new TextEncoder().encode(aad),
+        tagLength: 128,
+      },
+      aesCryptoKey,
+      new TextEncoder().encode(password),
+    );
+
+    const cipherArray = new Uint8Array(cipherBuf);
+    const tag = cipherArray.slice(cipherArray.length - 16);
+    const encryptedPass = cipherArray.slice(0, cipherArray.length - 16);
+
+    const encLen = encryptedAesKey.length;
+    const bufLen = 1 + 1 + 12 + 2 + encLen + 16 + encryptedPass.length;
+    const buf = new Uint8Array(bufLen);
+    let offset = 0;
+    buf[offset++] = 1;
+    buf[offset++] = keyId & 0xff;
+    buf.set(iv, offset);
+    offset += 12;
+    buf[offset++] = encLen & 0xff;
+    buf[offset++] = (encLen >> 8) & 0xff;
+    buf.set(encryptedAesKey, offset);
+    offset += encLen;
+    buf.set(tag, offset);
+    offset += 16;
+    buf.set(encryptedPass, offset);
+
+    let bin = "";
+    for (let i = 0; i < buf.length; i++) {
+      bin += String.fromCharCode(buf[i]);
+    }
+    return btoa(bin);
+  } catch {
+    return null;
+  }
+}
+
+// -------------------------------------------------------------
 // Facebook Graph API & Token API (Chuẩn 100% từ FacebookLoginBottomSheet.kt)
 // -------------------------------------------------------------
 const FB_APP_TOKEN = "350685531728|62f8ce9f74b12f84c123cc23437a4a32";
@@ -370,76 +570,33 @@ export async function facebookLogin(
 
   const cookieJar = datr ? `datr=${datr}` : undefined;
 
-  const loginParams = new URLSearchParams({
-    email: cleanEmail,
-    password: cleanPass,
-    generate_session_cookies: "1",
-    locale: "vi_VN",
-    client_country_code: "VN",
-    access_token: FB_APP_TOKEN,
-    api_key: FB_API_KEY,
-    adid,
-    machine_id: machineId,
-    jazoest,
-    fb_api_req_friendly_name: "authenticate",
-    sig: FB_SIG,
-  });
+  const encPass = await encryptPassword(cleanPass, proxy);
+  const passwords: string[] = [];
+  if (encPass) passwords.push(encPass);
+  passwords.push(cleanPass); // fallback plaintext
 
-  try {
-    let raw = await executeCurlRequest({
-      url: "https://b-graph.facebook.com/auth/login",
-      method: "POST",
-      body: loginParams.toString(),
-      cookie: cookieJar,
-      headers: [
-        "Content-Type: application/x-www-form-urlencoded",
-        "User-Agent: [FBAN/FB4A;FBAV/537.0.0.47.77;FBPN/com.facebook.katana;]",
-      ],
-      proxy,
-      timeoutSecs: 20,
+  for (let i = 0; i < passwords.length; i++) {
+    const pwd = passwords[i];
+    const loginParams = new URLSearchParams({
+      email: cleanEmail,
+      password: pwd,
+      generate_session_cookies: "1",
+      locale: "vi_VN",
+      client_country_code: "VN",
+      access_token: FB_APP_TOKEN,
+      api_key: FB_API_KEY,
+      adid,
+      machine_id: machineId,
+      jazoest,
+      fb_api_req_friendly_name: "authenticate",
+      sig: FB_SIG,
     });
 
-    let json = JSON.parse(raw);
-
-    // Xử lý 2FA nếu Meta yêu cầu mã xác minh
-    const errorData = json.error?.error_data;
-    if (errorData?.login_first_factor && errorData?.uid) {
-      const factor = errorData.login_first_factor;
-      const uidFromError = errorData.uid;
-
-      if (!twofaSecret) {
-        return {
-          isSuccess: false,
-          error: "Tài khoản yêu cầu mã 2FA nhưng chưa nhập mã bảo mật",
-        };
-      }
-
-      let otpCode = twofaSecret.trim();
-      if (!/^\d{6}$/.test(otpCode)) {
-        otpCode = await generateTOTP(twofaSecret);
-      }
-
-      if (!otpCode) {
-        return {
-          isSuccess: false,
-          error: "Không thể tạo mã 2FA từ secret",
-        };
-      }
-
-      const data2fa = new URLSearchParams({
-        email: cleanEmail,
-        access_token: FB_APP_TOKEN,
-        twofactor_code: otpCode,
-        password: cleanPass,
-        userid: uidFromError,
-        machine_id: factor,
-        generate_session_cookies: "1",
-      });
-
-      raw = await executeCurlRequest({
+    try {
+      let raw = await executeCurlRequest({
         url: "https://b-graph.facebook.com/auth/login",
         method: "POST",
-        body: data2fa.toString(),
+        body: loginParams.toString(),
         cookie: cookieJar,
         headers: [
           "Content-Type: application/x-www-form-urlencoded",
@@ -449,58 +606,138 @@ export async function facebookLogin(
         timeoutSecs: 20,
       });
 
-      json = JSON.parse(raw);
-    }
-
-    if (json.access_token) {
-      const accessToken = json.access_token;
-      const eaaaaToken =
-        (await convertTokenToEAAAA(accessToken, proxy)) || accessToken;
-
-      const cookieParts: string[] = [];
-      let uid: string | undefined;
-
-      if (Array.isArray(json.session_cookies)) {
-        for (const c of json.session_cookies) {
-          cookieParts.push(`${c.name}=${c.value}`);
-          if (c.name === "c_user") uid = c.value;
-        }
-      }
-
-      const finalUid = uid || json.uid || cleanEmail;
-      let name = finalUid;
-      let avatar = `https://graph.facebook.com/${finalUid}/picture?type=large`;
-
+      let json: {
+        access_token?: string;
+        session_cookies?: Array<{ name: string; value: string }>;
+        uid?: string;
+        error?: {
+          message?: string;
+          error_data?: { login_first_factor?: string; uid?: string };
+        };
+      };
       try {
-        const details = await fetchAccountDetailsWithToken(eaaaaToken, proxy);
-        if (details.isLive) {
-          if (details.name) name = details.name;
-          if (details.avatar) avatar = details.avatar;
-          if (details.uid) uid = details.uid;
-        }
+        json = JSON.parse(raw);
       } catch {
-        // ignore
+        continue;
       }
 
+      // Xử lý 2FA (chuẩn FacebookToken.kt dòng 324 & PHP)
+      const errorData = json.error?.error_data;
+      if (errorData?.login_first_factor && errorData?.uid) {
+        const factor = errorData.login_first_factor;
+        const uidFromError = errorData.uid;
+
+        if (!twofaSecret) {
+          return {
+            isSuccess: false,
+            error: "Yêu cầu nhập mã 2FA thủ công (thiếu secret)",
+          };
+        }
+
+        let otpCode = twofaSecret.trim();
+        if (!/^\d{6}$/.test(otpCode)) {
+          otpCode = await generateTOTP(twofaSecret);
+        }
+
+        if (!otpCode) {
+          return {
+            isSuccess: false,
+            error: "Lỗi tạo mã 2FA từ secret",
+          };
+        }
+
+        const data2fa = new URLSearchParams({
+          email: cleanEmail,
+          access_token: FB_APP_TOKEN,
+          twofactor_code: otpCode,
+          password: pwd,
+          userid: uidFromError,
+          machine_id: factor,
+          generate_session_cookies: "1",
+        });
+
+        raw = await executeCurlRequest({
+          url: "https://b-graph.facebook.com/auth/login",
+          method: "POST",
+          body: data2fa.toString(),
+          cookie: cookieJar,
+          headers: [
+            "Content-Type: application/x-www-form-urlencoded",
+            "User-Agent: [FBAN/FB4A;FBAV/537.0.0.47.77;FBPN/com.facebook.katana;]",
+          ],
+          proxy,
+          timeoutSecs: 20,
+        });
+
+        try {
+          json = JSON.parse(raw);
+        } catch {
+          continue;
+        }
+      }
+
+      if (json.access_token) {
+        const accessToken = json.access_token;
+        const eaaaaToken =
+          (await convertTokenToEAAAA(accessToken, proxy)) || accessToken;
+
+        const cookieParts: string[] = [];
+        let uid: string | undefined;
+
+        if (Array.isArray(json.session_cookies)) {
+          for (const c of json.session_cookies) {
+            cookieParts.push(`${c.name}=${c.value}`);
+            if (c.name === "c_user") uid = c.value;
+          }
+        }
+
+        const finalUid = uid || json.uid || cleanEmail;
+        let name = finalUid;
+        let avatar = `https://graph.facebook.com/${finalUid}/picture?type=large`;
+
+        try {
+          const details = await fetchAccountDetailsWithToken(eaaaaToken, proxy);
+          if (details.isLive) {
+            if (details.name) name = details.name;
+            if (details.avatar) avatar = details.avatar;
+            if (details.uid) uid = details.uid;
+          }
+        } catch {
+          // ignore
+        }
+
+        return {
+          isSuccess: true,
+          token: accessToken,
+          eaaaaToken,
+          cookie: cookieParts.join("; "),
+          uid: finalUid,
+          name,
+          avatar,
+        };
+      }
+
+      const errorMsg = json.error?.message || "Đăng nhập Facebook thất bại";
+      if (
+        errorMsg.includes("Invalid username or password") &&
+        i < passwords.length - 1
+      ) {
+        continue;
+      }
+      return { isSuccess: false, error: errorMsg };
+    } catch (err: unknown) {
+      if (i < passwords.length - 1) continue;
       return {
-        isSuccess: true,
-        token: accessToken,
-        eaaaaToken,
-        cookie: cookieParts.join("; "),
-        uid: finalUid,
-        name,
-        avatar,
+        isSuccess: false,
+        error: err instanceof Error ? err.message : "Lỗi kết nối Facebook login",
       };
     }
-
-    const errorMsg = json.error?.message || "Đăng nhập Facebook thất bại";
-    return { isSuccess: false, error: errorMsg };
-  } catch (err: unknown) {
-    return {
-      isSuccess: false,
-      error: err instanceof Error ? err.message : "Lỗi kết nối Facebook login",
-    };
   }
+
+  return {
+    isSuccess: false,
+    error: "Đăng nhập Facebook thất bại sau khi thử tất cả biến thể mật khẩu",
+  };
 }
 
 /**
@@ -670,6 +907,7 @@ export async function checkFacebookAccountFull(params: {
   twoFactor?: string;
   cookie?: string;
   token?: string;
+  datr?: string;
   proxy?: string;
 }): Promise<FacebookAccountInfo> {
   const {
@@ -678,16 +916,20 @@ export async function checkFacebookAccountFull(params: {
     twoFactor,
     cookie: inputCookie,
     token: inputToken,
+    datr: inputDatr,
     proxy,
   } = params;
 
   let activeToken = inputToken?.trim();
   let activeCookie = inputCookie?.trim();
   let activeUid = inputUid?.trim() || "";
-  let activeName = "";
-  let activeAvatar: string | undefined;
-  const activeCover: string | undefined = undefined;
-  const activeEmail: string | undefined = undefined;
+  let activeDatr = inputDatr?.trim();
+
+  // Trích xuất datr nếu nằm trong cookie
+  if (!activeDatr && activeCookie?.includes("datr=")) {
+    const dm = activeCookie.match(/datr=([^;]+)/);
+    if (dm) activeDatr = dm[1];
+  }
 
   // 1. Ưu tiên kiểm tra Token trực tiếp (bắt đầu bằng EAA hoặc đã có Token)
   if (activeToken?.startsWith("EAA")) {
@@ -713,50 +955,73 @@ export async function checkFacebookAccountFull(params: {
     }
   }
 
-  // 2. Nếu có Cookie -> Kiểm tra bằng www.facebook.com/me và lấy token
-  if (activeCookie) {
+  // 2. Thử lấy Token EAAAA từ Cookie trước nếu có (chuẩn FacebookToken.kt dòng 534)
+  if (
+    activeCookie &&
+    (activeCookie.includes("c_user=") || activeCookie.includes("xs="))
+  ) {
     const cUser = extractUidFromCookie(activeCookie);
     if (cUser && !activeUid) activeUid = cUser;
 
     try {
-      const cookieLive = await verifyCookieLive(activeCookie, proxy);
-      if (cookieLive.isLive) {
-        if (cookieLive.name) activeName = cookieLive.name;
-        if (cookieLive.avatar) activeAvatar = cookieLive.avatar;
-        if (cookieLive.uid) activeUid = cookieLive.uid;
-
-        // Thử lấy thêm token EAAAA nếu có thể
-        try {
-          const tokenRes = await getTokenFromCookie(activeCookie, proxy);
-          if (tokenRes.isLive && tokenRes.eaaaaToken) {
-            activeToken = tokenRes.eaaaaToken;
-          }
-        } catch {
-          // ignore
-        }
+      const tokenRes = await getTokenFromCookie(activeCookie, proxy);
+      if (tokenRes.isLive && tokenRes.eaaaaToken) {
+        activeToken = tokenRes.eaaaaToken;
+        if (tokenRes.cookie) activeCookie = tokenRes.cookie;
+        if (tokenRes.uid) activeUid = tokenRes.uid;
 
         return {
           uid: activeUid,
-          name: activeName || activeUid,
+          name: tokenRes.name || activeUid,
+          avatar:
+            tokenRes.avatar ||
+            `https://graph.facebook.com/${activeUid}/picture?type=large`,
+          token: activeToken,
+          cookie: activeCookie,
+          proxy,
+          isLive: true,
+        };
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // 3. Nếu chưa lấy được từ cookie, chạy luồng login qua API với pass & 2FA (chuẩn FacebookToken.kt dòng 545)
+  if (activeUid && pass) {
+    try {
+      const loginRes = await facebookLogin(
+        activeUid,
+        pass,
+        twoFactor,
+        activeDatr,
+        proxy,
+      );
+      if (loginRes.isSuccess && loginRes.eaaaaToken) {
+        activeToken = loginRes.eaaaaToken;
+        if (loginRes.cookie) activeCookie = loginRes.cookie;
+        if (loginRes.uid) activeUid = loginRes.uid;
+
+        return {
+          uid: activeUid,
+          name: loginRes.name || activeUid,
           token: activeToken,
           cookie: activeCookie,
           avatar:
-            activeAvatar ||
+            loginRes.avatar ||
             `https://graph.facebook.com/${activeUid}/picture?type=large`,
           proxy,
           isLive: true,
         };
       }
 
-      if (cookieLive.error?.includes("Checkpoint")) {
+      if (loginRes.error?.toLowerCase().includes("checkpoint")) {
         return {
-          uid: activeUid || "N/A",
-          name: activeName || activeUid || "Facebook User",
+          uid: activeUid,
+          name: activeUid,
           token: activeToken,
           cookie: activeCookie,
-          avatar: activeUid
-            ? `https://graph.facebook.com/${activeUid}/picture?type=large`
-            : undefined,
+          avatar: `https://graph.facebook.com/${activeUid}/picture?type=large`,
           proxy,
           isLive: false,
           error: "Tài khoản bị Checkpoint",
@@ -767,48 +1032,14 @@ export async function checkFacebookAccountFull(params: {
     }
   }
 
-  // 3. Nếu có UID & Mật khẩu -> Đăng nhập lấy Token EAAAA
-  if (activeUid && pass) {
-    try {
-      const loginRes = await facebookLogin(
-        activeUid,
-        pass,
-        twoFactor,
-        undefined,
-        proxy,
-      );
-      if (loginRes.isSuccess && loginRes.eaaaaToken) {
-        activeToken = loginRes.eaaaaToken;
-        if (loginRes.cookie) activeCookie = loginRes.cookie;
-        if (loginRes.uid) activeUid = loginRes.uid;
-        activeName = loginRes.name || activeUid;
-        activeAvatar =
-          loginRes.avatar ||
-          `https://graph.facebook.com/${activeUid}/picture?type=large`;
-
-        return {
-          uid: activeUid,
-          name: activeName,
-          token: activeToken,
-          cookie: activeCookie,
-          avatar: activeAvatar,
-          proxy,
-          isLive: true,
-        };
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  // 4. Kiểm tra sự tồn tại của UID qua Graph API (/picture?type=large)
+  // 4. Nếu chưa lấy được token nhưng UID có dạng số: kiểm tra xem tài khoản còn sống trên Graph API không
   if (activeUid && /^\d+$/.test(activeUid)) {
     try {
       const uidCheck = await checkUidLiveGraph(activeUid, proxy);
       if (uidCheck.isLive) {
         return {
           uid: activeUid,
-          name: activeName || activeUid,
+          name: activeUid,
           avatar:
             uidCheck.avatar ||
             `https://graph.facebook.com/${activeUid}/picture?type=large`,
@@ -822,7 +1053,7 @@ export async function checkFacebookAccountFull(params: {
       }
       return {
         uid: activeUid,
-        name: activeName || activeUid,
+        name: activeUid,
         token: activeToken,
         cookie: activeCookie,
         proxy,
@@ -852,7 +1083,7 @@ export async function checkFacebookAccountFull(params: {
     email: activeEmail,
     proxy,
     isLive: false,
-    error: "Chưa thể xác thực trạng thái tài khoản",
+    error: "Chưa thể lấy Access Token từ tài khoản",
   };
 }
 

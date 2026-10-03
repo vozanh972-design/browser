@@ -237,19 +237,14 @@ export async function createFacebookPageApi({
     client_input_params: {
       page_id: "0",
       profile_plus_id: "0",
-      cp_upsell_declined: 0,
-      off_platform_creator_reachout_id: "",
       category_ids: [categoryId],
-      nav_chain: "...",
     },
     server_params: {
       referrer: "pages_tab_launch_point",
-      INTERNAL__latency_qpl_marker_id: 36707139,
       creation_source: "android",
       name: pageName,
       variant: 5,
       screen: "category",
-      INTERNAL__latency_qpl_instance_id: 55098533200051.0,
     },
   };
 
@@ -261,49 +256,23 @@ export async function createFacebookPageApi({
       "com.bloks.www.additional.profile.plus.creation.action.category.submit",
   };
 
-  const ntContext = {
-    using_white_navbar: true,
-    styles_id: "588d028b36bed0e1889e09b60e0f9aea",
-    pixel_ratio: 2,
-    is_push_on: true,
-    debug_tooling_metadata_token: null,
-    is_flipper_enabled: false,
-    theme_params: [
-      {
-        value: [],
-        design_system_name: "FDS",
-      },
-    ],
-    bloks_version:
-      "338f8ead5977a2c41eba3e92584dcf1d132e8b7928f1f5796662ec064023047d",
-  };
-
   const variables = {
     params: level1,
     scale: "2",
-    nt_context: ntContext,
   };
 
   const params = new URLSearchParams({
     method: "post",
-    pretty: "false",
     format: "json",
-    server_timestamps: "true",
-    locale: "vi_VN",
     client_doc_id: "119940804239956818821550724",
     variables: JSON.stringify(variables),
   });
 
   const headers = [
-    `User-Agent: ${KATANA_USER_AGENT}`,
+    "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
     `Authorization: OAuth ${cleanToken}`,
+    "X-FB-Friendly-Name: AdditionalProfilePlusCreation",
     "Content-Type: application/x-www-form-urlencoded",
-    "X-Fb-Connection-Type: WIFI",
-    "X-Fb-Http-Engine: Tigon/Liger",
-    "X-Fb-Client-Ip: True",
-    "X-Fb-Server-Cluster: True",
-    "X-Graphql-Request-Purpose: fetch",
-    "X-Graphql-Client-Library: graphservice",
   ];
 
   try {
@@ -316,62 +285,38 @@ export async function createFacebookPageApi({
       timeoutSecs: 30,
     });
 
-    // 1. Bóc tách Page ID / Profile Plus ID theo 4 mẫu định dạng chuẩn (Li2/i0;)
-    let extractedPageId: string | undefined;
-    let extractedProfilePlusId: string | undefined;
+    let pageId: string | undefined;
+    let profilePlusId: string | undefined;
 
-    // Mẫu 1: WriteGlobalConsistencyStore
-    const p1Page = raw.match(
-      /\(bk\.action\.bloks\.WriteGlobalConsistencyStore,\s*"ADDITIONAL_PROFILE_PLUS_CREATION:page_id"\s*,\s*"(\d+)"/,
-    );
-    if (p1Page?.[1]) extractedPageId = p1Page[1];
+    const p615Match = raw.match(/615\d{12,}/);
+    if (p615Match?.[0]) profilePlusId = p615Match[0];
 
-    const p1Plus = raw.match(
-      /\(bk\.action\.bloks\.WriteGlobalConsistencyStore,\s*"ADDITIONAL_PROFILE_PLUS_CREATION:profile_plus_id"\s*,\s*"(\d+)"/,
-    );
-    if (p1Plus?.[1]) extractedProfilePlusId = p1Plus[1];
-
-    // Mẫu 2: dq8 action
-    if (!extractedPageId) {
-      const p2Page = raw.match(
-        /\(dq8\s+"ADDITIONAL_PROFILE_PLUS_CREATION:page_id"\s+"(\d+)"/,
-      );
-      if (p2Page?.[1]) extractedPageId = p2Page[1];
-    }
-    if (!extractedProfilePlusId) {
-      const p2Plus = raw.match(
-        /\(dq8\s+"ADDITIONAL_PROFILE_PLUS_CREATION:profile_plus_id"\s+"(\d+)"/,
-      );
-      if (p2Plus?.[1]) extractedProfilePlusId = p2Plus[1];
+    const idRegex =
+      /["'](?:ADDITIONAL_PROFILE_PLUS_CREATION:)?(?:profile_plus_id|page_id)["']\s*,\s*["'](\d+)["']/;
+    const idMatch = raw.match(idRegex);
+    if (idMatch?.[1]) {
+      const foundId = idMatch[1];
+      if (foundId.startsWith("615")) profilePlusId = foundId;
+      else pageId = foundId;
     }
 
-    // Mẫu 3: JSON key-value
-    if (!extractedPageId) {
+    if (!pageId) {
       const p3Page = raw.match(/"page_id"\s*[:=]\s*"?(\d{6,})"?/);
-      if (p3Page?.[1] && p3Page[1] !== "0") extractedPageId = p3Page[1];
+      if (p3Page?.[1] && p3Page[1] !== "0") pageId = p3Page[1];
     }
-    if (!extractedProfilePlusId) {
+    if (!profilePlusId) {
       const p3Plus = raw.match(/"profile_plus_id"\s*[:=]\s*"?(\d{6,})"?/);
-      if (p3Plus?.[1] && p3Plus[1] !== "0") extractedProfilePlusId = p3Plus[1];
+      if (p3Plus?.[1] && p3Plus[1] !== "0") profilePlusId = p3Plus[1];
     }
 
-    // Mẫu 4: Word boundary
-    if (!extractedPageId) {
-      const p4Page = raw.match(/\bpage_id\b[^\d]*(\d{6,})/);
-      if (p4Page?.[1] && p4Page[1] !== "0") extractedPageId = p4Page[1];
-    }
-
-    // Kiểm tra cờ thành công create_success hoặc đã trích xuất được Page ID hợp lệ
-    const isSuccess =
-      raw.includes("create_success") ||
-      (!!extractedPageId && extractedPageId !== "0") ||
-      (!!extractedProfilePlusId && extractedProfilePlusId !== "0");
+    const finalId = profilePlusId || pageId;
+    const isSuccess = !!finalId && finalId.length > 0;
 
     if (isSuccess) {
       return {
         isSuccess: true,
-        pageId: extractedPageId || extractedProfilePlusId,
-        profilePlusId: extractedProfilePlusId,
+        pageId: finalId,
+        profilePlusId,
         pageName,
         category: categoryId,
         rawResponse: raw,
