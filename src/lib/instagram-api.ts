@@ -667,6 +667,7 @@ export async function doLike(options: {
   linkJob?: string;
   proxy?: string;
   tokens?: IgPageTokens;
+  userId?: string;
 }): Promise<IgActionResult> {
   const {
     cookie: rawCookie,
@@ -674,9 +675,11 @@ export async function doLike(options: {
     linkJob = "",
     proxy,
     tokens: inputTokens,
+    userId,
   } = options;
 
   const cookie = normalizeCookie(rawCookie);
+  const actorId = userId?.trim() || getActorId(cookie);
   let mediaId = mediaIdOrUrl.trim();
 
   // Giải mã shortcode bằng BigInt nếu chưa phải số
@@ -739,9 +742,9 @@ export async function doLike(options: {
   if (lsd) headers.push(`X-FB-LSD: ${lsd}`);
 
   const bodyParams = new URLSearchParams({
-    av: "178414",
+    av: actorId !== "0" ? actorId : "178414",
     __d: "www",
-    __user: "0",
+    __user: actorId,
     __a: "1",
     __req: "1j",
     __hs: "20519.HYP:instagram_web_pkg.2.1...0",
@@ -832,6 +835,7 @@ export async function doComment(options: {
   linkJob?: string;
   proxy?: string;
   tokens?: IgPageTokens;
+  userId?: string;
 }): Promise<IgActionResult> {
   const {
     cookie: rawCookie,
@@ -840,9 +844,11 @@ export async function doComment(options: {
     linkJob = "",
     proxy,
     tokens: inputTokens,
+    userId,
   } = options;
 
   const cookie = normalizeCookie(rawCookie);
+  const actorId = userId?.trim() || getActorId(cookie);
   let mediaId = mediaIdOrUrl.trim();
 
   if (!/^\d+$/.test(mediaId)) {
@@ -896,9 +902,9 @@ export async function doComment(options: {
   if (lsd) headers.push(`X-FB-LSD: ${lsd}`);
 
   const bodyParams = new URLSearchParams({
-    av: "178414",
+    av: actorId !== "0" ? actorId : "178414",
     __d: "www",
-    __user: "0",
+    __user: actorId,
     __a: "1",
     __req: "1j",
     __hs: "20519.HYP:instagram_web_pkg.2.1...0",

@@ -95,13 +95,17 @@ export async function generateTOTP(secret: string): Promise<string> {
 
   const cryptoKey = await crypto.subtle.importKey(
     "raw",
-    keyBytes,
+    keyBytes as unknown as BufferSource,
     { name: "HMAC", hash: "SHA-1" },
     false,
     ["sign"],
   );
 
-  const sig = await crypto.subtle.sign("HMAC", cryptoKey, counterBytes);
+  const sig = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    counterBytes as unknown as BufferSource,
+  );
   const hmac = new Uint8Array(sig);
 
   const offset = hmac[hmac.length - 1] & 0x0f;
