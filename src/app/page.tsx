@@ -1373,7 +1373,9 @@ export default function HomePage() {
                                 </button>
                               ) : null}
                               {acc.twoFactor ? (
-                                <span className="text-[11px] font-mono">2FA</span>
+                                <span className="text-[11px] font-mono">
+                                  2FA
+                                </span>
                               ) : null}
                               {!acc.token && !acc.twoFactor && (
                                 <span>{tr("Mặc định", "Default")}</span>
@@ -1452,7 +1454,8 @@ export default function HomePage() {
                                 >
                                   {runState.lastError}
                                 </span>
-                              ) : acc.note && acc.note !== "Không có ghi chú" ? (
+                              ) : acc.note &&
+                                acc.note !== "Không có ghi chú" ? (
                                 acc.note
                               ) : (
                                 tr("Sẵn sàng", "Ready")
