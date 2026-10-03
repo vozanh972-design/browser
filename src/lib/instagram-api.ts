@@ -130,6 +130,8 @@ export function parseCookie(cookie: string): Record<string, string> {
   return map;
 }
 
+export const extractTokensFromCookie = parseCookie;
+
 export function getCsrfToken(cookie: string): string {
   const map = parseCookie(cookie);
   return map.csrftoken || "";
@@ -138,6 +140,76 @@ export function getCsrfToken(cookie: string): string {
 export function getActorId(cookie: string): string {
   const map = parseCookie(cookie);
   return map.ds_user_id || "0";
+}
+
+/**
+ * Trích xuất dtsg, lsd, jazoest từ trang Instagram
+ */
+export async function extractPageTokens(
+  cookie: string,
+  targetUrl = "https://www.instagram.com/",
+  proxy?: string,
+  cachedDtsg?: string,
+  cachedLsd?: string,
+): Promise<IgPageTokens> {
+  let fbDtsg = cachedDtsg?.trim() || "";
+  let lsd = cachedLsd?.trim() || "";
+  let jazoest = "26328";
+
+  try {
+    const html = await executeCurlRequest({
+      url: targetUrl || "https://www.instagram.com/",
+      method: "GET",
+      cookie,
+      proxy,
+      headers: [
+        `User-Agent: ${BROWSER_UA}`,
+        'sec-ch-ua: "Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        "sec-ch-ua-mobile: ?0",
+        'sec-ch-ua-platform: "Windows"',
+      ],
+    });
+
+    const lsdPatterns = [
+      /\["LSD",\s*\[\],\s*\{"token":"([^"]+)"/,
+      /"LSD",\s*\[\],\s*\{"token":"([^"]+)"/,
+      /name="lsd"\s+value="([^"]+)"/,
+      /"lsd":\s*\{"token":"([^"]+)"/,
+    ];
+    for (const p of lsdPatterns) {
+      const m = html.match(p);
+      if (m?.[1]) {
+        lsd = m[1];
+        break;
+      }
+    }
+
+    const dtsgPatterns = [
+      /\["DTSGInitialData",\s*\[\],\s*\{"token":"([^"]+)"/,
+      /"DTSGInitData":\s*\{"token":"([^"]+)"/,
+      /"dtsg":\s*\{"token":"([^"]+)"/,
+      /name="fb_dtsg"\s+value="([^"]+)"/,
+      /"token":"(AQ[^"]+)"/,
+    ];
+    for (const p of dtsgPatterns) {
+      const m = html.match(p);
+      if (m?.[1]) {
+        fbDtsg = m[1];
+        break;
+      }
+    }
+
+    const jazoestMatch = html.match(/name="jazoest"\s+value="(\d+)"/);
+    if (jazoestMatch?.[1]) {
+      jazoest = jazoestMatch[1];
+    } else if (fbDtsg) {
+      jazoest = computeJazoest(fbDtsg);
+    }
+  } catch {
+    // ignore
+  }
+
+  return { dtsg: fbDtsg, lsd, jazoest };
 }
 
 /**
