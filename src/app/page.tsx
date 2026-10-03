@@ -605,7 +605,32 @@ export default function HomePage() {
       });
 
       const isLive = checked.isLive;
-      const accountStatus = isLive ? "live" : "checkpoint";
+      let accountStatus: "live" | "checkpoint" | "die" | "unverified" =
+        "unverified";
+
+      if (isLive) {
+        accountStatus = "live";
+      } else if (
+        checked.error?.toLowerCase().includes("checkpoint") ||
+        checked.error?.toLowerCase().includes("khóa") ||
+        checked.error?.toLowerCase().includes("xác minh")
+      ) {
+        accountStatus = "checkpoint";
+      } else if (
+        checked.error?.toLowerCase().includes("die") ||
+        checked.error?.toLowerCase().includes("không tồn tại") ||
+        checked.error?.toLowerCase().includes("does not exist")
+      ) {
+        accountStatus = "die";
+      } else {
+        // Giữ trạng thái hiện tại hoặc unverified, TUYỆT ĐỐI không gán bừa checkpoint
+        accountStatus =
+          targetAccount.status &&
+          targetAccount.status !== "checkpoint" &&
+          targetAccount.status !== "die"
+            ? targetAccount.status
+            : "unverified";
+      }
 
       const updated = {
         uid: checked.uid || targetAccount.uid,
@@ -761,6 +786,10 @@ export default function HomePage() {
       if (account.uid?.startsWith("EAA")) {
         account.token = account.uid;
         account.uid = `acc_${idx + 1}`;
+      }
+
+      if (!account.avatar && account.uid && /^\d+$/.test(account.uid)) {
+        account.avatar = `https://graph.facebook.com/${account.uid}/picture?type=large`;
       }
 
       return account;

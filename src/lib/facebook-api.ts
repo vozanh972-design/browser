@@ -517,6 +517,160 @@ export async function checkFacebookAccountFull(params: {
   cookie?: string;
   token?: string;
   proxy?: string;
+/**
+ * Kiểm tra UID trực tiếp bằng Facebook Graph API v21.0
+ * Không cần token, không cần cookie, không bị chặn.
+ * Trả về 302 Found kèm CDN avatar nếu tài khoản đang LIVE.
+ * Trả về 400 Bad Request kèm "Object with ID does not exist" nếu tài khoản đã DIE / bị xóa.
+ */
+export async function checkUidLiveGraph(
+  uid: string,
+  proxy?: string,
+): Promise<{
+  isLive: boolean;
+  avatar?: string;
+  error?: string;
+}> {
+  const cleanUid = uid.trim();
+  if (!cleanUid || !/^\d+$/.test(cleanUid)) {
+    return { isLive: false, error: "UID không hợp lệ" };
+  }
+
+  try {
+    const raw = await executeCurlRequest({
+      url: `https://graph.facebook.com/${cleanUid}/picture?type=large`,
+      method: "GET",
+      includeHeaders: true,
+      proxy,
+      timeoutSecs: 12,
+    });
+
+    if (
+      raw.includes("302 Found") ||
+      raw.includes("fbcdn.net") ||
+      raw.includes("image/jpeg")
+    ) {
+      const locMatch = raw.match(/location:\s*(\S+)/i);
+      const avatar =
+        locMatch?.[1] ||
+        `https://graph.facebook.com/${cleanUid}/picture?type=large`;
+      return { isLive: true, avatar };
+    }
+
+    if (
+      raw.includes("does not exist") ||
+      raw.includes("Unsupported head request") ||
+      raw.includes("400 Bad Request")
+    ) {
+      return { isLive: false, error: "Tài khoản không tồn tại (Die)" };
+    }
+  } catch {
+    // fallback
+  }
+
+  return {
+    isLive: true,
+    avatar: `https://graph.facebook.com/${cleanUid}/picture?type=large`,
+  };
+}
+
+/**
+ * Xác thực cookie trực tiếp bằng www.facebook.com/me (chuẩn FacebookAccountManager.kt)
+ * Kiểm tra tài khoản có bị checkpoint / login_required hay không và bóc tách Tên từ <title>
+ */
+export async function verifyCookieLive(
+  cookie: string,
+  proxy?: string,
+): Promise<{
+  isLive: boolean;
+  uid?: string;
+  name?: string;
+  avatar?: string;
+  error?: string;
+}> {
+  const cleanCookie = cookie.replace(/[\r\n]+/g, "").trim();
+  const cUser = extractUidFromCookie(cleanCookie);
+
+  try {
+    const raw = await executeCurlRequest({
+      url: "https://www.facebook.com/me",
+      method: "GET",
+      cookie: cleanCookie,
+      headers: [
+        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+      ],
+      proxy,
+      timeoutSecs: 15,
+    });
+
+    const lower = raw.toLowerCase();
+    if (
+      lower.includes("login_required") ||
+      lower.includes("checkpoint") ||
+      lower.includes("/login") ||
+      lower.includes("checkpointsubmitbutton")
+    ) {
+      return {
+        isLive: false,
+        uid: cUser || undefined,
+        error: "Tài khoản bị Checkpoint hoặc hết hạn Cookie",
+      };
+    }
+
+    let name: string | undefined;
+    const titleMatch = raw.match(/<title>([^<]+)<\/title>/i);
+    if (titleMatch?.[1]) {
+      const cleanTitle = titleMatch[1]
+        .replace(/\|\s*Facebook/i, "")
+        .replace(/-\s*Facebook/i, "")
+        .trim();
+      if (
+        cleanTitle &&
+        !cleanTitle.toLowerCase().includes("facebook") &&
+        !cleanTitle.toLowerCase().includes("đăng nhập") &&
+        !cleanTitle.toLowerCase().includes("log in") &&
+        !cleanTitle.toLowerCase().includes("error")
+      ) {
+        name = cleanTitle;
+      }
+    }
+
+    const uid = cUser || undefined;
+    const avatar = uid
+      ? `https://graph.facebook.com/${uid}/picture?type=large`
+      : undefined;
+
+    return {
+      isLive: true,
+      uid,
+      name: name || uid,
+      avatar,
+    };
+  } catch (err: unknown) {
+    return {
+      isLive: false,
+      uid: cUser || undefined,
+      error: err instanceof Error ? err.message : "Lỗi kiểm tra cookie",
+    };
+  }
+}
+
+/**
+ * 5. KIỂM TRA TÀI KHOẢN THEO CHUẨN 100% FacebookAccountManager.kt:
+ * 1. Ưu tiên: Nếu dòng bắt đầu bằng EAA hoặc có Token -> gọi fetchAccountDetailsWithToken
+ * 2. Nếu có Cookie -> kiểm tra live qua www.facebook.com/me + lấy avatar & tên thật
+ * 3. Nếu có UID & Pass -> đăng nhập qua facebookLogin
+ * 4. Nếu có UID -> kiểm tra tồn tại trực tiếp qua Graph API (/picture)
+ */
+export async function checkFacebookAccountFull(params: {
+  uid?: string;
+  pass?: string;
+  twoFactor?: string;
+  cookie?: string;
+  token?: string;
+  proxy?: string;
 }): Promise<FacebookAccountInfo> {
   const {
     uid: inputUid,
@@ -532,9 +686,8 @@ export async function checkFacebookAccountFull(params: {
   let activeUid = inputUid?.trim() || "";
   let activeName = "";
   let activeAvatar: string | undefined;
-  let activeCover: string | undefined;
-  let activeEmail: string | undefined;
-  let isLive = false;
+  const activeCover: string | undefined = undefined;
+  const activeEmail: string | undefined = undefined;
 
   // 1. Ưu tiên kiểm tra Token trực tiếp (bắt đầu bằng EAA hoặc đã có Token)
   if (activeToken?.startsWith("EAA")) {
@@ -560,7 +713,61 @@ export async function checkFacebookAccountFull(params: {
     }
   }
 
-  // 2. Nếu có UID & Mật khẩu -> Đăng nhập lấy Token EAAAA (chuẩn FacebookToken.process)
+  // 2. Nếu có Cookie -> Kiểm tra bằng www.facebook.com/me và lấy token
+  if (activeCookie) {
+    const cUser = extractUidFromCookie(activeCookie);
+    if (cUser && !activeUid) activeUid = cUser;
+
+    try {
+      const cookieLive = await verifyCookieLive(activeCookie, proxy);
+      if (cookieLive.isLive) {
+        if (cookieLive.name) activeName = cookieLive.name;
+        if (cookieLive.avatar) activeAvatar = cookieLive.avatar;
+        if (cookieLive.uid) activeUid = cookieLive.uid;
+
+        // Thử lấy thêm token EAAAA nếu có thể
+        try {
+          const tokenRes = await getTokenFromCookie(activeCookie, proxy);
+          if (tokenRes.isLive && tokenRes.eaaaaToken) {
+            activeToken = tokenRes.eaaaaToken;
+          }
+        } catch {
+          // ignore
+        }
+
+        return {
+          uid: activeUid,
+          name: activeName || activeUid,
+          token: activeToken,
+          cookie: activeCookie,
+          avatar:
+            activeAvatar ||
+            `https://graph.facebook.com/${activeUid}/picture?type=large`,
+          proxy,
+          isLive: true,
+        };
+      }
+
+      if (cookieLive.error?.includes("Checkpoint")) {
+        return {
+          uid: activeUid || "N/A",
+          name: activeName || activeUid || "Facebook User",
+          token: activeToken,
+          cookie: activeCookie,
+          avatar: activeUid
+            ? `https://graph.facebook.com/${activeUid}/picture?type=large`
+            : undefined,
+          proxy,
+          isLive: false,
+          error: "Tài khoản bị Checkpoint",
+        };
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // 3. Nếu có UID & Mật khẩu -> Đăng nhập lấy Token EAAAA
   if (activeUid && pass) {
     try {
       const loginRes = await facebookLogin(
@@ -578,7 +785,6 @@ export async function checkFacebookAccountFull(params: {
         activeAvatar =
           loginRes.avatar ||
           `https://graph.facebook.com/${activeUid}/picture?type=large`;
-        isLive = true;
 
         return {
           uid: activeUid,
@@ -595,52 +801,58 @@ export async function checkFacebookAccountFull(params: {
     }
   }
 
-  // 3. Nếu có Cookie -> Thử lấy Token EAAAA qua getSessionForApp
-  if (activeCookie) {
-    const cUser = extractUidFromCookie(activeCookie);
-    if (cUser && !activeUid) activeUid = cUser;
-
+  // 4. Kiểm tra sự tồn tại của UID qua Graph API (/picture?type=large)
+  if (activeUid && /^\d+$/.test(activeUid)) {
     try {
-      const cookieRes = await getTokenFromCookie(activeCookie, proxy);
-      if (cookieRes.isLive && cookieRes.eaaaaToken) {
+      const uidCheck = await checkUidLiveGraph(activeUid, proxy);
+      if (uidCheck.isLive) {
         return {
-          uid: cookieRes.uid || activeUid,
-          name: cookieRes.name || activeUid,
-          token: cookieRes.eaaaaToken,
-          cookie: cookieRes.cookie || activeCookie,
+          uid: activeUid,
+          name: activeName || activeUid,
           avatar:
-            cookieRes.avatar ||
-            `https://graph.facebook.com/${cookieRes.uid || activeUid}/picture?type=large`,
+            uidCheck.avatar ||
+            `https://graph.facebook.com/${activeUid}/picture?type=large`,
+          token: activeToken,
+          cookie: activeCookie,
+          cover: activeCover,
+          email: activeEmail,
           proxy,
           isLive: true,
         };
       }
+      return {
+        uid: activeUid,
+        name: activeName || activeUid,
+        token: activeToken,
+        cookie: activeCookie,
+        proxy,
+        isLive: false,
+        error: "Tài khoản Facebook không tồn tại (Die)",
+      };
     } catch {
       // ignore
     }
   }
 
-  // 4. Nếu không lấy được token nhưng có UID / c_user
   const fallbackUid =
     (activeCookie ? extractUidFromCookie(activeCookie) : null) ||
     activeUid ||
     "N/A";
-  const defaultAvatar =
-    fallbackUid !== "N/A"
-      ? `https://graph.facebook.com/${fallbackUid}/picture?type=large`
-      : undefined;
 
   return {
     uid: fallbackUid,
     name: activeName || fallbackUid,
     token: activeToken,
     cookie: activeCookie,
-    avatar: defaultAvatar,
+    avatar:
+      fallbackUid !== "N/A"
+        ? `https://graph.facebook.com/${fallbackUid}/picture?type=large`
+        : undefined,
     cover: activeCover,
     email: activeEmail,
     proxy,
-    isLive,
-    error: isLive ? undefined : "Không thể lấy Access Token từ tài khoản",
+    isLive: false,
+    error: "Chưa thể xác thực trạng thái tài khoản",
   };
 }
 
