@@ -32,13 +32,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { facebookLogin, getTokenAndInfoFromCookie } from "@/lib/facebook-api";
+import {
+  facebookLogin,
+  getTokenAndInfoFromCookie,
+  type FacebookPageItem,
+} from "@/lib/facebook-api";
 import {
   createFacebookPageApi,
   generateRandomName,
   getFacebookPages,
   getRandomCategory,
-  type FacebookPageItem,
 } from "@/lib/facebook-page-api";
 import { showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";

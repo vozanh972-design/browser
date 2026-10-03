@@ -1,4 +1,5 @@
-import { executeCurlRequest } from "./facebook-api";
+import { executeCurlRequest, type FacebookPageItem } from "./facebook-api";
+export type { FacebookPageItem };
 
 export interface RegPageResult {
   isSuccess: boolean;
@@ -8,15 +9,6 @@ export interface RegPageResult {
   category?: string;
   errorMessage?: string;
   rawResponse?: string;
-}
-
-export interface FacebookPageItem {
-  pageId: string;
-  pageName: string;
-  pageToken: string;
-  additionalProfileId?: string;
-  avatar?: string;
-  isLive: boolean;
 }
 
 const KATANA_USER_AGENT =
