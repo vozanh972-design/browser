@@ -316,7 +316,9 @@ export async function getTokenFromCookie(
       isLive: false,
       uid: cUser || undefined,
       error:
-        err instanceof Error ? err.message : "Lỗi kết nối auth.getSessionForApp",
+        err instanceof Error
+          ? err.message
+          : "Lỗi kết nối auth.getSessionForApp",
     };
   }
 }
@@ -531,7 +533,7 @@ export async function checkFacebookAccountFull(params: {
   let isLive = false;
 
   // 1. Ưu tiên kiểm tra Token trực tiếp (bắt đầu bằng EAA hoặc đã có Token)
-  if (activeToken && activeToken.startsWith("EAA")) {
+  if (activeToken?.startsWith("EAA")) {
     try {
       const details = await fetchAccountDetailsWithToken(activeToken, proxy);
       if (details.isLive) {

@@ -31,11 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
-import {
-  checkFacebookAccountFull,
-  fetchAccountDetailsWithToken,
-  getTokenAndInfoFromCookie,
-} from "@/lib/facebook-api";
+import { checkFacebookAccountFull } from "@/lib/facebook-api";
 import { checkCookieIg, fetchIgUserInfo } from "@/lib/instagram-api";
 import { MOTION_EASE_OUT } from "@/lib/motion";
 import { showSuccessToast } from "@/lib/toast-utils";
