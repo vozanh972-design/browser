@@ -850,7 +850,7 @@ async fn curl_request(
     let conn_time_str = t.min(5).to_string();
 
     cmd
-      .arg("-s")
+      .arg("-sS")
       .arg("-g")
       .arg("-L")
       .arg("-X")
@@ -910,7 +910,12 @@ async fn curl_request(
     let stdout = String::from_utf8_lossy(&output.stdout);
     if stdout.trim().is_empty() && !output.status.success() {
       let stderr = String::from_utf8_lossy(&output.stderr);
-      return Err(format!("Curl error: {}", stderr));
+      let err_msg = if stderr.trim().is_empty() {
+        format!("Curl exited with status: {}", output.status)
+      } else {
+        format!("Curl error: {}", stderr.trim())
+      };
+      return Err(err_msg);
     }
     Ok(stdout.into_owned())
   })

@@ -1432,9 +1432,11 @@ export async function uploadFacebookPageAvatar(params: {
   ];
 
   // Danh sách endpoint thử nghiệm:
-  // TUYỆT ĐỐI KHÔNG DÙNG ID bắt đầu bằng 615 vì Graph API sẽ báo lỗi (#100) The global id 615... is not allowed
   const candidateEndpoints: string[] = [];
-  if (realPageId && realPageId !== "me" && !realPageId.startsWith("615")) {
+  if (pageId && pageId !== "me") {
+    candidateEndpoints.push(pageId);
+  }
+  if (realPageId && realPageId !== "me" && realPageId !== pageId) {
     candidateEndpoints.push(realPageId);
   }
   candidateEndpoints.push("me");
@@ -1447,7 +1449,28 @@ export async function uploadFacebookPageAvatar(params: {
     try {
       let rawRes = "";
       if (cleanPath) {
-        // Cách 1: Direct upload vào /{ep}/picture (chuẩn Facebook direct avatar endpoint)
+        // Cách 1: Upload vào /{ep}/photos rồi gán photo_id sau (chuẩn FacebookMediaEngine.kt)
+        rawRes = await executeCurlRequest({
+          url: `https://graph.facebook.com/v21.0/${ep}/photos`,
+          method: "POST",
+          headers,
+          formFields: [
+            `access_token=${activeToken}`,
+            "published=true",
+            `source=@${cleanPath}`,
+          ],
+          proxy,
+          timeoutSecs: 30,
+        });
+
+        const json = safeJsonParse<any>(rawRes);
+        if (json?.id) {
+          photoId = json.id;
+          successfulEndpoint = ep;
+          break;
+        }
+
+        // Cách 2: Direct upload vào /{ep}/picture
         const directRes = await executeCurlRequest({
           url: `https://graph.facebook.com/v21.0/${ep}/picture`,
           method: "POST",
@@ -1457,10 +1480,10 @@ export async function uploadFacebookPageAvatar(params: {
             `source=@${cleanPath}`,
           ],
           proxy,
-          timeoutSecs: 25,
+          timeoutSecs: 30,
         });
 
-        const jsonDirect = safeJsonParse(directRes);
+        const jsonDirect = safeJsonParse<any>(directRes);
         if (jsonDirect && !jsonDirect.error) {
           const directId = jsonDirect.id || "";
           const directUrl = directId
@@ -1476,20 +1499,6 @@ export async function uploadFacebookPageAvatar(params: {
             rawResponse: directRes,
           };
         }
-
-        // Cách 2: Upload vào /{ep}/photos rồi gán photo_id sau
-        rawRes = await executeCurlRequest({
-          url: `https://graph.facebook.com/v21.0/${ep}/photos`,
-          method: "POST",
-          headers,
-          formFields: [
-            `access_token=${activeToken}`,
-            "published=true",
-            `source=@${cleanPath}`,
-          ],
-          proxy,
-          timeoutSecs: 25,
-        });
       } else if (imageUrl) {
         const formBody = new URLSearchParams({
           access_token: activeToken,
@@ -1505,11 +1514,11 @@ export async function uploadFacebookPageAvatar(params: {
           ],
           body: formBody,
           proxy,
-          timeoutSecs: 25,
+          timeoutSecs: 30,
         });
       }
 
-      const json = safeJsonParse(rawRes);
+      const json = safeJsonParse<any>(rawRes);
       if (json?.id) {
         photoId = json.id;
         successfulEndpoint = ep;
@@ -1521,13 +1530,16 @@ export async function uploadFacebookPageAvatar(params: {
         errMsg = rawRes;
       }
     } catch (e: unknown) {
-      errMsg = e instanceof Error ? e.message : "Lỗi kết nối khi tải ảnh";
+      errMsg =
+        e instanceof Error
+          ? e.message
+          : typeof e === "string"
+            ? e
+            : JSON.stringify(e);
     }
   }
 
-  const targetForPic =
-    successfulEndpoint ||
-    (realPageId && !realPageId.startsWith("615") ? realPageId : "me");
+  const targetForPic = successfulEndpoint || pageId || realPageId || "me";
 
   // Bước 2: Gán photoId làm Avatar qua /{target}/picture
   if (photoId) {
@@ -1573,6 +1585,50 @@ export async function uploadFacebookPageAvatar(params: {
       }
     } catch {
       // fallback
+    }
+
+    // Fallback: Nếu targetForPic khác "me", thử gán qua "me"
+    if (targetForPic !== "me") {
+      try {
+        const setPicBodyMe = new URLSearchParams({
+          access_token: activeToken,
+          photo_id: photoId,
+          photo: photoId,
+          picture: photoId,
+        }).toString();
+
+        const picResMe = await executeCurlRequest({
+          url: `https://graph.facebook.com/v21.0/me/picture`,
+          method: "POST",
+          headers: [
+            ...headers,
+            "Content-Type: application/x-www-form-urlencoded",
+          ],
+          body: setPicBodyMe,
+          proxy,
+          timeoutSecs: 20,
+        });
+
+        const picJsonMe = safeJsonParse<any>(picResMe);
+        if (
+          picResMe?.trim() === "true" ||
+          picJsonMe === true ||
+          (picJsonMe && !picJsonMe.error)
+        ) {
+          const directUrl = await getPhotoDirectUrl(photoId, activeToken, proxy);
+          return {
+            success: true,
+            photoId,
+            mediaUrl:
+              directUrl ||
+              `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${activeToken}`,
+            message: "Cập nhật ảnh đại diện Page thành công",
+            rawResponse: picResMe,
+          };
+        }
+      } catch {
+        // ignore
+      }
     }
   }
 
@@ -1621,7 +1677,10 @@ export async function uploadFacebookPageCover(params: {
   ];
 
   const candidateEndpoints: string[] = [];
-  if (realPageId && realPageId !== "me" && !realPageId.startsWith("615")) {
+  if (pageId && pageId !== "me") {
+    candidateEndpoints.push(pageId);
+  }
+  if (realPageId && realPageId !== "me" && realPageId !== pageId) {
     candidateEndpoints.push(realPageId);
   }
   candidateEndpoints.push("me");
@@ -1635,6 +1694,7 @@ export async function uploadFacebookPageCover(params: {
     try {
       let rawRes = "";
       if (cleanPath) {
+        // Cách 1: Upload chuẩn không có cờ is_profile_cover (chuẩn cho Page)
         rawRes = await executeCurlRequest({
           url: `https://graph.facebook.com/v21.0/${ep}/photos`,
           method: "POST",
@@ -1645,8 +1705,38 @@ export async function uploadFacebookPageCover(params: {
             `source=@${cleanPath}`,
           ],
           proxy,
-          timeoutSecs: 25,
+          timeoutSecs: 30,
         });
+
+        const json = safeJsonParse<any>(rawRes);
+        if (json?.id) {
+          photoId = json.id;
+          successfulEndpoint = ep;
+          break;
+        }
+
+        // Cách 2: Nếu ep là me, thử thêm cờ is_profile_cover (chuẩn FacebookMediaEngine.kt)
+        if (ep === "me") {
+          const rawCover = await executeCurlRequest({
+            url: `https://graph.facebook.com/v21.0/${ep}/photos`,
+            method: "POST",
+            headers,
+            formFields: [
+              `access_token=${activeToken}`,
+              "published=true",
+              "is_profile_cover=true",
+              `source=@${cleanPath}`,
+            ],
+            proxy,
+            timeoutSecs: 30,
+          });
+          const jsonCover = safeJsonParse<any>(rawCover);
+          if (jsonCover?.id) {
+            photoId = jsonCover.id;
+            successfulEndpoint = ep;
+            break;
+          }
+        }
       } else if (imageUrl) {
         const formBody = new URLSearchParams({
           access_token: activeToken,
@@ -1678,7 +1768,12 @@ export async function uploadFacebookPageCover(params: {
         errMsg = rawRes;
       }
     } catch (e: unknown) {
-      errMsg = e instanceof Error ? e.message : "Lỗi kết nối khi tải ảnh";
+      errMsg =
+        e instanceof Error
+          ? e.message
+          : typeof e === "string"
+            ? e
+            : JSON.stringify(e);
     }
   }
 
@@ -1692,9 +1787,7 @@ export async function uploadFacebookPageCover(params: {
   }
 
   // Bước 2: Set photo này làm cover qua POST /{endpoint}
-  const targetForCover =
-    successfulEndpoint ||
-    (realPageId && !realPageId.startsWith("615") ? realPageId : "me");
+  const targetForCover = successfulEndpoint || pageId || realPageId || "me";
 
   // Thử cách 1: cover={"cover_id":"<photoId>","offset_x":0,"offset_y":0}
   try {
@@ -1777,6 +1870,51 @@ export async function uploadFacebookPageCover(params: {
     }
   } catch {
     // ignore
+  }
+
+  // Thử fallback trên endpoint "me" nếu targetForCover khác "me" (chuẩn FacebookMediaEngine.kt)
+  if (targetForCover !== "me") {
+    try {
+      const coverJsonMe = JSON.stringify({
+        cover_id: photoId,
+        offset_x: 0,
+        offset_y: 0,
+      });
+      const formBodyMe = new URLSearchParams({
+        access_token: activeToken,
+        cover: coverJsonMe,
+      }).toString();
+
+      const resMe = await executeCurlRequest({
+        url: `https://graph.facebook.com/v21.0/me`,
+        method: "POST",
+        headers: [
+          ...headers,
+          "Content-Type: application/x-www-form-urlencoded",
+        ],
+        body: formBodyMe,
+        proxy,
+        timeoutSecs: 20,
+      });
+
+      const jsonMe = safeJsonParse<any>(resMe);
+      if (
+        resMe?.trim() === "true" ||
+        jsonMe === true ||
+        (jsonMe && !jsonMe.error)
+      ) {
+        const directUrl = await getPhotoDirectUrl(photoId, activeToken, proxy);
+        return {
+          success: true,
+          photoId,
+          mediaUrl: directUrl || undefined,
+          message: "Cập nhật ảnh bìa thành công",
+          rawResponse: resMe,
+        };
+      }
+    } catch {
+      // ignore
+    }
   }
 
   return {
