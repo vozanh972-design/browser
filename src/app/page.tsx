@@ -1280,336 +1280,336 @@ export default function HomePage() {
                             : undefined);
 
                       return (
-                        <div
-                          key={acc.id}
-                          role="row"
-                          tabIndex={0}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
-                              e.preventDefault();
+                        <div key={acc.id} className="flex flex-col">
+                          <div
+                            role="row"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                toggleSelectOne(acc.id);
+                              }
+                            }}
+                            onClick={(e) => {
+                              const target = e.target as HTMLElement;
+                              if (
+                                target.closest("button") ||
+                                target.closest("[role='checkbox']")
+                              ) {
+                                return;
+                              }
                               toggleSelectOne(acc.id);
-                            }
-                          }}
-                          onClick={(e) => {
-                            const target = e.target as HTMLElement;
-                            if (
-                              target.closest("button") ||
-                              target.closest("[role='checkbox']")
-                            ) {
-                              return;
-                            }
-                            toggleSelectOne(acc.id);
-                          }}
-                          className={cn(
-                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-1.5 min-h-[46px] text-xs text-foreground cursor-pointer transition-colors select-none outline-none focus-visible:bg-muted/50",
-                            isSelected
-                              ? "bg-primary/10 border-l-2 border-primary"
-                              : isCheckpointOrDie
-                                ? "bg-muted/30 opacity-60 hover:bg-muted/40"
-                                : "hover:bg-muted/30",
-                            !acc.pages?.length && "h-[46px]",
-                          )}
-                        >
-                          {/* Checkbox */}
-                          <div className="flex items-center justify-center">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleSelectOne(acc.id)}
-                            />
-                          </div>
-
-                          {/* Tên & UID với Avatar Thật */}
-                          <div className="flex items-center gap-2.5 truncate pr-2">
-                            <div
-                              className={cn(
-                                isCheckpointOrDie && "grayscale opacity-75",
-                              )}
-                            >
-                              <AccountAvatar
-                                url={avatarSrc}
-                                isInstagram={acc.platform === "instagram"}
+                            }}
+                            className={cn(
+                              "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-1.5 min-h-[46px] text-xs text-foreground cursor-pointer transition-colors select-none outline-none focus-visible:bg-muted/50",
+                              isSelected
+                                ? "bg-primary/10 border-l-2 border-primary"
+                                : isCheckpointOrDie
+                                  ? "bg-muted/30 opacity-60 hover:bg-muted/40"
+                                  : "hover:bg-muted/30",
+                              !acc.pages?.length && "h-[46px]",
+                            )}
+                          >
+                            {/* Checkbox */}
+                            <div className="flex items-center justify-center">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSelectOne(acc.id)}
                               />
                             </div>
-                            <div className="flex flex-col min-w-0 justify-center">
-                              <span
+
+                            {/* Tên & UID với Avatar Thật */}
+                            <div className="flex items-center gap-2.5 truncate pr-2">
+                              <div
                                 className={cn(
-                                  "font-semibold truncate leading-tight",
-                                  isCheckpointOrDie
-                                    ? "text-muted-foreground"
-                                    : "text-foreground",
+                                  isCheckpointOrDie && "grayscale opacity-75",
                                 )}
                               >
-                                {acc.name ||
-                                  (acc.platform === "instagram"
-                                    ? "Đang đồng bộ..."
-                                    : acc.uid)}
-                              </span>
-                              <span className="text-[10px] font-mono text-muted-foreground truncate leading-tight">
-                                {acc.platform === "instagram"
-                                  ? `UID: ${acc.uid}`
-                                  : acc.name && acc.name !== acc.uid
-                                    ? acc.uid
-                                    : `UID: ${acc.uid}`}
-                              </span>
+                                <AccountAvatar
+                                  url={avatarSrc}
+                                  isInstagram={acc.platform === "instagram"}
+                                />
+                              </div>
+                              <div className="flex flex-col min-w-0 justify-center">
+                                <span
+                                  className={cn(
+                                    "font-semibold truncate leading-tight",
+                                    isCheckpointOrDie
+                                      ? "text-muted-foreground"
+                                      : "text-foreground",
+                                  )}
+                                >
+                                  {acc.name ||
+                                    (acc.platform === "instagram"
+                                      ? "Đang đồng bộ..."
+                                      : acc.uid)}
+                                </span>
+                                <span className="text-[10px] font-mono text-muted-foreground truncate leading-tight">
+                                  {acc.platform === "instagram"
+                                    ? `UID: ${acc.uid}`
+                                    : acc.name && acc.name !== acc.uid
+                                      ? acc.uid
+                                      : `UID: ${acc.uid}`}
+                                </span>
+                              </div>
                             </div>
-                          </div>
 
-                          {/* TIỆN ÍCH */}
-                          <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
-                            {acc.token ? (
+                            {/* TIỆN ÍCH */}
+                            <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
+                              {acc.token ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (acc.token) handleCopy(acc.token);
+                                  }}
+                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 cursor-pointer"
+                                  title={tr(
+                                    "Click để copy Token",
+                                    "Click to copy Token",
+                                  )}
+                                >
+                                  Token
+                                </button>
+                              ) : null}
+                              {acc.twoFactor ? (
+                                <span className="text-[11px] font-mono">2FA</span>
+                              ) : null}
+                              {!acc.token && !acc.twoFactor && (
+                                <span>{tr("Mặc định", "Default")}</span>
+                              )}
+                            </div>
+
+                            {/* Proxy / VPN */}
+                            <div className="text-muted-foreground truncate pr-2 font-mono text-[11px]">
+                              {acc.proxy || tr("Chưa chọn", "Not set")}
+                            </div>
+
+                            {/* TRẠNG THÁI */}
+                            <div className="flex items-center min-w-[95px]">
+                              {isChecking ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground whitespace-nowrap">
+                                  <RefreshCw className="size-2.5 animate-spin shrink-0" />
+                                  {tr("Đang kiểm tra", "Checking")}
+                                </span>
+                              ) : runState &&
+                                (runState.successCount > 0 ||
+                                  runState.earnedPoints > 0) ? (
+                                <span
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
+                                  title={`${runState.successCount} thành công, ${runState.errorCount} lỗi`}
+                                >
+                                  ✓ {runState.successCount}{" "}
+                                  {runState.earnedPoints > 0
+                                    ? `(+${runState.earnedPoints})`
+                                    : ""}
+                                </span>
+                              ) : acc.status === "live" ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
+                                  Live
+                                </span>
+                              ) : acc.status === "die" ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
+                                  Die
+                                </span>
+                              ) : acc.status === "checkpoint" ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
+                                  Checkpoint
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 whitespace-nowrap">
+                                  {tr("Chưa kiểm tra", "Unchecked")}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* HÀNH ĐỘNG */}
+                            <div className="text-muted-foreground truncate pr-2 font-medium">
+                              {isCheckpointOrDie ? (
+                                <span className="text-rose-500/80 font-medium">
+                                  {acc.status === "checkpoint"
+                                    ? tr("Bị Checkpoint", "Checkpoint")
+                                    : tr("Đã Die", "Died")}
+                                </span>
+                              ) : isRunning ? (
+                                <span
+                                  className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold truncate"
+                                  title={runState?.status}
+                                >
+                                  <span className="relative flex size-2 shrink-0">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+                                  </span>
+                                  <span className="truncate">
+                                    {runState?.status ||
+                                      tr("Đang chạy...", "Running...")}
+                                  </span>
+                                </span>
+                              ) : runState?.lastError ? (
+                                <span
+                                  className="text-amber-500 truncate"
+                                  title={runState.lastError}
+                                >
+                                  {runState.lastError}
+                                </span>
+                              ) : acc.note && acc.note !== "Không có ghi chú" ? (
+                                acc.note
+                              ) : (
+                                tr("Sẵn sàng", "Ready")
+                              )}
+                            </div>
+
+                            {/* Thao tác */}
+                            <div className="flex items-center justify-end gap-1.5 pr-2">
+                              {/* Nút chấm than: Xem toàn bộ thông tin tài khoản */}
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (acc.token) handleCopy(acc.token);
+                                  setDetailAccount(acc);
+                                  setIsDetailOpen(true);
                                 }}
-                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 cursor-pointer"
                                 title={tr(
-                                  "Click để copy Token",
-                                  "Click to copy Token",
+                                  "Xem toàn bộ thông tin tài khoản",
+                                  "View full account details",
                                 )}
+                                className="p-1 text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
                               >
-                                Token
+                                <CircleAlert className="size-3.5" />
                               </button>
-                            ) : null}
-                            {acc.twoFactor ? (
-                              <span className="text-[11px] font-mono">2FA</span>
-                            ) : null}
-                            {!acc.token && !acc.twoFactor && (
-                              <span>{tr("Mặc định", "Default")}</span>
-                            )}
-                          </div>
 
-                          {/* Proxy / VPN */}
-                          <div className="text-muted-foreground truncate pr-2 font-mono text-[11px]">
-                            {acc.proxy || tr("Chưa chọn", "Not set")}
-                          </div>
-
-                          {/* TRẠNG THÁI */}
-                          <div className="flex items-center min-w-[95px]">
-                            {isChecking ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground whitespace-nowrap">
-                                <RefreshCw className="size-2.5 animate-spin shrink-0" />
-                                {tr("Đang kiểm tra", "Checking")}
-                              </span>
-                            ) : runState &&
-                              (runState.successCount > 0 ||
-                                runState.earnedPoints > 0) ? (
-                              <span
-                                className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
-                                title={`${runState.successCount} thành công, ${runState.errorCount} lỗi`}
-                              >
-                                ✓ {runState.successCount}{" "}
-                                {runState.earnedPoints > 0
-                                  ? `(+${runState.earnedPoints})`
-                                  : ""}
-                              </span>
-                            ) : acc.status === "live" ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
-                                Live
-                              </span>
-                            ) : acc.status === "die" ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
-                                Die
-                              </span>
-                            ) : acc.status === "checkpoint" ? (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
-                                Checkpoint
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 whitespace-nowrap">
-                                {tr("Chưa kiểm tra", "Unchecked")}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* HÀNH ĐỘNG */}
-                          <div className="text-muted-foreground truncate pr-2 font-medium">
-                            {isCheckpointOrDie ? (
-                              <span className="text-rose-500/80 font-medium">
-                                {acc.status === "checkpoint"
-                                  ? tr("Bị Checkpoint", "Checkpoint")
-                                  : tr("Đã Die", "Died")}
-                              </span>
-                            ) : isRunning ? (
-                              <span
-                                className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold truncate"
-                                title={runState?.status}
-                              >
-                                <span className="relative flex size-2 shrink-0">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                                  <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
-                                </span>
-                                <span className="truncate">
-                                  {runState?.status ||
-                                    tr("Đang chạy...", "Running...")}
-                                </span>
-                              </span>
-                            ) : runState?.lastError ? (
-                              <span
-                                className="text-amber-500 truncate"
-                                title={runState.lastError}
-                              >
-                                {runState.lastError}
-                              </span>
-                            ) : acc.note && acc.note !== "Không có ghi chú" ? (
-                              acc.note
-                            ) : (
-                              tr("Sẵn sàng", "Ready")
-                            )}
-                          </div>
-
-                          {/* Thao tác */}
-                          <div className="flex items-center justify-end gap-1.5 pr-2">
-                            {/* Nút chấm than: Xem toàn bộ thông tin tài khoản */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDetailAccount(acc);
-                                setIsDetailOpen(true);
-                              }}
-                              title={tr(
-                                "Xem toàn bộ thông tin tài khoản",
-                                "View full account details",
-                              )}
-                              className="p-1 text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
-                            >
-                              <CircleAlert className="size-3.5" />
-                            </button>
-
-                            {/* Nút kiểm tra lại trạng thái Live/Die/Checkpoint */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void handleCheckAccount(acc);
-                              }}
-                              title={tr(
-                                "Kiểm tra lại tài khoản",
-                                "Re-check account",
-                              )}
-                              className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
-                            >
-                              <RefreshCw
-                                className={cn(
-                                  "size-3.5",
-                                  isChecking && "animate-spin text-primary",
+                              {/* Nút kiểm tra lại trạng thái Live/Die/Checkpoint */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleCheckAccount(acc);
+                                }}
+                                title={tr(
+                                  "Kiểm tra lại tài khoản",
+                                  "Re-check account",
                                 )}
-                              />
-                            </button>
+                                className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                              >
+                                <RefreshCw
+                                  className={cn(
+                                    "size-3.5",
+                                    isChecking && "animate-spin text-primary",
+                                  )}
+                                />
+                              </button>
 
-                            {/* Nút Chạy/Dừng tài khoản */}
-                            <button
-                              type="button"
-                              disabled={isCheckpointOrDie}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (isCheckpointOrDie) return;
-                                handleRunAccount(acc);
-                              }}
-                              title={
-                                isCheckpointOrDie
-                                  ? tr(
-                                      "Tài khoản bị Checkpoint/Die, không thể chạy",
-                                      "Account is Checkpoint/Die, cannot run",
-                                    )
-                                  : isRunning
+                              {/* Nút Chạy/Dừng tài khoản */}
+                              <button
+                                type="button"
+                                disabled={isCheckpointOrDie}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isCheckpointOrDie) return;
+                                  handleRunAccount(acc);
+                                }}
+                                title={
+                                  isCheckpointOrDie
                                     ? tr(
-                                        "Dừng chạy tài khoản",
-                                        "Stop running account",
+                                        "Tài khoản bị Checkpoint/Die, không thể chạy",
+                                        "Account is Checkpoint/Die, cannot run",
                                       )
-                                    : tr("Chạy tài khoản", "Run account")
-                              }
-                              className={cn(
-                                "p-1 rounded transition-colors",
-                                isCheckpointOrDie
-                                  ? "text-muted-foreground/30 opacity-40 cursor-not-allowed"
-                                  : isRunning
-                                    ? "text-rose-500 bg-rose-500/15 hover:bg-rose-500/25 cursor-pointer"
-                                    : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 cursor-pointer",
-                              )}
-                            >
-                              {isRunning ? (
-                                <Square className="size-3.5 fill-current" />
-                              ) : (
-                                <Play className="size-3.5 fill-current" />
-                              )}
-                            </button>
-
-                            {/* Nút xóa */}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteAccount(acc.id);
-                              }}
-                              title={tr("Xóa tài khoản", "Delete account")}
-                              className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="size-3.5" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Danh sách Pages con của tài khoản bên dưới */}
-                        {acc.pages && acc.pages.length > 0 && (
-                          <div className="pl-12 pr-4 py-2 bg-muted/15 border-t border-border/20 flex flex-col gap-1.5 text-xs">
-                            <div className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
-                              <Flag className="size-3.5 text-blue-500 shrink-0" />
-                              <span>
-                                {tr(
-                                  `Danh sách Page / Profile+ (${acc.pages.length}):`,
-                                  `Pages / Profile+ (${acc.pages.length}):`,
+                                    : isRunning
+                                      ? tr(
+                                          "Dừng chạy tài khoản",
+                                          "Stop running account",
+                                        )
+                                      : tr("Chạy tài khoản", "Run account")
+                                }
+                                className={cn(
+                                  "p-1 rounded transition-colors",
+                                  isCheckpointOrDie
+                                    ? "text-muted-foreground/30 opacity-40 cursor-not-allowed"
+                                    : isRunning
+                                      ? "text-rose-500 bg-rose-500/15 hover:bg-rose-500/25 cursor-pointer"
+                                      : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 cursor-pointer",
                                 )}
-                              </span>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-0.5">
-                              {acc.pages.map((p) => {
-                                const displayUid =
-                                  p.additionalProfileId || p.pageId;
-                                return (
-                                  <div
-                                    key={p.pageId}
-                                    className="flex items-center justify-between p-1.5 rounded-md bg-background/80 border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-colors shadow-2xs"
-                                  >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <AccountAvatar url={p.avatar} />
-                                      <div className="flex flex-col min-w-0">
-                                        <span className="font-medium truncate text-foreground leading-tight text-[11.5px]">
-                                          {p.pageName}
-                                        </span>
-                                        <span className="font-mono text-[9.5px] text-muted-foreground truncate leading-tight">
-                                          {displayUid}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    {p.pageToken ? (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (p.pageToken) {
-                                            handleCopy(p.pageToken);
-                                          }
-                                        }}
-                                        className="ml-1 text-[9px] px-1.5 py-0.5 font-mono bg-blue-500/10 text-blue-500 rounded border border-blue-500/20 hover:bg-blue-500/20 shrink-0 cursor-pointer"
-                                        title={tr(
-                                          "Copy Page Token",
-                                          "Copy Page Token",
-                                        )}
-                                      >
-                                        Token
-                                      </button>
-                                    ) : null}
-                                  </div>
-                                );
-                              })}
+                              >
+                                {isRunning ? (
+                                  <Square className="size-3.5 fill-current" />
+                                ) : (
+                                  <Play className="size-3.5 fill-current" />
+                                )}
+                              </button>
+
+                              {/* Nút xóa */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteAccount(acc.id);
+                                }}
+                                title={tr("Xóa tài khoản", "Delete account")}
+                                className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
                             </div>
                           </div>
-                        )}
-                      </div>
-                    );
+
+                          {/* Danh sách Pages con của tài khoản bên dưới */}
+                          {acc.pages && acc.pages.length > 0 && (
+                            <div className="pl-12 pr-4 py-2 bg-muted/15 border-t border-border/20 flex flex-col gap-1.5 text-xs">
+                              <div className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1.5">
+                                <Flag className="size-3.5 text-blue-500 shrink-0" />
+                                <span>
+                                  {tr(
+                                    `Danh sách Page / Profile+ (${acc.pages.length}):`,
+                                    `Pages / Profile+ (${acc.pages.length}):`,
+                                  )}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-0.5">
+                                {acc.pages.map((p) => {
+                                  const displayUid =
+                                    p.additionalProfileId || p.pageId;
+                                  return (
+                                    <div
+                                      key={p.pageId}
+                                      className="flex items-center justify-between p-1.5 rounded-md bg-background/80 border border-border/50 text-muted-foreground hover:text-foreground hover:border-border transition-colors shadow-2xs"
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <AccountAvatar url={p.avatar} />
+                                        <div className="flex flex-col min-w-0">
+                                          <span className="font-medium truncate text-foreground leading-tight text-[11.5px]">
+                                            {p.pageName}
+                                          </span>
+                                          <span className="font-mono text-[9.5px] text-muted-foreground truncate leading-tight">
+                                            {displayUid}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {p.pageToken ? (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (p.pageToken) {
+                                              handleCopy(p.pageToken);
+                                            }
+                                          }}
+                                          className="ml-1 text-[9px] px-1.5 py-0.5 font-mono bg-blue-500/10 text-blue-500 rounded border border-blue-500/20 hover:bg-blue-500/20 shrink-0 cursor-pointer"
+                                          title={tr(
+                                            "Copy Page Token",
+                                            "Copy Page Token",
+                                          )}
+                                        >
+                                          Token
+                                        </button>
+                                      ) : null}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
                     })}
                   </div>
                 )}
