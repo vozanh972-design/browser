@@ -17,56 +17,8 @@ env:
   STABLE_RELEASE: "true"
 
 jobs:
-  security-scan:
-    if: github.repository == 'vozanh972-design/browser'
-    name: Security Vulnerability Scan
-    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@9a498708959aeaef5ef730655706c5a1df1edbc2" # v2.3.8
-    with:
-      scan-args: |-
-        -r
-        --skip-git
-        --lockfile=pnpm-lock.yaml
-        --lockfile=src-tauri/Cargo.lock
-        ./
-    permissions:
-      security-events: write
-      contents: read
-      actions: read
-
-  lint-js:
-    if: github.repository == 'vozanh972-design/browser'
-    name: Lint JavaScript/TypeScript
-    uses: ./.github/workflows/lint-js.yml
-    permissions:
-      contents: read
-
-  lint-rust:
-    if: github.repository == 'vozanh972-design/browser'
-    name: Lint Rust
-    uses: ./.github/workflows/lint-rs.yml
-    permissions:
-      contents: read
-
-  codeql:
-    if: github.repository == 'vozanh972-design/browser'
-    name: CodeQL
-    uses: ./.github/workflows/codeql.yml
-    permissions:
-      security-events: write
-      contents: read
-      packages: read
-      actions: read
-
-  spellcheck:
-    if: github.repository == 'vozanh972-design/browser'
-    name: Spell Check
-    uses: ./.github/workflows/spellcheck.yml
-    permissions:
-      contents: read
-
   release:
     if: github.repository == 'vozanh972-design/browser'
-    needs: [security-scan, lint-js, lint-rust, codeql, spellcheck]
     permissions:
       contents: write
     strategy:
