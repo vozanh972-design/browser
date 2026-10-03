@@ -850,6 +850,7 @@ async fn curl_request(
 
     cmd
       .arg("-s")
+      .arg("-g")
       .arg("-L")
       .arg("-X")
       .arg(&m)

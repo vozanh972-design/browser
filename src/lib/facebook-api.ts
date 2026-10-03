@@ -362,10 +362,10 @@ export async function fetchAccountDetailsWithToken(
   error?: string;
 }> {
   const cleanToken = token.trim();
-  const url = `https://graph.facebook.com/v21.0/me?fields=id,name,email,picture.width(1024).height(1024){url,is_silhouette},cover{id,source}&access_token=${cleanToken}`;
+  const url = `https://graph.facebook.com/me?fields=id,name,email,picture.type(large),cover&access_token=${cleanToken}`;
 
   try {
-    const raw = await executeCurlRequest({
+    let raw = await executeCurlRequest({
       url,
       method: "GET",
       headers: [
@@ -376,7 +376,42 @@ export async function fetchAccountDetailsWithToken(
       timeoutSecs: 15,
     });
 
-    const json = JSON.parse(raw);
+    interface GraphMeResponse {
+      id?: string | number;
+      name?: string;
+      email?: string;
+      picture?: { data?: { url?: string; is_silhouette?: boolean } };
+      cover?: { source?: string; id?: string };
+      error?: { message?: string };
+    }
+
+    let json: GraphMeResponse = {};
+    try {
+      json = JSON.parse(raw);
+    } catch {
+      // Fallback nếu chuỗi trả về lỗi parse
+      json = {};
+    }
+
+    // Nếu /me với fields bị lỗi, thử fallback cơ bản /me?access_token
+    if (!json.id) {
+      try {
+        const fallbackRaw = await executeCurlRequest({
+          url: `https://graph.facebook.com/me?access_token=${cleanToken}`,
+          method: "GET",
+          headers: [`Authorization: OAuth ${cleanToken}`],
+          proxy,
+          timeoutSecs: 15,
+        });
+        const fallbackJson = JSON.parse(fallbackRaw);
+        if (fallbackJson.id) {
+          json = fallbackJson;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     if (json.id) {
       const uidStr = String(json.id);
 
@@ -387,7 +422,7 @@ export async function fetchAccountDetailsWithToken(
         avatarUrl = picData.url;
       }
       if (!avatarUrl) {
-        avatarUrl = `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${cleanToken}`;
+        avatarUrl = `https://graph.facebook.com/${uidStr}/picture?type=large`;
       }
 
       const coverUrl: string | undefined = json.cover?.source || undefined;
@@ -395,7 +430,7 @@ export async function fetchAccountDetailsWithToken(
       // Lấy danh sách Pages con của tài khoản (chuẩn FacebookAccountManager.kt & FacebookPageEngine.kt)
       let pages: FacebookPageItem[] = [];
       try {
-        const pagesUrl = `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,category,tasks,additional_profile_id,delegate_page_id,picture.width(200).height(200){url}&limit=100&access_token=${cleanToken}`;
+        const pagesUrl = `https://graph.facebook.com/v21.0/me/accounts?fields=id,name,access_token,category,tasks,additional_profile_id,delegate_page_id,global_brand_root_id&limit=100&access_token=${cleanToken}`;
         const pagesRaw = await executeCurlRequest({
           url: pagesUrl,
           method: "GET",
@@ -416,7 +451,6 @@ export async function fetchAccountDetailsWithToken(
               additional_profile_id?: string;
               delegate_page_id?: string;
               category?: string;
-              picture?: { data?: { url?: string } };
             }) => {
               const pid = String(item.id || "");
               const pname = String(item.name || "");
@@ -429,9 +463,7 @@ export async function fetchAccountDetailsWithToken(
               else if (pid.startsWith("615")) uid615 = pid;
               else uid615 = addId || delegate || pid;
 
-              const pAvatar =
-                item.picture?.data?.url ||
-                `https://graph.facebook.com/v21.0/${pid}/picture?type=large&access_token=${cleanToken}`;
+              const pAvatar = `https://graph.facebook.com/${pid}/picture?type=large`;
 
               return {
                 pageId: pid,
