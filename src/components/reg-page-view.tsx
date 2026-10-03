@@ -33,8 +33,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  convertTokenToEAAAA,
   facebookLogin,
   getTokenAndInfoFromCookie,
+  getTokenFromCookie,
   type FacebookPageItem,
 } from "@/lib/facebook-api";
 import {
@@ -273,6 +275,31 @@ export function RegPageView({
       let token = acc.token?.trim() || "";
       const proxy =
         proxyMode === "account" ? acc.proxy?.trim() || undefined : undefined;
+
+      // Ưu tiên Token EAAAA Katana vì Bloks Reg Page chỉ chấp nhận App ID 350685531728
+      if ((!token || !token.startsWith("EAAAA")) && acc.cookie) {
+        try {
+          const cookieRes = await getTokenFromCookie(acc.cookie, proxy);
+          if (cookieRes.eaaaaToken) {
+            token = cookieRes.eaaaaToken;
+          } else if (cookieRes.token) {
+            token = cookieRes.token;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      if (token && !token.startsWith("EAAAA")) {
+        try {
+          const converted = await convertTokenToEAAAA(token, proxy);
+          if (converted) {
+            token = converted;
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       if (!token && acc.cookie) {
         try {
