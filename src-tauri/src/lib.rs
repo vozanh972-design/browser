@@ -881,7 +881,13 @@ async fn curl_request(
     }
     if let Some(fields) = form_fields {
       for f in fields {
-        cmd.arg("-F").arg(f);
+        let sanitized = if f.starts_with("source=@") {
+          let path_part = &f["source=@".len()..];
+          format!("source=@{}", path_part.replace('\\', "/"))
+        } else {
+          f
+        };
+        cmd.arg("-F").arg(sanitized);
       }
     }
     cmd.arg(&url);
@@ -902,6 +908,10 @@ async fn curl_request(
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
+    if stdout.trim().is_empty() && !output.status.success() {
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      return Err(format!("Curl error: {}", stderr));
+    }
     Ok(stdout.into_owned())
   })
   .await

@@ -1228,6 +1228,15 @@ export interface UploadMediaResult {
   rawResponse?: string;
 }
 
+function safeJsonParse<T = Record<string, any>>(str: string): T | null {
+  if (!str || !str.trim()) return null;
+  try {
+    return JSON.parse(str) as T;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Lấy direct CDN URL từ Photo ID đã upload qua Graph API (chuẩn FacebookMediaEngine.kt)
  */
@@ -1242,9 +1251,14 @@ export async function getPhotoDirectUrl(
     const raw = await executeCurlRequest({
       url: `https://graph.facebook.com/v21.0/${photoId}?fields=id,source,images&access_token=${cleanToken}`,
       method: "GET",
+      headers: [
+        "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
+        `Authorization: OAuth ${cleanToken}`,
+      ],
       proxy,
     });
-    const json = JSON.parse(raw);
+    const json = safeJsonParse(raw);
+    if (!json) return null;
     if (json.source) return json.source;
     if (Array.isArray(json.images) && json.images.length > 0) {
       return json.images[0].source || null;
@@ -1275,33 +1289,72 @@ export async function uploadFacebookPageAvatar(params: {
     return { success: false, message: "Cần cung cấp file ảnh hoặc link ảnh" };
   }
 
-  const candidateEndpoints = [pageId];
-  if (pageId !== "me") {
-    candidateEndpoints.push("me");
+  // Chuẩn hóa đường dẫn file trên Windows: đổi \ thành / để curl đọc không bị lỗi escape / port syntax
+  const cleanPath = filePath ? filePath.replace(/\\/g, "/") : "";
+
+  const headers = [
+    "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
+    `Authorization: OAuth ${cleanToken}`,
+  ];
+
+  const candidateEndpoints: string[] = [];
+  if (pageId && pageId !== "me") {
+    candidateEndpoints.push(pageId);
   }
+  candidateEndpoints.push("me");
 
   let photoId = "";
   let errMsg = "";
   let successfulEndpoint = "";
 
-  // Bước 1: Upload ảnh vào /{endpoint}/photos
   for (const ep of candidateEndpoints) {
     try {
       let rawRes = "";
-      if (filePath) {
-        // Upload file ảnh cục bộ qua curl -F
+      if (cleanPath) {
+        // Cách 1: Direct upload vào /{ep}/picture (chuẩn Facebook direct avatar endpoint)
+        const directRes = await executeCurlRequest({
+          url: `https://graph.facebook.com/v21.0/${ep}/picture`,
+          method: "POST",
+          headers,
+          formFields: [
+            `access_token=${cleanToken}`,
+            `source=@${cleanPath}`,
+          ],
+          proxy,
+          timeoutSecs: 25,
+        });
+
+        const jsonDirect = safeJsonParse(directRes);
+        if (jsonDirect && !jsonDirect.error) {
+          const directId = jsonDirect.id || "";
+          const directUrl = directId
+            ? await getPhotoDirectUrl(directId, cleanToken, proxy)
+            : null;
+          return {
+            success: true,
+            photoId: directId,
+            mediaUrl:
+              directUrl ||
+              `https://graph.facebook.com/v21.0/${ep}/picture?type=large&access_token=${cleanToken}`,
+            message: "Cập nhật ảnh đại diện Page thành công",
+            rawResponse: directRes,
+          };
+        }
+
+        // Cách 2: Upload vào /{ep}/photos rồi gán photo_id sau
         rawRes = await executeCurlRequest({
           url: `https://graph.facebook.com/v21.0/${ep}/photos`,
           method: "POST",
+          headers,
           formFields: [
             `access_token=${cleanToken}`,
             "published=true",
-            `source=@${filePath}`,
+            `source=@${cleanPath}`,
           ],
           proxy,
+          timeoutSecs: 25,
         });
       } else if (imageUrl) {
-        // Upload qua URL ảnh
         const formBody = new URLSearchParams({
           access_token: cleanToken,
           published: "true",
@@ -1310,27 +1363,33 @@ export async function uploadFacebookPageAvatar(params: {
         rawRes = await executeCurlRequest({
           url: `https://graph.facebook.com/v21.0/${ep}/photos`,
           method: "POST",
-          headers: ["Content-Type: application/x-www-form-urlencoded"],
+          headers: [
+            ...headers,
+            "Content-Type: application/x-www-form-urlencoded",
+          ],
           body: formBody,
           proxy,
+          timeoutSecs: 25,
         });
       }
 
-      const json = JSON.parse(rawRes);
-      if (json.id) {
+      const json = safeJsonParse(rawRes);
+      if (json?.id) {
         photoId = json.id;
         successfulEndpoint = ep;
         break;
       }
-      if (json.error?.message) {
+      if (json?.error?.message) {
         errMsg = json.error.message;
+      } else if (rawRes && !rawRes.includes("<html>")) {
+        errMsg = rawRes;
       }
     } catch (e: unknown) {
-      errMsg = e instanceof Error ? e.message : "Lỗi tải ảnh";
+      errMsg = e instanceof Error ? e.message : "Lỗi kết nối khi tải ảnh";
     }
   }
 
-  const targetForPic = successfulEndpoint || pageId;
+  const targetForPic = successfulEndpoint || pageId || "me";
 
   // Bước 2: Gán photoId làm Avatar qua /{target}/picture
   if (photoId) {
@@ -1345,12 +1404,17 @@ export async function uploadFacebookPageAvatar(params: {
       const picRes = await executeCurlRequest({
         url: `https://graph.facebook.com/v21.0/${targetForPic}/picture`,
         method: "POST",
-        headers: ["Content-Type: application/x-www-form-urlencoded"],
+        headers: [
+          ...headers,
+          "Content-Type: application/x-www-form-urlencoded",
+        ],
         body: setPicBody,
         proxy,
+        timeoutSecs: 20,
       });
 
-      if (!picRes.includes('"error"')) {
+      const picJson = safeJsonParse(picRes);
+      if (picJson && !picJson.error) {
         const directUrl = await getPhotoDirectUrl(photoId, cleanToken, proxy);
         return {
           success: true,
@@ -1362,41 +1426,11 @@ export async function uploadFacebookPageAvatar(params: {
           rawResponse: picRes,
         };
       }
-    } catch {
-      // fallback
-    }
-  }
-
-  // Fallback: Direct upload vào /{target}/picture nếu chưa thành công
-  if (filePath) {
-    try {
-      const directRes = await executeCurlRequest({
-        url: `https://graph.facebook.com/v21.0/${targetForPic}/picture`,
-        method: "POST",
-        formFields: [
-          `access_token=${cleanToken}`,
-          `source=@${filePath}`,
-        ],
-        proxy,
-      });
-      if (!directRes.includes('"error"')) {
-        const directJson = JSON.parse(directRes);
-        const dId = directJson.id || photoId;
-        const directUrl = dId
-          ? await getPhotoDirectUrl(dId, cleanToken, proxy)
-          : null;
-        return {
-          success: true,
-          photoId: dId,
-          mediaUrl:
-            directUrl ||
-            `https://graph.facebook.com/v21.0/${targetForPic}/picture?type=large&access_token=${cleanToken}`,
-          message: "Cập nhật ảnh đại diện Page thành công",
-          rawResponse: directRes,
-        };
+      if (picJson?.error?.message) {
+        errMsg = picJson.error.message;
       }
     } catch {
-      // ignore
+      // fallback
     }
   }
 
@@ -1428,10 +1462,19 @@ export async function uploadFacebookPageCover(params: {
     return { success: false, message: "Cần cung cấp file ảnh hoặc link ảnh" };
   }
 
-  const candidateEndpoints = [pageId];
-  if (pageId !== "me") {
-    candidateEndpoints.push("me");
+  // Chuẩn hóa đường dẫn file trên Windows: đổi \ thành / để curl đọc không bị lỗi escape / port syntax
+  const cleanPath = filePath ? filePath.replace(/\\/g, "/") : "";
+
+  const headers = [
+    "User-Agent: [FBAN/FB4A;FBAV/548.1.0.51.64;FBBV/474618929;FBDM/{density=3.0,width=1080,height=2340};FBLC/vi_VN;FBRV/0;FBCR/Viettel;FBMF/samsung;FBBD/samsung;FBPN/com.facebook.katana;FBDV/SM-S928B;FBSV/14;FBOP/1;FBCA/arm64-v8a;]",
+    `Authorization: OAuth ${cleanToken}`,
+  ];
+
+  const candidateEndpoints: string[] = [];
+  if (pageId && pageId !== "me") {
+    candidateEndpoints.push(pageId);
   }
+  candidateEndpoints.push("me");
 
   let photoId = "";
   let errMsg = "";
@@ -1441,16 +1484,18 @@ export async function uploadFacebookPageCover(params: {
   for (const ep of candidateEndpoints) {
     try {
       let rawRes = "";
-      if (filePath) {
+      if (cleanPath) {
         rawRes = await executeCurlRequest({
           url: `https://graph.facebook.com/v21.0/${ep}/photos`,
           method: "POST",
+          headers,
           formFields: [
             `access_token=${cleanToken}`,
             "published=true",
-            `source=@${filePath}`,
+            `source=@${cleanPath}`,
           ],
           proxy,
+          timeoutSecs: 25,
         });
       } else if (imageUrl) {
         const formBody = new URLSearchParams({
@@ -1461,23 +1506,29 @@ export async function uploadFacebookPageCover(params: {
         rawRes = await executeCurlRequest({
           url: `https://graph.facebook.com/v21.0/${ep}/photos`,
           method: "POST",
-          headers: ["Content-Type: application/x-www-form-urlencoded"],
+          headers: [
+            ...headers,
+            "Content-Type: application/x-www-form-urlencoded",
+          ],
           body: formBody,
           proxy,
+          timeoutSecs: 25,
         });
       }
 
-      const json = JSON.parse(rawRes);
-      if (json.id) {
+      const json = safeJsonParse(rawRes);
+      if (json?.id) {
         photoId = json.id;
         successfulEndpoint = ep;
         break;
       }
-      if (json.error?.message) {
+      if (json?.error?.message) {
         errMsg = json.error.message;
+      } else if (rawRes && !rawRes.includes("<html>")) {
+        errMsg = rawRes;
       }
     } catch (e: unknown) {
-      errMsg = e instanceof Error ? e.message : "Lỗi tải ảnh";
+      errMsg = e instanceof Error ? e.message : "Lỗi kết nối khi tải ảnh";
     }
   }
 
@@ -1491,7 +1542,7 @@ export async function uploadFacebookPageCover(params: {
   }
 
   // Bước 2: Set photo này làm cover qua POST /{endpoint}
-  const targetForCover = successfulEndpoint || pageId;
+  const targetForCover = successfulEndpoint || pageId || "me";
 
   // Thử cách 1: cover={"cover_id":"<photoId>","offset_x":0,"offset_y":0}
   try {
@@ -1508,18 +1559,23 @@ export async function uploadFacebookPageCover(params: {
     const res1 = await executeCurlRequest({
       url: `https://graph.facebook.com/v21.0/${targetForCover}`,
       method: "POST",
-      headers: ["Content-Type: application/x-www-form-urlencoded"],
+      headers: [
+        ...headers,
+        "Content-Type: application/x-www-form-urlencoded",
+      ],
       body: formBody1,
       proxy,
+      timeoutSecs: 20,
     });
 
-    if (!res1.includes('"error"')) {
+    const json1 = safeJsonParse(res1);
+    if (json1 && !json1.error) {
       const directUrl = await getPhotoDirectUrl(photoId, cleanToken, proxy);
       return {
         success: true,
         photoId,
         mediaUrl: directUrl || undefined,
-        message: "Cập nhật ảnh bìa Page thành công",
+        message: "Cập nhật ảnh bìa thành công",
         rawResponse: res1,
       };
     }
@@ -1539,18 +1595,23 @@ export async function uploadFacebookPageCover(params: {
     const res2 = await executeCurlRequest({
       url: `https://graph.facebook.com/v21.0/${targetForCover}`,
       method: "POST",
-      headers: ["Content-Type: application/x-www-form-urlencoded"],
+      headers: [
+        ...headers,
+        "Content-Type: application/x-www-form-urlencoded",
+      ],
       body: formBody2,
       proxy,
+      timeoutSecs: 20,
     });
 
-    if (!res2.includes('"error"')) {
+    const json2 = safeJsonParse(res2);
+    if (json2 && !json2.error) {
       const directUrl = await getPhotoDirectUrl(photoId, cleanToken, proxy);
       return {
         success: true,
         photoId,
         mediaUrl: directUrl || undefined,
-        message: "Cập nhật ảnh bìa Page thành công",
+        message: "Cập nhật ảnh bìa thành công",
         rawResponse: res2,
       };
     }
