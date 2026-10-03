@@ -73,21 +73,18 @@ function AccountAvatar({
   url?: string;
   isInstagram?: boolean;
 }) {
-  const [error, setError] = useState(false);
-
-  useEffect(() => {
-    setError(false);
-  }, [url]);
+  const [errorUrl, setErrorUrl] = useState<string | null>(null);
+  const hasError = !url || errorUrl === url;
 
   return (
     <div className="relative size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
-      {!error && url ? (
+      {!hasError ? (
         // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
         <img
           src={url}
           alt=""
           className="size-full object-cover"
-          onError={() => setError(true)}
+          onError={() => setErrorUrl(url)}
         />
       ) : isInstagram ? (
         <FaInstagram className="size-4 text-[#E1306C]" />
@@ -1283,10 +1280,10 @@ export default function HomePage() {
                             : undefined);
 
                       return (
-                        <div key={acc.id} className="flex flex-col">
-                          <div
-                            role="row"
-                            tabIndex={0}
+                        <div
+                          key={acc.id}
+                          role="row"
+                          tabIndex={0}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
@@ -1304,12 +1301,13 @@ export default function HomePage() {
                             toggleSelectOne(acc.id);
                           }}
                           className={cn(
-                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-1.5 min-h-[46px] h-[46px] text-xs text-foreground cursor-pointer transition-colors select-none outline-none focus-visible:bg-muted/50",
+                            "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-1.5 min-h-[46px] text-xs text-foreground cursor-pointer transition-colors select-none outline-none focus-visible:bg-muted/50",
                             isSelected
                               ? "bg-primary/10 border-l-2 border-primary"
                               : isCheckpointOrDie
                                 ? "bg-muted/30 opacity-60 hover:bg-muted/40"
                                 : "hover:bg-muted/30",
+                            !acc.pages?.length && "h-[46px]",
                           )}
                         >
                           {/* Checkbox */}
@@ -1586,12 +1584,14 @@ export default function HomePage() {
                                         </span>
                                       </div>
                                     </div>
-                                    {p.pageToken && (
+                                    {p.pageToken ? (
                                       <button
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
-                                          handleCopy(p.pageToken!);
+                                          if (p.pageToken) {
+                                            handleCopy(p.pageToken);
+                                          }
                                         }}
                                         className="ml-1 text-[9px] px-1.5 py-0.5 font-mono bg-blue-500/10 text-blue-500 rounded border border-blue-500/20 hover:bg-blue-500/20 shrink-0 cursor-pointer"
                                         title={tr(
@@ -1601,7 +1601,7 @@ export default function HomePage() {
                                       >
                                         Token
                                       </button>
-                                    )}
+                                    ) : null}
                                   </div>
                                 );
                               })}

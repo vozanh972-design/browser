@@ -10,7 +10,7 @@ import {
   RefreshCw,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
@@ -63,13 +63,10 @@ function DialogAvatar({
   name?: string;
   isInstagram?: boolean;
 }) {
-  const [error, setError] = useState(false);
+  const [errorUrl, setErrorUrl] = useState<string | null>(null);
+  const hasError = !url || errorUrl === url;
 
-  useEffect(() => {
-    setError(false);
-  }, [url]);
-
-  if (!url || error) {
+  if (hasError) {
     return isInstagram ? (
       <div className="size-full flex items-center justify-center bg-[#E1306C]/10 text-[#E1306C]">
         <FaInstagram className="size-9" />
@@ -87,7 +84,7 @@ function DialogAvatar({
       src={url}
       alt={name || ""}
       className="size-full object-cover"
-      onError={() => setError(true)}
+      onError={() => setErrorUrl(url)}
     />
   );
 }
