@@ -293,13 +293,58 @@ export function RegPageView({
       }));
 
       let token = acc.token?.trim() || "";
+      let pass = acc.pass?.trim() || "";
+      let twoFactor = acc.twoFactor?.trim() || "";
+      let cookie = acc.cookie?.trim() || "";
+
+      // Khôi phục đầy đủ dữ liệu từ rawText hoặc cookie nếu có định dạng UID|PASS|2FA|COOKIE (chuẩn parseEntries cloneexe)
+      const rawLine = acc.rawText || acc.cookie || "";
+      let parsedUid = acc.uid;
+      if (rawLine.includes("|")) {
+        const parts = rawLine.split("|").map((p) => p.trim());
+        if (!parsedUid || parsedUid.startsWith("acc_")) {
+          if (parts[0] && /^\d+$/.test(parts[0])) parsedUid = parts[0];
+        }
+        if (!token) {
+          const foundToken = parts.find((p) => p.startsWith("EAA"));
+          if (foundToken) token = foundToken;
+        }
+        if (
+          !pass &&
+          parts.length >= 2 &&
+          !parts[1].includes("=") &&
+          !parts[1].startsWith("EAA")
+        ) {
+          pass = parts[1];
+        }
+        if (
+          !twoFactor &&
+          parts.length >= 3 &&
+          !parts[2].includes("=") &&
+          !parts[2].startsWith("EAA")
+        ) {
+          twoFactor = parts[2];
+        }
+        const foundCookie = parts.find(
+          (p) => p.includes("c_user=") || p.includes("xs="),
+        );
+        if (foundCookie) {
+          cookie = foundCookie;
+        }
+      }
+
+      // Làm sạch chuỗi cookie
+      if (cookie) {
+        cookie = cookie.replace(/[\r\n]+/g, "").trim();
+      }
+
       const proxy =
         proxyMode === "account" ? acc.proxy?.trim() || undefined : undefined;
 
-      // Ưu tiên Token EAAAA Katana vì Bloks Reg Page chỉ chấp nhận App ID 350685531728
-      if ((!token || !token.startsWith("EAAAA")) && acc.cookie) {
+      // 1. Thử lấy token EAAAA từ Cookie qua auth.getSessionForApp (chuẩn getTokenFromCookie trong cloneexe)
+      if ((!token || !token.startsWith("EAAAA")) && cookie) {
         try {
-          const cookieRes = await getTokenFromCookie(acc.cookie, proxy);
+          const cookieRes = await getTokenFromCookie(cookie, proxy);
           if (cookieRes.eaaaaToken) {
             token = cookieRes.eaaaaToken;
           } else if (cookieRes.token) {
@@ -310,6 +355,7 @@ export function RegPageView({
         }
       }
 
+      // 2. Chuyển đổi token sang App ID 350685531728 (EAAAA) nếu là token loại khác
       if (token && !token.startsWith("EAAAA")) {
         try {
           const converted = await convertTokenToEAAAA(token, proxy);
@@ -321,28 +367,20 @@ export function RegPageView({
         }
       }
 
-      if (!token && acc.cookie) {
-        try {
-          const info = await getTokenAndInfoFromCookie(acc.cookie, proxy);
-          if (info.token) {
-            token = info.token;
-          }
-        } catch {
-          // ignore
-        }
-      }
-
-      if (!token && acc.uid && acc.pass) {
+      // 3. Nếu chưa có token nhưng có UID & Mật khẩu -> Đăng nhập lấy Token EAAAA Katana (chuẩn FacebookToken.process cloneexe)
+      if (!token && (parsedUid || acc.uid) && pass) {
         try {
           const loginRes = await facebookLogin(
-            acc.uid,
-            acc.pass,
-            acc.twoFactor,
+            parsedUid || acc.uid,
+            pass,
+            twoFactor || undefined,
             undefined,
             proxy,
           );
           if (loginRes.isSuccess && loginRes.eaaaaToken) {
             token = loginRes.eaaaaToken;
+          } else if (loginRes.isSuccess && loginRes.token) {
+            token = loginRes.token;
           }
         } catch {
           // ignore
