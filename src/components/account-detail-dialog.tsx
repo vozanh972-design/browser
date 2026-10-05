@@ -180,8 +180,8 @@ export function AccountDetailDialog({
           const p2 = parts[2];
           if (
             !p2.startsWith("datr=") &&
-            !p2.contains("c_user=") &&
-            !p2.contains("xs=") &&
+            !p2.includes("c_user=") &&
+            !p2.includes("xs=") &&
             !p2.startsWith("EAA")
           ) {
             if (!twofa) twofa = p2;
