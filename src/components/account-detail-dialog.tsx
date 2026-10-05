@@ -243,7 +243,7 @@ export function AccountDetailDialog({
     (account.token
       ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${account.token}`
       : account.uid && !account.uid.startsWith("acc_")
-        ? `https://graph.facebook.com/${account.uid}/picture?type=large`
+        ? `https://graph.facebook.com/v21.0/${account.uid}/picture?type=large`
         : undefined);
   const coverUrl = currentCover || account.cover;
 

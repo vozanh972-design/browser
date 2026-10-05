@@ -870,7 +870,7 @@ export default function HomePage() {
       }
 
       if (!account.avatar && account.uid && /^\d+$/.test(account.uid)) {
-        account.avatar = `https://graph.facebook.com/${account.uid}/picture?type=large`;
+        account.avatar = `https://graph.facebook.com/v21.0/${account.uid}/picture?type=large`;
       }
 
       return account;
@@ -1460,7 +1460,7 @@ export default function HomePage() {
                         (acc.token
                           ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${acc.token}`
                           : acc.uid && !acc.uid.startsWith("acc_")
-                            ? `https://graph.facebook.com/${acc.uid}/picture?type=large`
+                            ? `https://graph.facebook.com/v21.0/${acc.uid}/picture?type=large`
                             : undefined);
 
                       return (

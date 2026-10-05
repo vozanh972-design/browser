@@ -923,7 +923,7 @@ export async function checkUidLiveGraph(
 
   try {
     const raw = await executeCurlRequest({
-      url: `https://graph.facebook.com/${cleanUid}/picture?type=large`,
+      url: `https://graph.facebook.com/v21.0/${cleanUid}/picture?type=large`,
       method: "GET",
       includeHeaders: true,
       proxy,
@@ -938,7 +938,7 @@ export async function checkUidLiveGraph(
       const locMatch = raw.match(/location:\s*(\S+)/i);
       const avatar =
         locMatch?.[1] ||
-        `https://graph.facebook.com/${cleanUid}/picture?type=large`;
+        `https://graph.facebook.com/v21.0/${cleanUid}/picture?type=large`;
       return { isLive: true, avatar };
     }
 
@@ -955,13 +955,23 @@ export async function checkUidLiveGraph(
 
   return {
     isLive: true,
-    avatar: `https://graph.facebook.com/${cleanUid}/picture?type=large`,
+    avatar: `https://graph.facebook.com/v21.0/${cleanUid}/picture?type=large`,
   };
 }
 
+function unescapeUnicode(str: string): string {
+  try {
+    return str.replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16)),
+    );
+  } catch {
+    return str;
+  }
+}
+
 /**
- * Xác thực cookie trực tiếp bằng www.facebook.com/me (chuẩn FacebookAccountManager.kt)
- * Kiểm tra tài khoản có bị checkpoint / login_required hay không và bóc tách Tên từ <title>
+ * Xác thực cookie trực tiếp bằng www.facebook.com/me (chuẩn 100% FacebookAccountManager.kt: verifyCookieAndGetInfo)
+ * Kiểm tra tài khoản có bị checkpoint / login_required hay không và bóc tách Tên từ USER_NAME_REGEX hoặc <title>
  */
 export async function verifyCookieLive(
   cookie: string,
@@ -985,6 +995,7 @@ export async function verifyCookieLive(
         "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Sec-Fetch-Site: same-origin",
       ],
       proxy,
       timeoutSecs: 15,
@@ -1000,25 +1011,34 @@ export async function verifyCookieLive(
       return {
         isLive: false,
         uid: cUser || undefined,
-        error: "Tài khoản bị Checkpoint hoặc hết hạn Cookie",
+        error: "Cookie die hoặc lỗi do FB Chặn",
       };
     }
 
-    let name: string | undefined;
-    const titleMatch = raw.match(/<title>([^<]+)<\/title>/i);
-    if (titleMatch?.[1]) {
-      const cleanTitle = titleMatch[1]
-        .replace(/\|\s*Facebook/i, "")
-        .replace(/-\s*Facebook/i, "")
-        .trim();
-      if (
-        cleanTitle &&
-        !cleanTitle.toLowerCase().includes("facebook") &&
-        !cleanTitle.toLowerCase().includes("đăng nhập") &&
-        !cleanTitle.toLowerCase().includes("log in") &&
-        !cleanTitle.toLowerCase().includes("error")
-      ) {
-        name = cleanTitle;
+    let name = cUser || "";
+    // Bóc tách tên bằng USER_NAME_REGEX chuẩn FacebookAccountManager.kt
+    const nameMatcher = raw.match(
+      /"__typename"\s*:\s*"User"[^}]*?"name"\s*:\s*"((?:\\.|[^"])*)"/,
+    );
+    if (nameMatcher?.[1]) {
+      const rawName = nameMatcher[1];
+      name = unescapeUnicode(
+        rawName.replace(/\\"/g, '"').replace(/\\\//g, "/"),
+      );
+    } else {
+      // Fallback lấy tên từ thẻ <title> chuẩn FacebookAccountManager.kt
+      const titleMatch = raw.match(/<title>(.*?)<\/title>/i);
+      if (titleMatch?.[1]) {
+        const rawTitle = titleMatch[1];
+        const cleanTitle = rawTitle.split(" | ")[0].split(" - ")[0].trim();
+        if (
+          cleanTitle &&
+          !cleanTitle.toLowerCase().includes("facebook") &&
+          !cleanTitle.toLowerCase().includes("log in") &&
+          !cleanTitle.toLowerCase().includes("đăng nhập")
+        ) {
+          name = cleanTitle;
+        }
       }
     }
 
@@ -1049,124 +1069,6 @@ export async function verifyCookieLive(
  * 3. Nếu có UID & Pass -> đăng nhập qua facebookLogin
  * 4. Nếu có UID -> kiểm tra tồn tại trực tiếp qua Graph API (/picture)
  */
-/**
- * Chuẩn FacebookLiveChecker.kt từ cloneexe:
- * Kiểm tra cookie bằng cách tải trang m.facebook.com/$uid với Cookie.
- * - Bị redirect về login hoặc chứa login/password/checkpoint -> isLive: false
- * - Trích xuất được avatar hoặc nội dung profile -> isLive: true
- */
-export async function checkCookieWithFacebookLiveChecker(
-  cookieStr: string,
-  proxy?: string,
-): Promise<{
-  isLive: boolean;
-  uid?: string;
-  avatar?: string;
-  name?: string;
-  isCheckpoint?: boolean;
-}> {
-  const uid = extractUidFromCookie(cookieStr);
-  if (!uid) {
-    return { isLive: false };
-  }
-
-  try {
-    const raw = await executeCurlRequest({
-      url: `https://m.facebook.com/${uid}`,
-      method: "GET",
-      headers: [
-        "User-Agent: Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
-        "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
-        `Cookie: ${cookieStr}`,
-      ],
-      includeHeaders: true,
-      proxy,
-      timeoutSecs: 15,
-    });
-
-    const lowerRaw = raw.toLowerCase();
-
-    // 1. Kiểm tra redirect về login hoặc checkpoint (Chuẩn FacebookLiveChecker.kt dòng 61 & 138)
-    if (
-      lowerRaw.includes("location: https://m.facebook.com/login") ||
-      lowerRaw.includes("location: https://www.facebook.com/login") ||
-      lowerRaw.includes("login_required") ||
-      (lowerRaw.includes("login") && lowerRaw.includes("password")) ||
-      lowerRaw.includes("checkpoint") ||
-      lowerRaw.includes("xác minh danh tính")
-    ) {
-      const isCheckpoint =
-        lowerRaw.includes("checkpoint") || lowerRaw.includes("xác minh");
-      return { isLive: false, uid, isCheckpoint };
-    }
-
-    // 2. Trích xuất Avatar (Chuẩn extractAvatarUrl / extractAvatarUrlV2 FacebookLiveChecker.kt)
-    let avatarUrl: string | undefined;
-    const v2Match = raw.match(
-      /<img[^>]+src="([^"]+)"[^>]*class="[^"]*rounded gray-border[^"]*"/i,
-    );
-    if (v2Match?.[1]) {
-      avatarUrl = v2Match[1].replace(/&amp;/g, "&");
-    }
-
-    if (!avatarUrl) {
-      const pMatch =
-        raw.match(/data-profile-pic-url="([^"]+)"/) ||
-        raw.match(
-          /<img[^>]*class="[^"]*profilePic[^"]*"[^>]*src="([^"]+)"/i,
-        ) ||
-        raw.match(
-          /<div[^>]*role="img"[^>]*style="background-image:\s*url\(['"]?([^'"]+)['"]?\)/i,
-        ) ||
-        raw.match(
-          /https:\/\/scontent\.[^"]+\.fbcdn\.net\/[^"]+_n\.(?:jpg|png|gif|webp)/i,
-        );
-      if (pMatch?.[1] || pMatch?.[0]) {
-        const found = pMatch[1] || pMatch[0];
-        if (
-          !found.includes("silhouette") &&
-          !found.includes("default_avatar")
-        ) {
-          avatarUrl = found.replace(/&amp;/g, "&");
-        }
-      }
-    }
-
-    // 3. Trích xuất tên (Chuẩn extractFullName FacebookLiveChecker.kt)
-    let fullName: string | undefined;
-    const titleMatch = raw.match(/<title>([^<]+)<\/title>/i);
-    if (titleMatch?.[1]) {
-      const cleanTitle = titleMatch[1]
-        .split(" | ")[0]
-        .split(" - ")[0]
-        .trim();
-      if (
-        cleanTitle &&
-        !cleanTitle.toLowerCase().includes("facebook") &&
-        !cleanTitle.toLowerCase().includes("log in") &&
-        !cleanTitle.toLowerCase().includes("đăng nhập")
-      ) {
-        fullName = cleanTitle;
-      }
-    }
-
-    const hasProfileContent =
-      Boolean(avatarUrl) ||
-      raw.includes("profile") ||
-      raw.includes("_1dwg") ||
-      raw.includes("profilePic");
-
-    return {
-      isLive: hasProfileContent,
-      uid,
-      avatar: avatarUrl,
-      name: fullName,
-    };
-  } catch {
-    return { isLive: false, uid };
-  }
-}
 
 export async function checkFacebookAccountFull(params: {
   uid?: string;
@@ -1256,34 +1158,34 @@ export async function checkFacebookAccountFull(params: {
       // ignore
     }
 
-    // Nếu chưa lấy được EAAAA, kiểm tra xác thực Cookie qua FacebookLiveChecker.kt
+    // Nếu chưa lấy được EAAAA, kiểm tra xác thực Cookie qua verifyCookieLive (chuẩn 100% FacebookAccountManager.kt: verifyCookieAndGetInfo)
     try {
-      const liveCheck = await checkCookieWithFacebookLiveChecker(
-        activeCookie,
-        proxy,
-      );
+      const liveCheck = await verifyCookieLive(activeCookie, proxy);
       if (liveCheck.isLive) {
         return {
-          uid: activeUid,
+          uid: activeUid || liveCheck.uid || "N/A",
           name: liveCheck.name || activeUid,
           avatar:
             liveCheck.avatar ||
-            `https://graph.facebook.com/${activeUid}/picture?type=large`,
+            `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
           token: activeToken,
           cookie: activeCookie,
           proxy,
           isLive: true,
         };
       }
-      if (liveCheck.isCheckpoint) {
+      if (
+        liveCheck.error?.toLowerCase().includes("checkpoint") ||
+        liveCheck.error?.toLowerCase().includes("chặn")
+      ) {
         return {
-          uid: activeUid,
+          uid: activeUid || liveCheck.uid || "N/A",
           name: liveCheck.name || activeUid,
           token: activeToken,
           cookie: activeCookie,
           avatar:
             liveCheck.avatar ||
-            `https://graph.facebook.com/${activeUid}/picture?type=large`,
+            `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
           proxy,
           isLive: false,
           error: "Tài khoản bị Checkpoint",
@@ -1330,7 +1232,7 @@ export async function checkFacebookAccountFull(params: {
           name: activeUid,
           token: activeToken,
           cookie: activeCookie,
-          avatar: `https://graph.facebook.com/${activeUid}/picture?type=large`,
+          avatar: `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
           proxy,
           isLive: false,
           error: "Tài khoản bị Checkpoint",
@@ -1349,7 +1251,7 @@ export async function checkFacebookAccountFull(params: {
       const uidCheck = await checkUidLiveGraph(activeUid, proxy);
       fallbackAvatar =
         uidCheck.avatar ||
-        `https://graph.facebook.com/${activeUid}/picture?type=large`;
+        `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`;
     } catch {
       // ignore
     }
@@ -1368,7 +1270,7 @@ export async function checkFacebookAccountFull(params: {
     avatar:
       fallbackAvatar ||
       (fallbackUid !== "N/A"
-        ? `https://graph.facebook.com/${fallbackUid}/picture?type=large`
+        ? `https://graph.facebook.com/v21.0/${fallbackUid}/picture?type=large`
         : undefined),
     proxy,
     isLive: false,
