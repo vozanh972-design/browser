@@ -63,6 +63,8 @@ interface AccountDetailDialogProps {
     avatar?: string;
     cover?: string;
     token?: string;
+    name?: string;
+    pages?: FacebookPageItem[];
   }) => void;
   isChecking?: boolean;
 }
@@ -142,29 +144,87 @@ export function AccountDetailDialog({
     setIsFetchingToken(true);
     try {
       let tokenFound: string | null = null;
+      let newName: string | undefined;
+      let newAvatar: string | undefined;
+      let newCover: string | undefined;
+      let newPages: FacebookPageItem[] | undefined;
+
+      // Trích xuất datr nếu có trong cookie hoặc rawText (chuẩn FacebookToken.kt dòng 488)
+      let datr: string | undefined;
+      const cookieStr = account.cookie || "";
+      if (cookieStr.includes("datr=")) {
+        const dm = cookieStr.match(/datr=([^;]+)/);
+        if (dm) datr = dm[1];
+      }
+      if (!datr && account.rawText?.includes("datr=")) {
+        const dm = account.rawText.match(/datr=([^;|]+)/);
+        if (dm) datr = dm[1];
+      }
+
       // 1. Thử lấy token từ Cookie qua auth.getSessionForApp (chuẩn getTokenFromCookie cloneexe)
       if (account.cookie) {
         const clean = account.cookie.replace(/[\r\n]+/g, "").trim();
         const cookieRes = await getTokenFromCookie(clean, account.proxy);
-        if (cookieRes.eaaaaToken) tokenFound = cookieRes.eaaaaToken;
-        else if (cookieRes.token) tokenFound = cookieRes.token;
+        if (cookieRes.eaaaaToken) {
+          tokenFound = cookieRes.eaaaaToken;
+          if (cookieRes.name) newName = cookieRes.name;
+          if (cookieRes.avatar) newAvatar = cookieRes.avatar;
+          if (cookieRes.cover) newCover = cookieRes.cover;
+          if (cookieRes.pages?.length) newPages = cookieRes.pages;
+        } else if (cookieRes.token) {
+          tokenFound = cookieRes.token;
+        }
       }
-      // 2. Nếu chưa có nhưng có UID & Pass/2FA, đăng nhập qua facebookLogin
+
+      // 2. Nếu chưa có nhưng có UID & Pass/2FA, đăng nhập qua facebookLogin (chuẩn FacebookToken.kt dòng 545)
       if (!tokenFound && account.uid && account.pass) {
         const loginRes = await facebookLogin(
           account.uid,
           account.pass,
           account.twoFactor,
-          undefined,
+          datr,
           account.proxy,
         );
         if (loginRes.isSuccess) {
           tokenFound = loginRes.eaaaaToken || loginRes.token || null;
+          if (loginRes.name) newName = loginRes.name;
+          if (loginRes.avatar) newAvatar = loginRes.avatar;
+          if (loginRes.cover) newCover = loginRes.cover;
+          if (loginRes.pages?.length) newPages = loginRes.pages;
         }
       }
+
+      // 3. Nếu đã lấy được Token nhưng chưa có đầy đủ chi tiết profile/pages: gọi fetchAccountDetailsWithToken
       if (tokenFound) {
+        if (!newName || !newAvatar || !newPages || newPages.length === 0) {
+          try {
+            const details = await fetchAccountDetailsWithToken(
+              tokenFound,
+              account.proxy,
+            );
+            if (details.isLive) {
+              if (details.name) newName = details.name;
+              if (details.avatar) newAvatar = details.avatar;
+              if (details.cover) newCover = details.cover;
+              if (details.pages?.length) newPages = details.pages;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
         setCurrentToken(tokenFound);
-        onUpdateMedia?.({ token: tokenFound });
+        if (newAvatar) setCurrentAvatar(newAvatar);
+        if (newCover) setCurrentCover(newCover);
+
+        onUpdateMedia?.({
+          token: tokenFound,
+          ...(newAvatar ? { avatar: newAvatar } : {}),
+          ...(newCover ? { cover: newCover } : {}),
+          ...(newName ? { name: newName } : {}),
+          ...(newPages ? { pages: newPages } : {}),
+        });
+
         showSuccessToast(
           tr(
             "Đã lấy Access Token (EAAAA) thành công!",

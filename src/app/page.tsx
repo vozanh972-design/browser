@@ -2183,14 +2183,16 @@ export default function HomePage() {
         onRecheck={(acc) => void handleCheckAccount(acc as FacebookAccount)}
         onUpdateMedia={(updated) => {
           if (!detailAccount) return;
-          setAccounts((prev) =>
-            prev.map((a) => {
+          setAccounts((prev) => {
+            const updatedList = prev.map((a) => {
               if (a.id === detailAccount.id) {
                 return {
                   ...a,
                   avatar: updated.avatar || a.avatar,
                   cover: updated.cover || a.cover,
                   token: updated.token || a.token,
+                  name: updated.name || a.name,
+                  pages: updated.pages || a.pages,
                 };
               }
               if (a.pages && a.pages.length > 0) {
@@ -2210,8 +2212,18 @@ export default function HomePage() {
                 }
               }
               return a;
-            }),
-          );
+            });
+            try {
+              localStorage.setItem(
+                "autolunex_facebook_accounts_v1",
+                JSON.stringify(updatedList),
+              );
+            } catch {
+              // ignore
+            }
+            return updatedList;
+          });
+          setDetailAccount((prev) => (prev ? { ...prev, ...updated } : prev));
         }}
         isChecking={
           detailAccount ? checkingIds.includes(detailAccount.id) : false

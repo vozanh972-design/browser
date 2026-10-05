@@ -1329,6 +1329,20 @@ export async function checkFacebookAccountFull(params: {
             if (loginRes.isSuccess && (loginRes.eaaaaToken || loginRes.token)) {
               activeToken = loginRes.eaaaaToken || loginRes.token;
               if (loginRes.cookie) activeCookie = loginRes.cookie;
+              return {
+                uid: loginRes.uid || activeUid,
+                name: loginRes.name || liveCheck.name || activeUid,
+                avatar:
+                  loginRes.avatar ||
+                  liveCheck.avatar ||
+                  `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${activeToken}`,
+                cover: loginRes.cover,
+                token: activeToken,
+                cookie: activeCookie,
+                pages: loginRes.pages,
+                proxy,
+                isLive: true,
+              };
             }
           } catch {
             // ignore
@@ -1341,6 +1355,20 @@ export async function checkFacebookAccountFull(params: {
             const tokenRes = await getTokenFromCookie(activeCookie, proxy);
             if (tokenRes.eaaaaToken || tokenRes.token) {
               activeToken = tokenRes.eaaaaToken || tokenRes.token;
+              return {
+                uid: activeUid || tokenRes.uid || liveCheck.uid || "N/A",
+                name: tokenRes.name || liveCheck.name || activeUid,
+                avatar:
+                  tokenRes.avatar ||
+                  liveCheck.avatar ||
+                  `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${activeToken}`,
+                cover: tokenRes.cover,
+                token: activeToken,
+                cookie: tokenRes.cookie || activeCookie,
+                pages: tokenRes.pages,
+                proxy,
+                isLive: true,
+              };
             }
           } catch {
             // ignore
