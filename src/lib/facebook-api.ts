@@ -970,6 +970,159 @@ function unescapeUnicode(str: string): string {
 }
 
 /**
+ * Trích xuất Tên, Avatar HD và trạng thái Live/Checkpoint từ HTML www.facebook.com
+ * Chuẩn 100% từ FacebookAccountManager.kt (USER_NAME_REGEX, <title>) và FacebookLiveChecker.kt
+ */
+export function extractFacebookInfoFromHtml(
+  html: string,
+  cUser?: string,
+): {
+  name?: string;
+  avatar?: string;
+  isLive: boolean;
+  isCheckpoint: boolean;
+  isDie: boolean;
+} {
+  if (!html) return { isLive: false, isCheckpoint: false, isDie: false };
+
+  // 1. Trích xuất tên (Name) chuẩn 100% cloneexe (USER_NAME_REGEX + Desktop SSR + <title>)
+  let extractedName: string | undefined;
+
+  // Pattern 1: USER_NAME_REGEX chuẩn FacebookAccountManager.kt
+  const nameMatch1 = html.match(
+    /"__typename"\s*:\s*"User"[^}]*?"name"\s*:\s*"((?:\\.|[^"])*)"/,
+  );
+  if (nameMatch1?.[1]) {
+    const raw = unescapeUnicode(
+      nameMatch1[1].replace(/\\"/g, '"').replace(/\\\//g, "/"),
+    );
+    if (raw.trim()) extractedName = raw.trim();
+  }
+
+  // Pattern 2: "NAME":"..." / "SHORT_NAME":"..." trong Desktop SSR script
+  if (!extractedName) {
+    const nameMatch2 = html.match(/"NAME"\s*:\s*"((?:\\.|[^"])*)"/);
+    if (nameMatch2?.[1]) {
+      const raw = unescapeUnicode(
+        nameMatch2[1].replace(/\\"/g, '"').replace(/\\\//g, "/"),
+      );
+      if (raw.trim()) extractedName = raw.trim();
+    }
+  }
+
+  // Pattern 3: <title> chuẩn FacebookAccountManager.kt & FacebookLiveChecker.kt
+  if (!extractedName) {
+    const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+    if (titleMatch?.[1]) {
+      let title = titleMatch[1]
+        .replace(/&amp;/g, "&")
+        .replace(/&#039;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .trim();
+      title = title.split(" | ")[0].split(" - ")[0].trim();
+      title = title.replace(/^\(\d+\)\s*/, "").trim(); // Bỏ số thông báo (3) Tên
+      const lower = title.toLowerCase();
+      if (
+        title &&
+        !lower.includes("facebook") &&
+        !lower.includes("log in") &&
+        !lower.includes("đăng nhập") &&
+        !lower.includes("checkpoint") &&
+        !lower.includes("xác minh") &&
+        !lower.includes("error") &&
+        !lower.includes("không tìm thấy")
+      ) {
+        extractedName = title;
+      }
+    }
+  }
+
+  // 2. Trích xuất Avatar HD thật (FacebookLiveChecker.kt & FacebookMediaEngine.kt)
+  let extractedAvatar: string | undefined;
+
+  const avatarPatterns = [
+    // Relay store profile_picture
+    /"profile_picture"\s*:\s*\{\s*"uri"\s*:\s*"([^"]+)"/,
+    // SVG image xlink:href
+    /<image[^>]+xlink:href="([^"]*fbcdn\.net[^"]*)"/i,
+    /xlink:href="([^"]*fbcdn\.net[^"]*)"/i,
+    // Desktop img
+    /<img[^>]+src="([^"]*fbcdn\.net[^"]*)"[^>]*role="img"/i,
+    // data-profile-pic-url (FacebookLiveChecker.kt)
+    /data-profile-pic-url="([^"]+)"/i,
+    // class profilePic (FacebookLiveChecker.kt)
+    /<img[^>]*class="[^"]*profilePic[^"]*"[^>]*src="([^"]+)"/i,
+    // class rounded gray-border (FacebookLiveChecker.kt extractAvatarUrlV2)
+    /<img[^>]+src="([^"]+)"[^>]*class="[^"]*rounded gray-border[^"]*"/i,
+    // Direct fbcdn profile image link
+    /(https:\\?\/\\?\/scontent[^"'\s\\]+\.fbcdn\.net\\?\/[^"'\s\\]+_n\.(?:jpg|png|gif|webp)[^"'\s\\]*)/,
+  ];
+
+  for (const pat of avatarPatterns) {
+    const match = html.match(pat);
+    if (match?.[1]) {
+      const cand = match[1]
+        .replace(/\\\//g, "/")
+        .replace(/&amp;/g, "&")
+        .replace(/\\u0025/g, "%");
+      // Loại bỏ ảnh silhouette / placeholder
+      if (
+        !cand.includes("84628273_176159830277856") &&
+        !cand.includes("silhouette") &&
+        !cand.includes("default_avatar") &&
+        !cand.includes("static.xx.fbcdn") &&
+        !cand.includes("rsrc.php")
+      ) {
+        extractedAvatar = cand;
+        break;
+      }
+    }
+  }
+
+  // Fallback avatar nếu không bắt được URL HD trực tiếp trong HTML
+  if (!extractedAvatar && cUser && /^\d+$/.test(cUser)) {
+    extractedAvatar = `https://graph.facebook.com/v21.0/${cUser}/picture?type=large`;
+  }
+
+  // 3. Phán đoán Live vs Checkpoint vs Die chuẩn xác
+  // Nếu đã bắt được tên thật HOẶC avatar thật -> CHẮC CHẮN 100% LIVE!
+  if (extractedName || (extractedAvatar && !extractedAvatar.includes("silhouette"))) {
+    return {
+      name: extractedName,
+      avatar: extractedAvatar,
+      isLive: true,
+      isCheckpoint: false,
+      isDie: false,
+    };
+  }
+
+  // Kiểm tra Checkpoint thực sự (chỉ khi KHÔNG lấy được tên profile)
+  const isCheckpoint = Boolean(
+    html.includes("checkpointSubmitButton") ||
+    html.includes('action="/checkpoint/') ||
+    html.includes('name="submit[Continue]"') ||
+    /<title>[^<]*(checkpoint|xác minh|security check)[^<]*<\/title>/i.test(html)
+  );
+
+  // Kiểm tra Die thực sự
+  const isDie = Boolean(
+    html.includes("login_form") ||
+    html.includes('id="loginbutton"') ||
+    /<title>[^<]*(log in|đăng nhập)[^<]*<\/title>/i.test(html)
+  );
+
+  return {
+    name: undefined,
+    avatar: extractedAvatar,
+    isLive: !isCheckpoint && !isDie,
+    isCheckpoint,
+    isDie,
+  };
+}
+
+/**
  * Xác thực cookie trực tiếp bằng www.facebook.com/me (chuẩn 100% FacebookAccountManager.kt: verifyCookieAndGetInfo)
  * Kiểm tra tài khoản có bị checkpoint / login_required hay không và bóc tách Tên từ USER_NAME_REGEX hoặc <title>
  */
@@ -1001,57 +1154,58 @@ export async function verifyCookieLive(
       timeoutSecs: 15,
     });
 
-    const lower = raw.toLowerCase();
-    if (
-      lower.includes("login_required") ||
-      lower.includes("checkpoint") ||
-      lower.includes("/login") ||
-      lower.includes("checkpointsubmitbutton")
-    ) {
-      return {
-        isLive: false,
-        uid: cUser || undefined,
-        error: "Cookie die hoặc lỗi do FB Chặn",
-      };
-    }
+    let info = extractFacebookInfoFromHtml(raw, cUser || undefined);
 
-    let name = cUser || "";
-    // Bóc tách tên bằng USER_NAME_REGEX chuẩn FacebookAccountManager.kt
-    const nameMatcher = raw.match(
-      /"__typename"\s*:\s*"User"[^}]*?"name"\s*:\s*"((?:\\.|[^"])*)"/,
-    );
-    if (nameMatcher?.[1]) {
-      const rawName = nameMatcher[1];
-      name = unescapeUnicode(
-        rawName.replace(/\\"/g, '"').replace(/\\\//g, "/"),
-      );
-    } else {
-      // Fallback lấy tên từ thẻ <title> chuẩn FacebookAccountManager.kt
-      const titleMatch = raw.match(/<title>(.*?)<\/title>/i);
-      if (titleMatch?.[1]) {
-        const rawTitle = titleMatch[1];
-        const cleanTitle = rawTitle.split(" | ")[0].split(" - ")[0].trim();
-        if (
-          cleanTitle &&
-          !cleanTitle.toLowerCase().includes("facebook") &&
-          !cleanTitle.toLowerCase().includes("log in") &&
-          !cleanTitle.toLowerCase().includes("đăng nhập")
-        ) {
-          name = cleanTitle;
+    // Nếu /me chưa bắt được Tên và cUser có sẵn, thử lấy trực tiếp từ trang cá nhân https://www.facebook.com/${cUser}
+    if (!info.name && cUser && !info.isCheckpoint && !info.isDie) {
+      try {
+        const profileRaw = await executeCurlRequest({
+          url: `https://www.facebook.com/${cUser}`,
+          method: "GET",
+          cookie: cleanCookie,
+          headers: [
+            "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+            "Sec-Fetch-Site: same-origin",
+          ],
+          proxy,
+          timeoutSecs: 15,
+        });
+        const profileInfo = extractFacebookInfoFromHtml(profileRaw, cUser);
+        if (profileInfo.name) {
+          info = profileInfo;
+        } else if (profileInfo.avatar && !info.avatar) {
+          info.avatar = profileInfo.avatar;
         }
+      } catch {
+        // ignore
       }
     }
 
-    const uid = cUser || undefined;
-    const avatar = uid
-      ? `https://graph.facebook.com/${uid}/picture?type=large`
-      : undefined;
+    if (info.isLive) {
+      return {
+        isLive: true,
+        uid: cUser || undefined,
+        name: info.name || cUser || "Facebook User",
+        avatar: info.avatar,
+      };
+    }
+
+    if (info.isCheckpoint) {
+      return {
+        isLive: false,
+        uid: cUser || undefined,
+        name: cUser || undefined,
+        avatar: info.avatar,
+        error: "Tài khoản bị Checkpoint",
+      };
+    }
 
     return {
-      isLive: true,
-      uid,
-      name: name || uid,
-      avatar,
+      isLive: false,
+      uid: cUser || undefined,
+      error: "Cookie đã hết hạn (Die)",
     };
   } catch (err: unknown) {
     return {
@@ -1174,10 +1328,7 @@ export async function checkFacebookAccountFull(params: {
           isLive: true,
         };
       }
-      if (
-        liveCheck.error?.toLowerCase().includes("checkpoint") ||
-        liveCheck.error?.toLowerCase().includes("chặn")
-      ) {
+      if (liveCheck.error?.toLowerCase().includes("checkpoint")) {
         return {
           uid: activeUid || liveCheck.uid || "N/A",
           name: liveCheck.name || activeUid,
@@ -1191,6 +1342,18 @@ export async function checkFacebookAccountFull(params: {
           error: "Tài khoản bị Checkpoint",
         };
       }
+      return {
+        uid: activeUid || liveCheck.uid || "N/A",
+        name: liveCheck.name || activeUid,
+        token: activeToken,
+        cookie: activeCookie,
+        avatar:
+          liveCheck.avatar ||
+          `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
+        proxy,
+        isLive: false,
+        error: liveCheck.error || "Cookie die",
+      };
     } catch {
       // ignore
     }

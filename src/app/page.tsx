@@ -85,6 +85,7 @@ function AccountAvatar({
           src={url}
           alt=""
           className="size-full object-cover"
+          referrerPolicy="no-referrer"
           onError={() => setErrorUrl(url)}
         />
       ) : isInstagram ? (
