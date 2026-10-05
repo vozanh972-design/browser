@@ -1254,8 +1254,8 @@ export async function checkFacebookAccountFull(params: {
     if (dm) activeDatr = dm[1];
   }
 
-  // 1. Ưu tiên kiểm tra Token trực tiếp (bắt đầu bằng EAA hoặc đã có Token)
-  if (activeToken?.startsWith("EAA")) {
+  // 1. Ưu tiên kiểm tra Token trực tiếp: Dùng token get ngay info acc & pages (Graph API)
+  if (activeToken && activeToken.trim().length >= 15) {
     try {
       const details = await fetchAccountDetailsWithToken(activeToken, proxy);
       if (details.isLive) {

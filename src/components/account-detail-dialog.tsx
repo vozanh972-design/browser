@@ -27,6 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   type FacebookPageItem,
   facebookLogin,
+  fetchAccountDetailsWithToken,
   getTokenFromCookie,
   uploadFacebookPageAvatar,
   uploadFacebookPageCover,
@@ -131,104 +132,144 @@ export function AccountDetailDialog({
   const [currentToken, setCurrentToken] = useState<string | undefined>(
     account?.token,
   );
+  const [currentName, setCurrentName] = useState<string | undefined>(
+    account?.name,
+  );
+  const [currentPages, setCurrentPages] = useState<FacebookPageItem[]>(
+    account?.pages || [],
+  );
   const [isFetchingToken, setIsFetchingToken] = useState(false);
 
   useEffect(() => {
     setCurrentAvatar(account?.avatar);
     setCurrentCover(account?.cover);
     setCurrentToken(account?.token);
-  }, [account?.avatar, account?.cover, account?.token]);
+    setCurrentName(account?.name);
+    setCurrentPages(account?.pages || []);
+  }, [
+    account?.avatar,
+    account?.cover,
+    account?.token,
+    account?.name,
+    account?.pages,
+  ]);
 
   const handleFetchToken = async () => {
     if (!account) return;
     setIsFetchingToken(true);
     try {
-      let tokenFound: string | null = null;
-      let newName: string | undefined;
-      let newAvatar: string | undefined;
-      let newCover: string | undefined;
-      let newPages: FacebookPageItem[] | undefined;
-
-      // Trích xuất datr nếu có trong cookie hoặc rawText (chuẩn FacebookToken.kt dòng 488)
+      let uid = account.uid;
+      let pass = account.pass;
+      let twofa = account.twoFactor;
+      let cookie = account.cookie;
       let datr: string | undefined;
-      const cookieStr = account.cookie || "";
-      if (cookieStr.includes("datr=")) {
-        const dm = cookieStr.match(/datr=([^;]+)/);
-        if (dm) datr = dm[1];
+
+      // Chuẩn FacebookToken.parseEntries từ cloneexe: trích xuất từ rawText định dạng uid|pass|cookie hoặc uid|pass|2fa|cookie
+      if (account.rawText && account.rawText.includes("|")) {
+        const parts = account.rawText.split("|").map((p) => p.trim());
+        if (parts[0] && (!uid || uid.startsWith("acc_"))) uid = parts[0];
+        if (parts[1] && !pass) pass = parts[1];
+        for (const part of parts) {
+          if (part.startsWith("datr=")) {
+            datr = part.substring(5);
+          } else if (part.includes("c_user=") || part.includes("xs=")) {
+            if (!cookie) cookie = part;
+          }
+        }
+        if (parts.length > 2) {
+          const p2 = parts[2];
+          if (
+            !p2.startsWith("datr=") &&
+            !p2.contains("c_user=") &&
+            !p2.contains("xs=") &&
+            !p2.startsWith("EAA")
+          ) {
+            if (!twofa) twofa = p2;
+          }
+        }
       }
-      if (!datr && account.rawText?.includes("datr=")) {
-        const dm = account.rawText.match(/datr=([^;|]+)/);
+
+      if (!datr && cookie?.includes("datr=")) {
+        const dm = cookie.match(/datr=([^;]+)/);
         if (dm) datr = dm[1];
       }
 
-      // 1. Thử lấy token từ Cookie qua auth.getSessionForApp (chuẩn getTokenFromCookie cloneexe)
-      if (account.cookie) {
-        const clean = account.cookie.replace(/[\r\n]+/g, "").trim();
+      let tokenFound: string | null = null;
+
+      // 1. Thử lấy token từ Cookie trước nếu có (chuẩn FacebookToken.kt dòng 534: getTokenFromCookie)
+      if (cookie && (cookie.includes("c_user=") || cookie.includes("xs="))) {
+        const clean = cookie.replace(/[\r\n]+/g, "").trim();
         const cookieRes = await getTokenFromCookie(clean, account.proxy);
         if (cookieRes.eaaaaToken) {
           tokenFound = cookieRes.eaaaaToken;
-          if (cookieRes.name) newName = cookieRes.name;
-          if (cookieRes.avatar) newAvatar = cookieRes.avatar;
-          if (cookieRes.cover) newCover = cookieRes.cover;
-          if (cookieRes.pages?.length) newPages = cookieRes.pages;
+          if (cookieRes.cookie) cookie = cookieRes.cookie;
         } else if (cookieRes.token) {
           tokenFound = cookieRes.token;
         }
       }
 
-      // 2. Nếu chưa có nhưng có UID & Pass/2FA, đăng nhập qua facebookLogin (chuẩn FacebookToken.kt dòng 545)
-      if (!tokenFound && account.uid && account.pass) {
+      // 2. Nếu chưa lấy được từ cookie, chạy luồng login qua API với pass & 2FA (chuẩn FacebookToken.kt dòng 545)
+      if (!tokenFound && uid && pass) {
         const loginRes = await facebookLogin(
-          account.uid,
-          account.pass,
-          account.twoFactor,
+          uid,
+          pass,
+          twofa,
           datr,
           account.proxy,
         );
-        if (loginRes.isSuccess) {
+        if (loginRes.isSuccess && (loginRes.eaaaaToken || loginRes.token)) {
           tokenFound = loginRes.eaaaaToken || loginRes.token || null;
-          if (loginRes.name) newName = loginRes.name;
-          if (loginRes.avatar) newAvatar = loginRes.avatar;
-          if (loginRes.cover) newCover = loginRes.cover;
-          if (loginRes.pages?.length) newPages = loginRes.pages;
+          if (loginRes.cookie) cookie = loginRes.cookie;
         }
       }
 
-      // 3. Nếu đã lấy được Token nhưng chưa có đầy đủ chi tiết profile/pages: gọi fetchAccountDetailsWithToken
+      // 3. Fallback: Nếu không ra token mới nhưng tài khoản đã có token EAAAA sẵn
+      if (!tokenFound && (account.token || currentToken)) {
+        tokenFound = account.token || currentToken || null;
+      }
+
+      // 4. DÙNG TOKEN VỪA GET RA CHẠY NGẦM ĐĂNG NHẬP VÔ GET INFO ACC KÈM HIỆN PAGES (chuẩn FacebookLoginBottomSheet.kt dòng 320 & FacebookAccountManager.kt dòng 423)
       if (tokenFound) {
-        if (!newName || !newAvatar || !newPages || newPages.length === 0) {
-          try {
-            const details = await fetchAccountDetailsWithToken(
-              tokenFound,
-              account.proxy,
-            );
-            if (details.isLive) {
-              if (details.name) newName = details.name;
-              if (details.avatar) newAvatar = details.avatar;
-              if (details.cover) newCover = details.cover;
-              if (details.pages?.length) newPages = details.pages;
+        let newName: string | undefined = currentName || account.name;
+        let newAvatar: string | undefined = currentAvatar || account.avatar;
+        let newCover: string | undefined = currentCover || account.cover;
+        let newPages: FacebookPageItem[] = currentPages.length > 0 ? currentPages : (account.pages || []);
+
+        try {
+          const details = await fetchAccountDetailsWithToken(
+            tokenFound,
+            account.proxy,
+          );
+          if (details.isLive) {
+            if (details.name) newName = details.name;
+            if (details.avatar) newAvatar = details.avatar;
+            if (details.cover) newCover = details.cover;
+            if (details.pages && details.pages.length > 0) {
+              newPages = details.pages;
             }
-          } catch {
-            // ignore
           }
+        } catch {
+          // ignore
         }
 
         setCurrentToken(tokenFound);
+        if (newName) setCurrentName(newName);
         if (newAvatar) setCurrentAvatar(newAvatar);
         if (newCover) setCurrentCover(newCover);
+        setCurrentPages(newPages);
 
         onUpdateMedia?.({
           token: tokenFound,
           ...(newAvatar ? { avatar: newAvatar } : {}),
           ...(newCover ? { cover: newCover } : {}),
           ...(newName ? { name: newName } : {}),
-          ...(newPages ? { pages: newPages } : {}),
+          ...(newPages.length > 0 ? { pages: newPages } : {}),
         });
 
         showSuccessToast(
           tr(
-            "Đã lấy Access Token (EAAAA) thành công!",
-            "Fetched Access Token (EAAAA) successfully!",
+            "Đã lấy Token EAAAA & thông tin Pages thành công!",
+            "Fetched Token EAAAA & Pages successfully!",
           ),
         );
       } else {
@@ -249,12 +290,7 @@ export function AccountDetailDialog({
   };
 
   useEffect(() => {
-    if (
-      isOpen &&
-      account &&
-      !account.token &&
-      (account.cookie || (account.uid && account.pass))
-    ) {
+    if (isOpen && account && account.platform !== "instagram") {
       void handleFetchToken();
     }
   }, [isOpen, account?.id]);
@@ -372,22 +408,26 @@ export function AccountDetailDialog({
   };
 
   const isInstagram = account.platform === "instagram";
+  const activeTok = currentToken || account.token;
+  const displayName = currentName || account.name || account.uid;
   const avatarUrl =
     currentAvatar ||
     account.avatar ||
-    (account.token
-      ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${account.token}`
+    (activeTok
+      ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${activeTok}`
       : account.uid && !account.uid.startsWith("acc_")
         ? `https://graph.facebook.com/v21.0/${account.uid}/picture?type=large`
         : undefined);
   const coverUrl = currentCover || account.cover;
+  const displayPages =
+    currentPages.length > 0 ? currentPages : account.pages || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl p-0 overflow-hidden bg-background border-border">
         <DialogHeader className="sr-only">
           <DialogTitle>
-            Chi tiết tài khoản {account.name || account.uid}
+            Chi tiết tài khoản {displayName}
           </DialogTitle>
         </DialogHeader>
 
@@ -406,7 +446,7 @@ export function AccountDetailDialog({
           )}
           <div className="absolute inset-0 bg-black/20" />
           {/* Nút đổi ảnh bìa khi có token */}
-          {account.token && (
+          {activeTok && (
             <button
               type="button"
               disabled={isUploadingCover}
@@ -436,11 +476,11 @@ export function AccountDetailDialog({
               <div className="relative size-20 sm:size-22 rounded-full border-4 border-background bg-muted overflow-hidden shrink-0 shadow-md group">
                 <DialogAvatar
                   url={avatarUrl}
-                  name={account.name || account.uid}
+                  name={displayName}
                   isInstagram={isInstagram}
                 />
                 {/* Nút đổi Avatar khi có token */}
-                {account.token && (
+                {activeTok && (
                   <button
                     type="button"
                     disabled={isUploadingAvatar}
@@ -464,7 +504,7 @@ export function AccountDetailDialog({
               <div className="flex flex-col pb-1">
                 <div className="flex items-center gap-2">
                   <h3 className="text-base sm:text-lg font-bold text-foreground truncate max-w-xs sm:max-w-sm">
-                    {account.name || account.uid}
+                    {displayName}
                   </h3>
                   {account.status === "live" ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
@@ -752,21 +792,21 @@ export function AccountDetailDialog({
             </div>
 
             {/* Danh sách Fanpage / Profile+ của tài khoản */}
-            {account.pages && account.pages.length > 0 && (
+            {displayPages.length > 0 ? (
               <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
                     <Flag className="size-3.5 text-blue-500" />
                     <span>
                       {tr(
-                        `Danh sách Fanpage / Profile+ (${account.pages.length})`,
-                        `Fanpages / Profile+ (${account.pages.length})`,
+                        `Danh sách Fanpage / Profile+ (${displayPages.length})`,
+                        `Fanpages / Profile+ (${displayPages.length})`,
                       )}
                     </span>
                   </span>
                 </div>
                 <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
-                  {account.pages.map((p) => {
+                  {displayPages.map((p) => {
                     const displayUid = p.additionalProfileId || p.pageId;
                     return (
                       <div
@@ -830,7 +870,17 @@ export function AccountDetailDialog({
                   })}
                 </div>
               </div>
-            )}
+            ) : isFetchingToken ? (
+              <div className="rounded-lg border border-border/80 bg-muted/20 p-3 flex items-center justify-center gap-2 text-xs text-muted-foreground animate-pulse">
+                <RefreshCw className="size-3.5 animate-spin text-primary" />
+                <span>
+                  {tr(
+                    "Đang dùng Token tải thông tin & danh sách Pages...",
+                    "Using Token to fetch profile info & pages...",
+                  )}
+                </span>
+              </div>
+            ) : null}
 
             {/* Chuỗi định dạng gốc */}
             <div className="rounded-lg border border-border/80 bg-muted/20 p-2.5 flex flex-col gap-1.5">

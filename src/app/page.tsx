@@ -840,20 +840,18 @@ export default function HomePage() {
         } else if (parts.length >= 2) {
           account.uid = parts[0];
           account.pass = parts[1];
-          if (parts[2]) {
-            if (
-              parts[2].includes("datr=") ||
-              parts[2].includes("c_user=") ||
-              parts[2].includes("xs=")
-            ) {
-              account.cookie = parts[2];
-            } else {
-              account.twoFactor = parts[2];
+          for (let pIdx = 2; pIdx < parts.length; pIdx++) {
+            const p = parts[pIdx];
+            if (p.includes("c_user=") || p.includes("xs=")) {
+              account.cookie = p;
+            } else if (p.startsWith("EAA")) {
+              account.token = p;
+            } else if (p.includes(":") && !p.startsWith("http")) {
+              account.proxy = p;
+            } else if (!account.twoFactor && p.length >= 6) {
+              account.twoFactor = p;
             }
           }
-          if (parts[3]) account.cookie = parts[3];
-          if (parts[4]) account.token = parts[4];
-          if (parts[5]) account.proxy = parts[5];
         }
       }
 
