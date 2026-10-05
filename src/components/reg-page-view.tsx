@@ -1520,8 +1520,12 @@ export function RegPageView({
                 </div>
               </div>
 
-              {/* Phản hồi gốc từ Meta (Raw Response) */}
-              {selectedErrorDetail.rawResponse && (
+              {/* Phản hồi gốc từ Meta (Raw Response) - Ẩn khi là phản hồi bloks / giới hạn từ Facebook */}
+              {selectedErrorDetail.rawResponse &&
+                !selectedErrorDetail.rawResponse.includes("fb_bloks_action") &&
+                !selectedErrorDetail.rawResponse.includes("additional_profile_plus_creation") &&
+                !selectedErrorDetail.rawResponse.includes("quá nhiều lần") &&
+                !selectedErrorDetail.errorMessage?.toLowerCase().includes("quá nhiều lần") && (
                 <div className="flex flex-col gap-1 mt-1">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-semibold text-muted-foreground">
