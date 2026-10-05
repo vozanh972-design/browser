@@ -26,6 +26,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   type FacebookPageItem,
+  facebookLogin,
+  getTokenFromCookie,
   uploadFacebookPageAvatar,
   uploadFacebookPageCover,
 } from "@/lib/facebook-api";
@@ -57,7 +59,11 @@ interface AccountDetailDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onRecheck?: (account: AccountDetailData) => void;
-  onUpdateMedia?: (updated: { avatar?: string; cover?: string }) => void;
+  onUpdateMedia?: (updated: {
+    avatar?: string;
+    cover?: string;
+    token?: string;
+  }) => void;
   isChecking?: boolean;
 }
 
@@ -120,10 +126,78 @@ export function AccountDetailDialog({
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
 
+  const [currentToken, setCurrentToken] = useState<string | undefined>(
+    account?.token,
+  );
+  const [isFetchingToken, setIsFetchingToken] = useState(false);
+
   useEffect(() => {
     setCurrentAvatar(account?.avatar);
     setCurrentCover(account?.cover);
-  }, [account?.avatar, account?.cover]);
+    setCurrentToken(account?.token);
+  }, [account?.avatar, account?.cover, account?.token]);
+
+  const handleFetchToken = async () => {
+    if (!account) return;
+    setIsFetchingToken(true);
+    try {
+      let tokenFound: string | null = null;
+      // 1. Thử lấy token từ Cookie qua auth.getSessionForApp (chuẩn getTokenFromCookie cloneexe)
+      if (account.cookie) {
+        const clean = account.cookie.replace(/[\r\n]+/g, "").trim();
+        const cookieRes = await getTokenFromCookie(clean, account.proxy);
+        if (cookieRes.eaaaaToken) tokenFound = cookieRes.eaaaaToken;
+        else if (cookieRes.token) tokenFound = cookieRes.token;
+      }
+      // 2. Nếu chưa có nhưng có UID & Pass/2FA, đăng nhập qua facebookLogin
+      if (!tokenFound && account.uid && account.pass) {
+        const loginRes = await facebookLogin(
+          account.uid,
+          account.pass,
+          account.twoFactor,
+          undefined,
+          account.proxy,
+        );
+        if (loginRes.isSuccess) {
+          tokenFound = loginRes.eaaaaToken || loginRes.token || null;
+        }
+      }
+      if (tokenFound) {
+        setCurrentToken(tokenFound);
+        onUpdateMedia?.({ token: tokenFound });
+        showSuccessToast(
+          tr(
+            "Đã lấy Access Token (EAAAA) thành công!",
+            "Fetched Access Token (EAAAA) successfully!",
+          ),
+        );
+      } else {
+        showErrorToast(
+          tr(
+            "Không thể lấy Token từ Cookie/Tài khoản này",
+            "Could not fetch Token from this Cookie/Account",
+          ),
+        );
+      }
+    } catch {
+      showErrorToast(
+        tr("Lỗi khi kết nối lấy Token", "Error connecting to fetch Token"),
+      );
+    } finally {
+      setIsFetchingToken(false);
+    }
+  };
+
+  useEffect(() => {
+    if (
+      isOpen &&
+      account &&
+      !account.token &&
+      (account.cookie || (account.uid && account.pass))
+    ) {
+      void handleFetchToken();
+    }
+  }, [isOpen, account?.id]);
 
   if (!account) return null;
 
@@ -533,29 +607,51 @@ export function AccountDetailDialog({
                   <Key className="size-3.5 text-blue-500" />
                   <span>Access Token (EAAAA)</span>
                 </span>
-                {account.token && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleCopy(account.token, "token", tr("Token", "Token"))
-                    }
-                    className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
-                  >
-                    {copiedKey === "token" ? (
-                      <Check className="size-3 text-emerald-500" />
-                    ) : (
-                      <Copy className="size-3" />
-                    )}
-                    <span>
-                      {copiedKey === "token"
-                        ? tr("Đã chép", "Copied")
-                        : "Copy Token"}
+                <div className="flex items-center gap-2">
+                  {isFetchingToken && (
+                    <span className="text-[11px] text-muted-foreground animate-pulse flex items-center gap-1">
+                      <RefreshCw className="size-3 animate-spin text-primary" />
+                      <span>{tr("Đang lấy token...", "Fetching token...")}</span>
                     </span>
-                  </button>
-                )}
+                  )}
+                  {!currentToken &&
+                    !isFetchingToken &&
+                    (account.cookie || (account.uid && account.pass)) && (
+                      <button
+                        type="button"
+                        onClick={handleFetchToken}
+                        className="text-[11px] text-primary hover:underline cursor-pointer font-medium"
+                      >
+                        {tr("Lấy Token", "Get Token")}
+                      </button>
+                    )}
+                  {currentToken && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleCopy(currentToken, "token", tr("Token", "Token"))
+                      }
+                      className="flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer"
+                    >
+                      {copiedKey === "token" ? (
+                        <Check className="size-3 text-emerald-500" />
+                      ) : (
+                        <Copy className="size-3" />
+                      )}
+                      <span>
+                        {copiedKey === "token"
+                          ? tr("Đã chép", "Copied")
+                          : "Copy Token"}
+                      </span>
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="max-h-20 overflow-y-auto rounded bg-background/80 p-2 text-xs font-mono select-all break-all border border-border/50 text-foreground">
-                {account.token || tr("Chưa có Token", "No Token")}
+                {currentToken ||
+                  (isFetchingToken
+                    ? tr("Đang lấy Token...", "Fetching Token...")
+                    : tr("Chưa có Token", "No Token"))}
               </div>
             </div>
 

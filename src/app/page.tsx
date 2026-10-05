@@ -2190,6 +2190,7 @@ export default function HomePage() {
                   ...a,
                   avatar: updated.avatar || a.avatar,
                   cover: updated.cover || a.cover,
+                  token: updated.token || a.token,
                 };
               }
               if (a.pages && a.pages.length > 0) {

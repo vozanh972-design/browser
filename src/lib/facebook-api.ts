@@ -1316,6 +1316,37 @@ export async function checkFacebookAccountFull(params: {
     try {
       const liveCheck = await verifyCookieLive(activeCookie, proxy);
       if (liveCheck.isLive) {
+        // Nếu tài khoản chưa có Token mà có pass: Gọi facebookLogin để lấy Access Token EAAAA (chuẩn FacebookToken.kt dòng 545)
+        if (!activeToken && activeUid && pass) {
+          try {
+            const loginRes = await facebookLogin(
+              activeUid,
+              pass,
+              twoFactor,
+              activeDatr,
+              proxy,
+            );
+            if (loginRes.isSuccess && (loginRes.eaaaaToken || loginRes.token)) {
+              activeToken = loginRes.eaaaaToken || loginRes.token;
+              if (loginRes.cookie) activeCookie = loginRes.cookie;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
+        // Nếu vẫn chưa có Token mà có cookie: Thử lấy token qua getTokenFromCookie
+        if (!activeToken && activeCookie) {
+          try {
+            const tokenRes = await getTokenFromCookie(activeCookie, proxy);
+            if (tokenRes.eaaaaToken || tokenRes.token) {
+              activeToken = tokenRes.eaaaaToken || tokenRes.token;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
         return {
           uid: activeUid || liveCheck.uid || "N/A",
           name: liveCheck.name || activeUid,
