@@ -350,9 +350,29 @@ export function RegPageView({
       }
 
       if (!token) {
+        const missingErr =
+          "Lỗi: Thiếu Token EAAA (Checkpoint hoặc Cookie hết hạn)";
         setAccountStatuses((prev) => ({
           ...prev,
-          [acc.uid]: "Lỗi: Thiếu Token EAAA",
+          [acc.uid]: missingErr,
+        }));
+        setAccountErrors((prev) => ({
+          ...prev,
+          [acc.uid]: {
+            accountUid: acc.uid,
+            accountName: acc.name,
+            pageName: "Kiểm tra Token EAAA",
+            errorMessage: missingErr,
+            rawResponse:
+              "Tài khoản thiếu Token EAAA và không thể chuyển đổi từ Cookie/Mật khẩu. Vui lòng kiểm tra lại Cookie hoặc trạng thái tài khoản.",
+            timestamp: new Date().toLocaleTimeString("vi-VN", {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            }),
+            step: 0,
+            total: regCount,
+          },
         }));
         return;
       }
@@ -473,47 +493,22 @@ export function RegPageView({
             [acc.uid]: errDetail,
           }));
 
-          // Nếu bị Meta chặn (Sentry Block / 1675030 / Action Block / Giới hạn / Checkpoint) thì DỪNG NGAY!
-          const isMetaBlocked =
-            errMsg.includes("1675030") ||
-            errMsg.includes("Sentry") ||
-            errMsg.includes("sentry") ||
-            errMsg.includes("giới hạn") ||
-            errMsg.includes("quá nhiều") ||
-            errMsg.includes("chặn") ||
-            errMsg.includes("blocked") ||
-            errMsg.includes("Checkpoint") ||
-            errMsg.includes("checkpoint") ||
-            errMsg.includes("limit") ||
-            Boolean(res.rawResponse?.includes("sentry_block")) ||
-            Boolean(res.rawResponse?.includes('"allow_user_retry":false')) ||
-            acc.status === "die" ||
-            acc.status === "checkpoint";
-
-          if (isMetaBlocked) {
-            setAccountStatuses((prev) => ({
-              ...prev,
-              [acc.uid]: `Dừng: ${errMsg}`,
-            }));
-            break; // DỪNG VÒNG LẶP NGAY LẬP TỨC, KHÔNG CỐ TẠO TIẾP VÔ VỌNG!
-          }
-
-          // CHỈ KHI LỖI MẠNG TẠM THỜI THÌ MỚI ĐỢI DELAY ĐỂ THỬ LẠI LẦN TIẾP THEO
+          // Khi lỗi, PHẢI đợi đúng số time đã set (delayMs) mới reg tiếp, hiển thị đếm ngược
           if (step < regCount && !stopRequestedRef.current) {
             const delayTime = Math.max(delayMs, 500);
             for (let rem = Math.ceil(delayTime / 1000); rem > 0; rem--) {
               if (stopRequestedRef.current) break;
               setAccountStatuses((prev) => ({
                 ...prev,
-                [acc.uid]: `Lỗi (${step}/${regCount}): ${errMsg} • Đợi ${rem}s để thử tiếp...`,
+                [acc.uid]: `Lỗi (${step}/${regCount}): ${errMsg} • Chờ ${rem}s để tiếp tục...`,
               }));
               await new Promise((r) => setTimeout(r, 1000));
             }
           } else {
-            // Lần reg cuối cùng
+            // Lần reg cuối cùng hoặc đã dừng
             setAccountStatuses((prev) => ({
               ...prev,
-              [acc.uid]: `Lỗi (${step}/${regCount}): ${errMsg}`,
+              [acc.uid]: `Lỗi (${step}/${regCount}): ${errMsg} [Thành công: ${createdCount}/${regCount}]`,
             }));
           }
         }
@@ -522,12 +517,15 @@ export function RegPageView({
       if (!stopRequestedRef.current) {
         setAccountStatuses((prev) => {
           const current = prev[acc.uid] || "";
-          if (createdCount === 0 && current.startsWith("Lỗi")) {
+          if (
+            createdCount === 0 &&
+            (current.startsWith("Lỗi") || current.startsWith("Checkpoint"))
+          ) {
             return prev;
           }
           return {
             ...prev,
-            [acc.uid]: `Hoàn tất (${createdCount}/${regCount} Page)`,
+            [acc.uid]: `Hoàn tất: [Thành công: ${createdCount}/${regCount} Page]`,
           };
         });
       }
@@ -1055,9 +1053,9 @@ export function RegPageView({
                         )}
                       </div>
 
-                      {/* Thao tác: Dấu chấm than đỏ xem lỗi / Dấu chấm than xem chi tiết Profile */}
+                      {/* Thao tác: Dấu chấm than đỏ xem lỗi (khi có lỗi) HOẶC Dấu xem chi tiết Profile */}
                       <div className="flex items-center justify-center gap-1 pr-2">
-                        {accountErrors[acc.uid] && (
+                        {accountErrors[acc.uid] ? (
                           <button
                             type="button"
                             onClick={() =>
@@ -1068,15 +1066,16 @@ export function RegPageView({
                           >
                             <AlertCircle className="size-3.5" />
                           </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAccountForDetail(acc)}
+                            title="Xem chi tiết Profile chủ"
+                            className="size-7 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer border border-border/60 shadow-2xs"
+                          >
+                            <Info className="size-3.5" />
+                          </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => setSelectedAccountForDetail(acc)}
-                          title="Xem chi tiết Profile chủ"
-                          className="size-7 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-full transition-colors cursor-pointer border border-border/60 shadow-2xs"
-                        >
-                          <Info className="size-3.5" />
-                        </button>
                       </div>
                     </div>
 

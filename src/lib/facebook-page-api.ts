@@ -225,19 +225,24 @@ export async function createFacebookPageApi({
     };
   }
 
-  // Cấu trúc chuẩn 100% từ FacebookPageEngine.kt
+  // Cấu trúc chuẩn 100% từ FacebookPageService.kt (Android FB4A Katana Bloks GraphQL)
   const innerParams = {
     client_input_params: {
       page_id: "0",
       profile_plus_id: "0",
+      cp_upsell_declined: 0,
+      off_platform_creator_reachout_id: "",
       category_ids: [categoryId],
+      nav_chain: "...",
     },
     server_params: {
       referrer: "pages_tab_launch_point",
+      INTERNAL__latency_qpl_marker_id: 36707139,
       creation_source: "android",
       name: pageName,
       variant: 5,
       screen: "category",
+      INTERNAL__latency_qpl_instance_id: 55098533200051.0,
     },
   };
 
@@ -249,23 +254,49 @@ export async function createFacebookPageApi({
       "com.bloks.www.additional.profile.plus.creation.action.category.submit",
   };
 
+  const ntContext = {
+    using_white_navbar: true,
+    styles_id: "588d028b36bed0e1889e09b60e0f9aea",
+    pixel_ratio: 2,
+    is_push_on: true,
+    debug_tooling_metadata_token: null,
+    is_flipper_enabled: false,
+    theme_params: [
+      {
+        value: [],
+        design_system_name: "FDS",
+      },
+    ],
+    bloks_version:
+      "338f8ead5977a2c41eba3e92584dcf1d132e8b7928f1f5796662ec064023047d",
+  };
+
   const variables = {
     params: level1,
     scale: "2",
+    nt_context: ntContext,
   };
 
   const params = new URLSearchParams({
     method: "post",
+    pretty: "false",
     format: "json",
+    server_timestamps: "true",
+    locale: "vi_VN",
     client_doc_id: "119940804239956818821550724",
     variables: JSON.stringify(variables),
   });
 
   const headers = [
-    `User-Agent: ${KATANA_USER_AGENT}`,
+    "User-Agent: [FBAN/FB4A;FBAV/537.0.0.47.77;FBPN/com.facebook.katana;]",
     `Authorization: OAuth ${cleanToken}`,
-    "X-FB-Friendly-Name: AdditionalProfilePlusCreation",
     "Content-Type: application/x-www-form-urlencoded",
+    "X-Fb-Connection-Type: WIFI",
+    "X-Fb-Http-Engine: Tigon/Liger",
+    "X-Fb-Client-Ip: True",
+    "X-Fb-Server-Cluster: True",
+    "X-Graphql-Request-Purpose: fetch",
+    "X-Graphql-Client-Library: graphservice",
   ];
 
   try {
