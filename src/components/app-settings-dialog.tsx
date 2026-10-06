@@ -464,7 +464,7 @@ export function AppSettingsDialog({
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
         hideClose
-        className="p-0 gap-0 overflow-hidden rounded-2xl border border-border/80 shadow-2xl bg-background/95 backdrop-blur-2xl transition-all duration-300 flex flex-col w-[94vw] max-w-4xl h-[650px] max-h-[88vh]"
+        className="p-0 gap-0 overflow-hidden rounded-2xl border border-border/80 shadow-2xl bg-background/95 backdrop-blur-2xl transition-all duration-300 flex flex-col w-[94vw] max-w-4xl h-[min(650px,calc(100%-2rem))] max-h-[calc(100%-2rem)]"
       >
         <DialogTitle className="sr-only">
           {tr("Cài đặt hệ thống AutoLunex", "AutoLunex System Settings")}

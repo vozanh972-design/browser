@@ -1151,7 +1151,7 @@ export default function HomePage() {
   };
 
   return (
-    <div className="flex h-dvh flex-col bg-background text-foreground font-(family-name:--font-geist-sans) overflow-hidden select-none">
+    <div className="flex h-full flex-col bg-background text-foreground font-(family-name:--font-geist-sans) overflow-hidden select-none">
       {/* Key login screen — shown when not unlocked; passes savedKey for auto-recheck */}
       {!isUnlocked && (
         <KeyLoginScreen
@@ -1467,7 +1467,7 @@ export default function HomePage() {
                     )}
                   </div>
                 ) : (
-                  <div className="divide-y divide-border/30 overflow-y-auto max-h-[calc(100vh-180px)]">
+                  <div className="flex-1 min-h-0 divide-y divide-border/30 overflow-y-auto">
                     {filteredAccounts.map((acc) => {
                       const isChecking = checkingIds.includes(acc.id);
                       const isSelected = selectedIds.includes(acc.id);
