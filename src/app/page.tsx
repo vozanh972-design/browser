@@ -170,6 +170,19 @@ export default function HomePage() {
                 cleanAcc.status = "unverified";
               }
             }
+            // Tự động phân tách lại pass và uid nếu rawText có dấu | mà pass đang rỗng
+            if (!cleanAcc.pass && cleanAcc.rawText && cleanAcc.rawText.includes("|")) {
+              const p = cleanAcc.rawText.split("|").map((s) => s.trim());
+              if (p.length >= 2) {
+                if (!cleanAcc.uid || cleanAcc.uid.startsWith("acc_")) cleanAcc.uid = p[0];
+                cleanAcc.pass = p[1];
+                for (let i = 2; i < p.length; i++) {
+                  if (p[i].includes("c_user=") || p[i].includes("xs=")) cleanAcc.cookie = p[i];
+                  else if (p[i].startsWith("EAA")) cleanAcc.token = p[i];
+                  else if (!cleanAcc.twoFactor && p[i].length >= 6 && !p[i].includes(":")) cleanAcc.twoFactor = p[i];
+                }
+              }
+            }
             // Tự động chuẩn hóa nếu tài khoản cũ bị lưu nhầm chuỗi cookie vào UID hoặc Name
             if (
               cleanAcc.uid &&
@@ -622,6 +635,7 @@ export default function HomePage() {
         token: targetAccount.token,
         proxy: proxyParam,
         pass: targetAccount.pass,
+        twoFactor: targetAccount.twoFactor,
       });
 
       if (result.isNetworkError) {
@@ -634,11 +648,12 @@ export default function HomePage() {
         isLive,
         status: isLive ? "live" : "die",
         token: result.token || targetAccount.token,
+        cookie: result.cookie || targetAccount.cookie,
         uid: result.uid || targetAccount.uid,
         name: result.name || targetAccount.name,
         avatar: isLive ? (result.avatar || targetAccount.avatar) : undefined,
         cover: isLive ? targetAccount.cover : undefined,
-        pages: isLive ? targetAccount.pages : undefined,
+        pages: isLive ? (result.pages || targetAccount.pages) : undefined,
         note: isLive
           ? targetAccount.note || "Sẵn sàng"
           : (result.error || "Đã Die"),
@@ -841,13 +856,7 @@ export default function HomePage() {
           }
         });
       } else {
-        if (line.includes("c_user=") || line.includes("xs=")) {
-          account.cookie = line;
-          const match = line.match(/c_user=([^;]+)/);
-          if (match) account.uid = match[1];
-        } else if (line.startsWith("EAA")) {
-          account.token = line;
-        } else if (parts.length >= 2) {
+        if (parts.length >= 2) {
           account.uid = parts[0];
           account.pass = parts[1];
           for (let pIdx = 2; pIdx < parts.length; pIdx++) {
@@ -862,6 +871,12 @@ export default function HomePage() {
               account.twoFactor = p;
             }
           }
+        } else if (line.includes("c_user=") || line.includes("xs=")) {
+          account.cookie = line;
+          const match = line.match(/c_user=([^;]+)/);
+          if (match) account.uid = match[1];
+        } else if (line.startsWith("EAA")) {
+          account.token = line;
         }
       }
 
