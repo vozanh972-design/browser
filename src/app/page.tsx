@@ -635,12 +635,12 @@ export default function HomePage() {
       const updated = {
         uid: checked.uid || targetAccount.uid,
         name: checked.name || targetAccount.name,
-        avatar: checked.avatar || targetAccount.avatar,
-        cover: checked.cover || targetAccount.cover,
+        avatar: isLive ? (checked.avatar || targetAccount.avatar) : undefined,
+        cover: isLive ? (checked.cover || targetAccount.cover) : undefined,
         mail: checked.email || targetAccount.mail,
         token: checked.token || targetAccount.token,
         cookie: checked.cookie || targetAccount.cookie,
-        pages: checked.pages || targetAccount.pages,
+        pages: isLive ? (checked.pages || targetAccount.pages) : undefined,
         status: (isLive ? "live" : accountStatus) as
           | "live"
           | "checkpoint"
@@ -1455,12 +1455,14 @@ export default function HomePage() {
                       const runState = runnerStates.get(acc.id);
                       const isRunning = runState?.isRunning ?? false;
                       const avatarSrc =
-                        acc.avatar ||
-                        (acc.token
-                          ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${acc.token}`
-                          : acc.uid && !acc.uid.startsWith("acc_")
-                            ? `https://graph.facebook.com/v21.0/${acc.uid}/picture?type=large`
-                            : undefined);
+                        acc.status === "die"
+                          ? undefined
+                          : acc.avatar ||
+                            (acc.token
+                              ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${acc.token}`
+                              : acc.uid && !acc.uid.startsWith("acc_")
+                                ? `https://graph.facebook.com/v21.0/${acc.uid}/picture?type=large`
+                                : undefined);
 
                       return (
                         <div key={acc.id} className="flex flex-col">
