@@ -1360,7 +1360,7 @@ export async function checkLiveApi(
       if (json.access_token) {
         let extractedUid = json.uid ? String(json.uid) : undefined;
         if (!extractedUid) {
-          extractedUid = extractUidFromCookie(cleanCookie);
+          extractedUid = extractUidFromCookie(cleanCookie) || undefined;
         }
 
         // Tùy chọn: bóc thêm tên/avatar từ Graph API với token vừa lấy
