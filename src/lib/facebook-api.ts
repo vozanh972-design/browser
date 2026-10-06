@@ -1458,9 +1458,7 @@ export async function checkFacebookAccountFull(params: {
           name: loginRes.name || activeUid,
           token: activeToken,
           cookie: activeCookie,
-          avatar:
-            loginRes.avatar ||
-            `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${activeToken}`,
+          avatar: loginRes.avatar,
           cover: loginRes.cover,
           pages: loginRes.pages,
           proxy,
@@ -1468,7 +1466,15 @@ export async function checkFacebookAccountFull(params: {
         };
       }
 
-      if (loginRes.error?.toLowerCase().includes("checkpoint")) {
+      const errLower = (loginRes.error || "").toLowerCase();
+      if (
+        errLower.includes("checkpoint") ||
+        errLower.includes("security check") ||
+        errLower.includes("abusive") ||
+        errLower.includes("disallowed") ||
+        errLower.includes("xác minh") ||
+        errLower.includes("khóa")
+      ) {
         return {
           uid: activeUid,
           name: activeUid,
@@ -1480,6 +1486,17 @@ export async function checkFacebookAccountFull(params: {
           error: "Tài khoản bị Checkpoint",
         };
       }
+
+      return {
+        uid: activeUid,
+        name: activeUid,
+        token: activeToken,
+        cookie: activeCookie,
+        avatar: undefined,
+        proxy,
+        isLive: false,
+        error: loginRes.error || "Đăng nhập thất bại (Die)",
+      };
     } catch {
       // ignore
     }
