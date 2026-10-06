@@ -958,7 +958,8 @@ export async function checkUidLiveGraph(
         location.includes("HsTZSDw4avx") ||
         location.includes("silhouette") ||
         location.includes("default_avatar") ||
-        location.includes("84628273_176159830277856");
+        location.includes("84628273_176159830277856") ||
+        raw.includes("HsTZSDw4avx");
 
       if (!isPlaceholder && (location.includes("scontent") || location.includes("fbcdn.net"))) {
         return { isLive: true, avatar: location };
@@ -970,7 +971,8 @@ export async function checkUidLiveGraph(
       raw.includes("does not exist") ||
       raw.includes("Unsupported get request") ||
       raw.includes("Unsupported head request") ||
-      raw.includes("400 Bad Request")
+      raw.includes("400 Bad Request") ||
+      raw.includes("HsTZSDw4avx")
     ) {
       return { isLive: false, error: "Tài khoản không tồn tại (Die)" };
     }
@@ -980,7 +982,7 @@ export async function checkUidLiveGraph(
 
   return {
     isLive: false,
-    error: "Không thể xác thực trạng thái UID (Die)",
+    error: "Tài khoản không tồn tại (Die)",
   };
 }
 
@@ -1106,14 +1108,25 @@ export function extractFacebookInfoFromHtml(
     }
   }
 
-  // Fallback avatar nếu không bắt được URL HD trực tiếp trong HTML
-  if (!extractedAvatar && cUser && /^\d+$/.test(cUser)) {
-    extractedAvatar = `https://graph.facebook.com/v21.0/${cUser}/picture?type=large`;
-  }
+  // 3. Phán đoán Live vs Checkpoint vs Die chuẩn xác 100% cloneexe
+  const isCheckpoint = Boolean(
+    html.includes("checkpointSubmitButton") ||
+    html.includes('action="/checkpoint/') ||
+    html.includes('name="submit[Continue]"') ||
+    /<title>[^<]*(checkpoint|xác minh|security check)[^<]*<\/title>/i.test(html)
+  );
 
-  // 3. Phán đoán Live vs Checkpoint vs Die chuẩn xác
-  // Nếu đã bắt được tên thật HOẶC avatar thật -> CHẮC CHẮN 100% LIVE!
-  if (extractedName || (extractedAvatar && !extractedAvatar.includes("silhouette"))) {
+  const isDie = Boolean(
+    html.includes("login_form") ||
+    html.includes('id="loginbutton"') ||
+    html.includes('name="login"') ||
+    /<title>[^<]*(log in|đăng nhập|không tìm thấy trang)[^<]*<\/title>/i.test(html)
+  );
+
+  // Chỉ Live khi không checkpoint, không die, VÀ thực sự lấy được Tên thật hoặc Avatar CDN thật trong HTML
+  const isLive = !isCheckpoint && !isDie && Boolean(extractedName || extractedAvatar);
+
+  if (isLive) {
     return {
       name: extractedName,
       avatar: extractedAvatar,
@@ -1123,27 +1136,12 @@ export function extractFacebookInfoFromHtml(
     };
   }
 
-  // Kiểm tra Checkpoint thực sự (chỉ khi KHÔNG lấy được tên profile)
-  const isCheckpoint = Boolean(
-    html.includes("checkpointSubmitButton") ||
-    html.includes('action="/checkpoint/') ||
-    html.includes('name="submit[Continue]"') ||
-    /<title>[^<]*(checkpoint|xác minh|security check)[^<]*<\/title>/i.test(html)
-  );
-
-  // Kiểm tra Die thực sự
-  const isDie = Boolean(
-    html.includes("login_form") ||
-    html.includes('id="loginbutton"') ||
-    /<title>[^<]*(log in|đăng nhập)[^<]*<\/title>/i.test(html)
-  );
-
   return {
     name: undefined,
-    avatar: extractedAvatar,
-    isLive: !isCheckpoint && !isDie,
+    avatar: undefined,
+    isLive: false,
     isCheckpoint,
-    isDie,
+    isDie: isDie || !isCheckpoint,
   };
 }
 
@@ -1222,7 +1220,7 @@ export async function verifyCookieLive(
         isLive: false,
         uid: cUser || undefined,
         name: cUser || undefined,
-        avatar: info.avatar,
+        avatar: undefined,
         error: "Tài khoản bị Checkpoint",
       };
     }
@@ -1230,6 +1228,7 @@ export async function verifyCookieLive(
     return {
       isLive: false,
       uid: cUser || undefined,
+      avatar: undefined,
       error: "Cookie đã hết hạn (Die)",
     };
   } catch (err: unknown) {
@@ -1403,9 +1402,7 @@ export async function checkFacebookAccountFull(params: {
         return {
           uid: activeUid || liveCheck.uid || "N/A",
           name: liveCheck.name || activeUid,
-          avatar:
-            liveCheck.avatar ||
-            `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
+          avatar: liveCheck.avatar,
           token: activeToken,
           cookie: activeCookie,
           proxy,
@@ -1418,26 +1415,24 @@ export async function checkFacebookAccountFull(params: {
           name: liveCheck.name || activeUid,
           token: activeToken,
           cookie: activeCookie,
-          avatar:
-            liveCheck.avatar ||
-            `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
+          avatar: undefined,
           proxy,
           isLive: false,
           error: "Tài khoản bị Checkpoint",
         };
       }
-      return {
-        uid: activeUid || liveCheck.uid || "N/A",
-        name: liveCheck.name || activeUid,
-        token: activeToken,
-        cookie: activeCookie,
-        avatar:
-          liveCheck.avatar ||
-          `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
-        proxy,
-        isLive: false,
-        error: liveCheck.error || "Cookie die",
-      };
+      if (!pass) {
+        return {
+          uid: activeUid || liveCheck.uid || "N/A",
+          name: liveCheck.name || activeUid,
+          token: activeToken,
+          cookie: activeCookie,
+          avatar: undefined,
+          proxy,
+          isLive: false,
+          error: liveCheck.error || "Cookie die",
+        };
+      }
     } catch {
       // ignore
     }

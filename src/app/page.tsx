@@ -635,7 +635,13 @@ export default function HomePage() {
       const updated = {
         uid: checked.uid || targetAccount.uid,
         name: checked.name || targetAccount.name,
-        avatar: isLive ? (checked.avatar || targetAccount.avatar) : undefined,
+        avatar: isLive
+          ? checked.avatar ||
+            (targetAccount.avatar &&
+            !targetAccount.avatar.includes("graph.facebook.com")
+              ? targetAccount.avatar
+              : undefined)
+          : undefined,
         cover: isLive ? (checked.cover || targetAccount.cover) : undefined,
         mail: checked.email || targetAccount.mail,
         token: checked.token || targetAccount.token,
@@ -866,10 +872,6 @@ export default function HomePage() {
       if (account.uid?.startsWith("EAA")) {
         account.token = account.uid;
         account.uid = `acc_${idx + 1}`;
-      }
-
-      if (!account.avatar && account.uid && /^\d+$/.test(account.uid)) {
-        account.avatar = `https://graph.facebook.com/v21.0/${account.uid}/picture?type=large`;
       }
 
       return account;
@@ -1455,14 +1457,9 @@ export default function HomePage() {
                       const runState = runnerStates.get(acc.id);
                       const isRunning = runState?.isRunning ?? false;
                       const avatarSrc =
-                        acc.status === "die"
+                        isCheckpointOrDie
                           ? undefined
-                          : acc.avatar ||
-                            (acc.token
-                              ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${acc.token}`
-                              : acc.uid && !acc.uid.startsWith("acc_")
-                                ? `https://graph.facebook.com/v21.0/${acc.uid}/picture?type=large`
-                                : undefined);
+                          : acc.avatar;
 
                       return (
                         <div key={acc.id} className="flex flex-col">

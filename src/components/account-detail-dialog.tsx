@@ -411,15 +411,9 @@ export function AccountDetailDialog({
   const activeTok = currentToken || account.token;
   const displayName = currentName || account.name || account.uid;
   const avatarUrl =
-    account.status === "die" && !currentAvatar
+    account.status === "die" || account.status === "checkpoint"
       ? undefined
-      : currentAvatar ||
-        account.avatar ||
-        (activeTok
-          ? `https://graph.facebook.com/v21.0/me/picture?type=large&access_token=${activeTok}`
-          : account.uid && !account.uid.startsWith("acc_")
-            ? `https://graph.facebook.com/v21.0/${account.uid}/picture?type=large`
-            : undefined);
+      : currentAvatar || account.avatar;
   const coverUrl = currentCover || account.cover;
   const displayPages =
     currentPages.length > 0 ? currentPages : account.pages || [];
