@@ -1240,29 +1240,288 @@ export async function verifyCookieLive(
   }
 }
 
-/**
- * KIỂM TRA TÀI KHOẢN FACEBOOK LIVE / DIE CHUẨN 100% THEO FbToolHelper (cloneexe):
- * 1. Nếu input có Token (bắt đầu bằng EAA... hoặc length >= 15):
- *    -> Gọi https://graph.facebook.com/v21.0/me?access_token={token} (fetchAccountDetailsWithToken).
- *    -> Nếu HTTP 200 và có id -> LIVE! (Lấy luôn tên, avatar, pages).
- *    -> Nếu response chứa "error" (mã 190...) -> DIE!
- * 2. Nếu có Cookie (chứa c_user hoặc xs):
- *    -> Thử get token trực tiếp từ cookie qua auth.getSessionForApp (getTokenFromCookie).
- *    -> Nếu lấy được token -> Dùng token gọi fetchAccountDetailsWithToken -> LIVE!
- *    -> Nếu không lấy được token (cookie hết hạn): chuyển tiếp sang bước 3 (login nếu có pass).
- * 3. Nếu có UID & PASS (khi không có cookie hoặc cookie hết hạn):
- *    -> Đăng nhập bằng UID | PASS | 2FA qua Graph API auth/login (facebookLogin).
- *    -> Nếu đăng nhập thành công -> lấy được token EAAAA -> gọi fetchAccountDetailsWithToken -> LIVE!
- *    -> Nếu đăng nhập thất bại:
- *       + Lỗi checkpoint / security check / abusive / disallowed / xác minh / khóa -> CHECKPOINT!
- *       + Lỗi khác -> DIE!
- * 4. Nếu chỉ có UID đơn thuần (không pass, không cookie, không token):
- *    -> Gọi https://graph.facebook.com/v21.0/{uid}/picture?type=normal (checkUidLiveGraph).
- *    -> Nếu trả về redirect tới CDN ảnh đại diện hợp lệ -> LIVE!
- *    -> Nếu trả về 400 Bad Request hoặc ảnh xám rỗng HsTZSDw4avx.gif -> DIE!
- * 5. Các trường hợp còn lại: DIE!
- */
+export interface CheckLiveApiAccount {
+  uid?: string;
+  name?: string;
+  cookie?: string;
+  token?: string;
+  proxy?: string;
+  pass?: string;
+}
 
+export interface CheckLiveApiResult {
+  isLive: boolean;
+  token?: string;
+  uid?: string;
+  name?: string;
+  avatar?: string;
+  error?: string;
+  isNetworkError?: boolean;
+}
+
+/**
+ * KIỂM TRA LIVE/DIE THEO CƠ CHẾ 100% THUẦN API JSON FACEBOOK:
+ * Tuyệt đối KHÔNG dùng Web Scraper, KHÔNG gọi mbasic hay m.facebook.com.
+ *
+ * CƠ CHẾ 1: Kiểm tra tài khoản bằng COOKIE (Qua endpoint getSessionForApp)
+ * - Method: POST
+ * - URL: https://api.facebook.com/method/auth.getSessionForApp
+ * - Headers:
+ *   Cookie: {chuỗi cookie của tài khoản, gồm c_user và xs}
+ *   Content-Type: application/x-www-form-urlencoded
+ *   User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+ * - Body: format=json&generate_session_cookies=1
+ * - Phân tích JSON trả về:
+ *   + Nếu JSON có chứa key "access_token" -> TRẠNG THÁI: LIVE (bóc access_token mới cập nhật vào tài khoản).
+ *   + Nếu JSON có key "error_code" hoặc "error_msg" (hoặc HTTP Status 400/401) -> TRẠNG THÁI: DIE.
+ *
+ * CƠ CHẾ 2: Kiểm tra tài khoản bằng ACCESS TOKEN (Qua Graph API)
+ * - Method: GET
+ * - URL: https://graph.facebook.com/v21.0/me?access_token={token}
+ * - Headers: Không cần cookie, chỉ cần User-Agent bình thường.
+ * - Phân tích JSON trả về:
+ *   + Nếu HTTP Status 200 VÀ JSON có key "id" -> TRẠNG THÁI: LIVE (cập nhật lại tên và id nếu cần).
+ *   + Nếu JSON trả về có object "error" -> TRẠNG THÁI: DIE (code 190 hoặc các mã lỗi khác).
+ *   + Nếu request bị Timeout / Lỗi Proxy mạng -> Giữ nguyên trạng thái, báo "Lỗi kết nối", KHÔNG đánh dấu là Die.
+ */
+export async function checkLiveApi(
+  account: CheckLiveApiAccount,
+): Promise<CheckLiveApiResult> {
+  const cleanCookie = account.cookie?.replace(/[\r\n]+/g, "").trim() || "";
+  const cleanToken = account.token?.trim() || "";
+  const proxy =
+    account.proxy && account.proxy !== "Chưa chọn"
+      ? sanitizeProxy(account.proxy)
+      : undefined;
+
+  const isNetworkFailure = (errStr: string): boolean => {
+    const l = errStr.toLowerCase();
+    return (
+      l.includes("timeout") ||
+      l.includes("timed out") ||
+      l.includes("connect") ||
+      l.includes("connection refused") ||
+      l.includes("failed to connect") ||
+      l.includes("proxy") ||
+      l.includes("network") ||
+      l.includes("dns") ||
+      l.includes("econnrefused") ||
+      l.includes("econnreset")
+    );
+  };
+
+  // -------------------------------------------------------------------------
+  // ƯU TIÊN 1: NẾU CÓ COOKIE -> GỌI CƠ CHẾ 1 (auth.getSessionForApp)
+  // -------------------------------------------------------------------------
+  const hasCookie =
+    cleanCookie &&
+    (cleanCookie.includes("c_user=") || cleanCookie.includes("xs="));
+
+  if (hasCookie) {
+    const url = "https://api.facebook.com/method/auth.getSessionForApp";
+    const bodyParams = new URLSearchParams({
+      format: "json",
+      generate_session_cookies: "1",
+    });
+
+    try {
+      const raw = await executeCurlRequest({
+        url,
+        method: "POST",
+        body: bodyParams.toString(),
+        cookie: cleanCookie,
+        headers: [
+          `Cookie: ${cleanCookie}`,
+          "Content-Type: application/x-www-form-urlencoded",
+          "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        ],
+        proxy,
+        timeoutSecs: 15,
+      });
+
+      interface SessionForAppResponse {
+        access_token?: string;
+        uid?: string | number;
+        session_cookies?: Array<{ name: string; value: string }>;
+        error_code?: number;
+        error_msg?: string;
+      }
+
+      let json: SessionForAppResponse = {};
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        if (raw.includes("error_code") || raw.includes("error_msg")) {
+          return { isLive: false, error: "Cookie đã hết hạn hoặc bị checkpoint" };
+        }
+      }
+
+      // JSON có chứa key "access_token" -> LIVE
+      if (json.access_token) {
+        let extractedUid = json.uid ? String(json.uid) : undefined;
+        if (!extractedUid) {
+          extractedUid = extractUidFromCookie(cleanCookie);
+        }
+
+        // Tùy chọn: bóc thêm tên/avatar từ Graph API với token vừa lấy
+        let fetchedName: string | undefined;
+        let fetchedAvatar: string | undefined;
+        try {
+          const meRaw = await executeCurlRequest({
+            url: `https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${json.access_token}`,
+            method: "GET",
+            headers: [
+              "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            ],
+            proxy,
+            timeoutSecs: 10,
+          });
+          const meJson = JSON.parse(meRaw);
+          if (meJson.id) {
+            extractedUid = String(meJson.id);
+            fetchedName = meJson.name;
+            if (
+              meJson.picture?.data?.url &&
+              !meJson.picture.data.url.includes("84628273_176159830277856")
+            ) {
+              fetchedAvatar = meJson.picture.data.url;
+            }
+          }
+        } catch {
+          // ignore — token vẫn live
+        }
+
+        return {
+          isLive: true,
+          token: json.access_token,
+          uid: extractedUid || account.uid,
+          name: fetchedName || account.name,
+          avatar: fetchedAvatar,
+        };
+      }
+
+      // JSON có key "error_code" hoặc "error_msg" (hoặc HTTP Status 400/401) -> DIE
+      if (json.error_code || json.error_msg) {
+        return {
+          isLive: false,
+          error: json.error_msg || `Cookie Die (Mã lỗi: ${json.error_code})`,
+        };
+      }
+
+      return {
+        isLive: false,
+        error: "Cookie không hợp lệ hoặc đã hết hạn",
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (isNetworkFailure(msg)) {
+        return {
+          isLive: false,
+          isNetworkError: true,
+          error: "Lỗi kết nối proxy / mạng",
+        };
+      }
+      return {
+        isLive: false,
+        error: msg,
+      };
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // ƯU TIÊN 2: NẾU CÓ ACCESS TOKEN -> GỌI CƠ CHẾ 2 (graph.facebook.com/v21.0/me)
+  // -------------------------------------------------------------------------
+  if (cleanToken && cleanToken.length >= 15) {
+    const url = `https://graph.facebook.com/v21.0/me?fields=id,name,picture.type(large)&access_token=${encodeURIComponent(cleanToken)}`;
+
+    try {
+      const raw = await executeCurlRequest({
+        url,
+        method: "GET",
+        headers: [
+          "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        ],
+        proxy,
+        timeoutSecs: 15,
+      });
+
+      interface GraphMeResponse {
+        id?: string | number;
+        name?: string;
+        picture?: { data?: { url?: string } };
+        error?: {
+          message?: string;
+          type?: string;
+          code?: number;
+          error_subcode?: number;
+        };
+      }
+
+      let json: GraphMeResponse = {};
+      try {
+        json = JSON.parse(raw);
+      } catch {
+        // parse error
+      }
+
+      // HTTP Status 200 VÀ JSON có key "id" -> LIVE
+      if (json.id) {
+        let avatarUrl: string | undefined;
+        if (
+          json.picture?.data?.url &&
+          !json.picture.data.url.includes("84628273_176159830277856")
+        ) {
+          avatarUrl = json.picture.data.url;
+        }
+        return {
+          isLive: true,
+          uid: String(json.id),
+          name: json.name || account.name,
+          avatar: avatarUrl,
+          token: cleanToken,
+        };
+      }
+
+      // JSON trả về có object "error" -> DIE
+      if (json.error) {
+        return {
+          isLive: false,
+          error: json.error.message || `Token DIE (code: ${json.error.code})`,
+        };
+      }
+
+      return {
+        isLive: false,
+        error: "Token không hợp lệ hoặc đã hết hạn",
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (isNetworkFailure(msg)) {
+        return {
+          isLive: false,
+          isNetworkError: true,
+          error: "Lỗi kết nối proxy / mạng",
+        };
+      }
+      return {
+        isLive: false,
+        error: msg,
+      };
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Không có cả cookie lẫn token
+  // -------------------------------------------------------------------------
+  return {
+    isLive: false,
+    error: "Tài khoản thiếu Cookie và Token để kiểm tra",
+  };
+}
+
+/**
+ * Kiểm tra đầy đủ tài khoản Facebook sử dụng checkLiveApi 100% REST / Graph API
+ */
 export async function checkFacebookAccountFull(params: {
   uid?: string;
   pass?: string;
@@ -1272,243 +1531,35 @@ export async function checkFacebookAccountFull(params: {
   datr?: string;
   proxy?: string;
 }): Promise<FacebookAccountInfo> {
-  const {
-    uid: inputUid,
-    pass,
-    twoFactor,
-    cookie: inputCookie,
-    token: inputToken,
-    datr: inputDatr,
-    proxy,
-  } = params;
+  const result = await checkLiveApi({
+    uid: params.uid,
+    cookie: params.cookie,
+    token: params.token,
+    proxy: params.proxy,
+    pass: params.pass,
+  });
 
-  let activeToken = inputToken?.trim();
-  let activeCookie = inputCookie?.trim();
-  let activeUid = inputUid?.trim() || "";
-  let activeDatr = inputDatr?.trim();
-
-  // Trích xuất datr nếu nằm trong cookie
-  if (!activeDatr && activeCookie?.includes("datr=")) {
-    const dm = activeCookie.match(/datr=([^;]+)/);
-    if (dm) activeDatr = dm[1];
-  }
-
-  // Trích xuất c_user từ cookie nếu có
-  if (activeCookie?.includes("c_user=")) {
-    const cUser = extractUidFromCookie(activeCookie);
-    if (cUser && !activeUid) activeUid = cUser;
-  }
-
-  // -------------------------------------------------------------------------
-  // Luồng 1 & 5: Kiểm tra trực tiếp qua Token (nếu có Token)
-  // -------------------------------------------------------------------------
-  if (activeToken && activeToken.length >= 15) {
-    try {
-      const details = await fetchAccountDetailsWithToken(activeToken, proxy);
-      if (details.isLive && details.uid) {
-        return {
-          uid: details.uid,
-          name: details.name || details.uid,
-          avatar:
-            details.avatar ||
-            `https://graph.facebook.com/v21.0/${details.uid}/picture?type=large`,
-          cover: details.cover,
-          email: details.email,
-          token: activeToken,
-          cookie: activeCookie,
-          pages: details.pages,
-          proxy,
-          isLive: true,
-        };
-      }
-    } catch {
-      // Token die/hết hạn
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Luồng 2: Lấy Token từ Cookie qua getSessionForApp (chuẩn cloneexe)
-  // -------------------------------------------------------------------------
-  if (
-    activeCookie &&
-    (activeCookie.includes("c_user=") || activeCookie.includes("xs="))
-  ) {
-    try {
-      const tokenRes = await getTokenFromCookie(activeCookie, proxy);
-      if (tokenRes.isLive && tokenRes.eaaaaToken) {
-        activeToken = tokenRes.eaaaaToken;
-        if (tokenRes.cookie) activeCookie = tokenRes.cookie;
-        if (tokenRes.uid) activeUid = tokenRes.uid;
-
-        return {
-          uid: activeUid,
-          name: tokenRes.name || activeUid,
-          avatar:
-            tokenRes.avatar ||
-            `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
-          cover: tokenRes.cover,
-          token: activeToken,
-          cookie: activeCookie,
-          pages: tokenRes.pages,
-          proxy,
-          isLive: true,
-        };
-      }
-    } catch {
-      // Cookie hết hạn hoặc không lấy được token
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Luồng 3: Đăng nhập bằng UID | PASS | 2FA (khi không có cookie hoặc cookie hết hạn)
-  // -------------------------------------------------------------------------
-  if (activeUid && pass) {
-    try {
-      const loginRes = await facebookLogin(
-        activeUid,
-        pass,
-        twoFactor,
-        activeDatr,
-        proxy,
-      );
-
-      if (loginRes.isSuccess && (loginRes.eaaaaToken || loginRes.token)) {
-        activeToken = loginRes.eaaaaToken || loginRes.token;
-        if (loginRes.cookie) activeCookie = loginRes.cookie;
-        if (loginRes.uid) activeUid = loginRes.uid;
-
-        // Dùng token vừa lấy để gọi info và pages
-        try {
-          const details = await fetchAccountDetailsWithToken(activeToken!, proxy);
-          if (details.isLive && details.uid) {
-            return {
-              uid: details.uid,
-              name: details.name || loginRes.name || activeUid,
-              token: activeToken,
-              cookie: activeCookie,
-              avatar:
-                details.avatar ||
-                loginRes.avatar ||
-                `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
-              cover: details.cover || loginRes.cover,
-              pages: details.pages || loginRes.pages,
-              proxy,
-              isLive: true,
-            };
-          }
-        } catch {
-          // ignore
-        }
-
-        return {
-          uid: activeUid,
-          name: loginRes.name || activeUid,
-          token: activeToken,
-          cookie: activeCookie,
-          avatar:
-            loginRes.avatar ||
-            `https://graph.facebook.com/v21.0/${activeUid}/picture?type=large`,
-          cover: loginRes.cover,
-          pages: loginRes.pages,
-          proxy,
-          isLive: true,
-        };
-      }
-
-      // Xử lý lỗi đăng nhập thất bại
-      const errLower = (loginRes.error || "").toLowerCase();
-      if (
-        errLower.includes("checkpoint") ||
-        errLower.includes("security check") ||
-        errLower.includes("abusive") ||
-        errLower.includes("disallowed") ||
-        errLower.includes("xác minh") ||
-        errLower.includes("khóa")
-      ) {
-        return {
-          uid: activeUid,
-          name: activeUid,
-          token: activeToken,
-          cookie: activeCookie,
-          avatar: undefined,
-          proxy,
-          isLive: false,
-          error: "Tài khoản bị Checkpoint",
-        };
-      }
-
-      return {
-        uid: activeUid,
-        name: activeUid,
-        token: activeToken,
-        cookie: activeCookie,
-        avatar: undefined,
-        proxy,
-        isLive: false,
-        error: loginRes.error || "Đăng nhập thất bại (Die)",
-      };
-    } catch (err: unknown) {
-      return {
-        uid: activeUid,
-        name: activeUid,
-        token: activeToken,
-        cookie: activeCookie,
-        avatar: undefined,
-        proxy,
-        isLive: false,
-        error: err instanceof Error ? err.message : "Lỗi đăng nhập",
-      };
-    }
-  }
-
-  // -------------------------------------------------------------------------
-  // Luồng 4: Check nhanh UID công khai (chỉ khi nhập UID đơn thuần, không pass, không cookie, không token)
-  // -------------------------------------------------------------------------
-  if (
-    activeUid &&
-    /^\d+$/.test(activeUid) &&
-    !pass &&
-    !activeCookie &&
-    !activeToken
-  ) {
-    try {
-      const uidCheck = await checkUidLiveGraph(activeUid, proxy);
-      if (uidCheck.isLive && uidCheck.avatar) {
-        return {
-          uid: activeUid,
-          name: activeUid,
-          avatar: uidCheck.avatar,
-          proxy,
-          isLive: true,
-        };
-      }
-    } catch {
-      // ignore
-    }
-
+  if (result.isLive) {
     return {
-      uid: activeUid,
-      name: activeUid,
-      avatar: undefined,
-      proxy,
-      isLive: false,
-      error: "Tài khoản Die (không tồn tại công khai)",
+      uid: result.uid || params.uid || "",
+      name: result.name || params.uid || "",
+      avatar: result.avatar,
+      token: result.token || params.token,
+      cookie: params.cookie,
+      proxy: params.proxy,
+      isLive: true,
     };
   }
 
-  // -------------------------------------------------------------------------
-  // Trường hợp còn lại: DIE
-  // -------------------------------------------------------------------------
-  const fallbackUid = activeUid || "N/A";
   return {
-    uid: fallbackUid,
-    name: fallbackUid,
-    token: activeToken,
-    cookie: activeCookie,
+    uid: params.uid || "",
+    name: params.uid || "",
+    token: params.token,
+    cookie: params.cookie,
     avatar: undefined,
-    proxy,
+    proxy: params.proxy,
     isLive: false,
-    error: activeCookie ? "Cookie die" : "Tài khoản Die",
+    error: result.error || "Tài khoản Die",
   };
 }
 

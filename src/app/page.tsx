@@ -33,6 +33,7 @@ import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import {
   checkFacebookAccountFull,
+  checkLiveApi,
   checkUidLiveGraph,
   type FacebookPageItem,
 } from "@/lib/facebook-api";
@@ -63,6 +64,7 @@ export interface FacebookAccount {
   proxy?: string;
   platform?: "facebook" | "instagram";
   status: "live" | "checkpoint" | "die" | "unverified";
+  isLive?: boolean;
   rawText: string;
   pages?: FacebookPageItem[];
 }
@@ -162,6 +164,12 @@ export default function HomePage() {
         if (Array.isArray(parsed)) {
           return parsed.map((acc: FacebookAccount) => {
             const cleanAcc = { ...acc };
+            // TUYỆT ĐỐI KHÔNG hardcode isLive = true/false lúc khởi tạo tài khoản nếu chưa được xác thực API
+            if (cleanAcc.isLive === undefined) {
+              if (cleanAcc.status === "live") {
+                cleanAcc.status = "unverified";
+              }
+            }
             // Tự động chuẩn hóa nếu tài khoản cũ bị lưu nhầm chuỗi cookie vào UID hoặc Name
             if (
               cleanAcc.uid &&
@@ -607,50 +615,33 @@ export default function HomePage() {
           ? targetAccount.proxy
           : undefined;
 
-      // Kiểm tra toàn diện tài khoản Facebook bằng chuẩn FacebookLiveChecker + FacebookToken
-      const checked = await checkFacebookAccountFull({
+      // Kiểm tra tài khoản bằng checkLiveApi 100% REST / Graph API
+      const result = await checkLiveApi({
         uid: targetAccount.uid,
-        pass: targetAccount.pass,
-        twoFactor: targetAccount.twoFactor,
         cookie: targetAccount.cookie,
         token: targetAccount.token,
         proxy: proxyParam,
+        pass: targetAccount.pass,
       });
 
-      const isLive = checked.isLive;
-      let accountStatus: "live" | "checkpoint" | "die" = "die";
-
-      if (isLive) {
-        accountStatus = "live";
-      } else if (
-        checked.error?.toLowerCase().includes("checkpoint") ||
-        checked.error?.toLowerCase().includes("khóa") ||
-        checked.error?.toLowerCase().includes("xác minh")
-      ) {
-        accountStatus = "checkpoint";
-      } else {
-        accountStatus = "die";
+      if (result.isNetworkError) {
+        // Nếu request bị Timeout / Lỗi Proxy mạng: Giữ nguyên trạng thái, báo "Lỗi kết nối", KHÔNG đánh dấu là Die.
+        return;
       }
 
-      const updated = {
-        uid: checked.uid || targetAccount.uid,
-        name: checked.name || targetAccount.name,
-        avatar: isLive
-          ? checked.avatar ||
-            (targetAccount.avatar &&
-            !targetAccount.avatar.includes("graph.facebook.com")
-              ? targetAccount.avatar
-              : undefined)
-          : undefined,
-        cover: isLive ? (checked.cover || targetAccount.cover) : undefined,
-        mail: checked.email || targetAccount.mail,
-        token: checked.token || targetAccount.token,
-        cookie: checked.cookie || targetAccount.cookie,
-        pages: isLive ? (checked.pages || targetAccount.pages) : undefined,
-        status: (isLive ? "live" : accountStatus) as
-          | "live"
-          | "checkpoint"
-          | "die",
+      const isLive = result.isLive;
+      const updated: Partial<FacebookAccount> = {
+        isLive,
+        status: isLive ? "live" : "die",
+        token: result.token || targetAccount.token,
+        uid: result.uid || targetAccount.uid,
+        name: result.name || targetAccount.name,
+        avatar: isLive ? (result.avatar || targetAccount.avatar) : undefined,
+        cover: isLive ? targetAccount.cover : undefined,
+        pages: isLive ? targetAccount.pages : undefined,
+        note: isLive
+          ? targetAccount.note || "Sẵn sàng"
+          : (result.error || "Đã Die"),
       };
 
       setAccounts((prev) => {
@@ -676,6 +667,19 @@ export default function HomePage() {
       setCheckingIds((prev) => prev.filter((id) => id !== targetAccount.id));
     }
   };
+
+  // Tự động kiểm tra các tài khoản chưa được xác thực API khi khởi động ứng dụng
+  useEffect(() => {
+    const unverified = accounts.filter((a) => a.isLive === undefined);
+    if (unverified.length === 0) return;
+
+    void (async () => {
+      for (const acc of unverified) {
+        await handleCheckAccount(acc);
+        await new Promise((r) => setTimeout(r, 600));
+      }
+    })();
+  }, []);
 
   const handleCheckPage = async (
     targetAccount: FacebookAccount,
@@ -1453,7 +1457,9 @@ export default function HomePage() {
                       const isChecking = checkingIds.includes(acc.id);
                       const isSelected = selectedIds.includes(acc.id);
                       const isCheckpointOrDie =
-                        acc.status === "checkpoint" || acc.status === "die";
+                        acc.isLive === false ||
+                        acc.status === "checkpoint" ||
+                        acc.status === "die";
                       const runState = runnerStates.get(acc.id);
                       const isRunning = runState?.isRunning ?? false;
                       const avatarSrc =
@@ -1588,17 +1594,13 @@ export default function HomePage() {
                                     ? `(+${runState.earnedPoints})`
                                     : ""}
                                 </span>
-                              ) : acc.status === "live" ? (
+                              ) : acc.isLive === true ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
                                   Live
                                 </span>
-                              ) : acc.status === "die" ? (
+                              ) : acc.isLive === false || acc.status === "die" || acc.status === "checkpoint" ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
                                   Die
-                                </span>
-                              ) : acc.status === "checkpoint" ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
-                                  Checkpoint
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 whitespace-nowrap">

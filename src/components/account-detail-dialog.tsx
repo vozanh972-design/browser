@@ -51,6 +51,7 @@ export interface AccountDetailData {
   proxy?: string;
   platform?: "facebook" | "instagram";
   status: "live" | "checkpoint" | "die" | "unverified";
+  isLive?: boolean;
   rawText: string;
   pages?: FacebookPageItem[];
 }
@@ -411,7 +412,9 @@ export function AccountDetailDialog({
   const activeTok = currentToken || account.token;
   const displayName = currentName || account.name || account.uid;
   const avatarUrl =
-    account.status === "die" || account.status === "checkpoint"
+    account.isLive === false ||
+    account.status === "die" ||
+    account.status === "checkpoint"
       ? undefined
       : currentAvatar || account.avatar;
   const coverUrl = currentCover || account.cover;
@@ -502,18 +505,14 @@ export function AccountDetailDialog({
                   <h3 className="text-base sm:text-lg font-bold text-foreground truncate max-w-xs sm:max-w-sm">
                     {displayName}
                   </h3>
-                  {account.status === "live" ? (
+                  {account.isLive === true ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                       <ShieldCheck className="size-3" />
                       Live
                     </span>
-                  ) : account.status === "die" ? (
+                  ) : account.isLive === false || account.status === "die" || account.status === "checkpoint" ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20">
                       Die
-                    </span>
-                  ) : account.status === "checkpoint" ? (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                      Checkpoint
                     </span>
                   ) : (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-500 border border-amber-500/20">
