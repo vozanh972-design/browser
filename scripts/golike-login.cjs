@@ -397,11 +397,12 @@ async function launchGolikeBrowser() {
 }
 
 // Khởi chạy HTTP Server cục bộ cho AutoLunex giao tiếp
+// Khởi chạy HTTP Server cục bộ cho AutoLunex giao tiếp
 const server = http.createServer(async (req, res) => {
   // Bật CORS cho AutoLunex
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, *');
 
   if (req.method === 'OPTIONS') {
     res.writeHead(204);
@@ -413,7 +414,7 @@ const server = http.createServer(async (req, res) => {
 
   if (url.pathname === '/ping') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'ok', isBrowserOpen }));
+    res.end(JSON.stringify({ status: 'ok', isBrowserOpen, hasSession: Boolean(currentSession && currentSession.golike_token) }));
     return;
   }
 
@@ -421,6 +422,58 @@ const server = http.createServer(async (req, res) => {
     const result = await launchGolikeBrowser();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(result));
+    return;
+  }
+
+  if (url.pathname === '/submit-session' && req.method === 'POST') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', async () => {
+      try {
+        const data = JSON.parse(body || '{}');
+        if (data && data.golike_token) {
+          if (!currentSession) {
+            currentSession = {
+              golike_token: '',
+              golike_t_header: '',
+              golike_g_auth: '',
+              golike_device_id: '',
+              golike_username: '',
+              golike_user_id: '',
+              golike_signing_key: '',
+              golike_web_data: 'null',
+              golike_web_cookies: '',
+              golike_header: {},
+              golike_tiktok_map: {},
+              golike_version_app: '3.0',
+              golike_web_version: '3.0',
+              golike_web_version_text: '26.09.17.1',
+              golike_protocol: 'v2',
+              golike_gauth_version: '1.0',
+              golike_scheme: 'https'
+            };
+          }
+          Object.assign(currentSession, data);
+          if (currentSession.golike_token && !currentSession.golike_token.startsWith('Bearer ')) {
+            currentSession.golike_token = `Bearer ${currentSession.golike_token}`;
+          }
+          await syncProtocol(currentSession);
+          for (const p of SESSION_PATHS) {
+            try {
+              const dir = path.dirname(p);
+              if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+              fs.writeFileSync(p, JSON.stringify(currentSession, null, 2), 'utf8');
+            } catch(e) {}
+          }
+          console.log('[GOMAX] Saved session from in-app WebView:', currentSession.golike_username || 'success');
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true, session: currentSession }));
+      } catch(err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
     return;
   }
 
@@ -455,6 +508,186 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true }));
     return;
+  }
+
+  // Route phục vụ WebView trực tiếp trong app
+  const isHtmlRoute = url.pathname === '/' || url.pathname === '/login' || url.pathname === '/home' || url.pathname === '/webview';
+  if (req.method === 'GET' && isHtmlRoute) {
+    try {
+      const upstream = await fetch('https://app.golike.net/login', {
+        headers: {
+          'User-Agent': GOMAX_USER_AGENT,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+      });
+      let html = await upstream.text();
+
+      const injectBridge = `
+<script>
+window.__lastAuth = '';
+window.__lastT = '';
+window.__lastGAuth = '';
+window.__lastGDeviceId = '';
+window.__lastGUsername = '';
+window.__lastSigningKey = '';
+window.__lastUserId = '';
+window.__lastWebData = 'null';
+window.__lastVersionText = '26.09.17.1';
+
+function sendSessionToParent() {
+  try {
+    let signingKey = window.__lastSigningKey || '';
+    let userId = window.__lastUserId || '';
+    let webData = window.__lastWebData || localStorage.getItem('__') || 'null';
+    let deviceId = window.__lastGDeviceId || localStorage.getItem('device_id') || localStorage.getItem('deviceId') || '';
+    let username = window.__lastGUsername || localStorage.getItem('username') || '';
+    
+    let appRoot = document.querySelector('#app');
+    let state = appRoot && appRoot.__vue__ && appRoot.__vue__.$store ? appRoot.__vue__.$store.state : null;
+    if (!state && appRoot && appRoot.__vue_app__ && appRoot.__vue_app__.config && appRoot.__vue_app__.config.globalProperties && appRoot.__vue_app__.config.globalProperties.$store) {
+      state = appRoot.__vue_app__.config.globalProperties.$store.state;
+    }
+    if (state) {
+      if (!signingKey) signingKey = String(state.signing_key || '');
+      if (!userId) userId = String(state.user_id || '');
+      if (!deviceId) deviceId = String(state.device_id || state.deviceId || '');
+      if (!username) username = String(state.username || state.user_name || '');
+    }
+
+    let token = window.__lastAuth || '';
+    if (!token) {
+      for (let i = 0; i < localStorage.length; i++) {
+        let k = localStorage.key(i) || '';
+        if (k.toLowerCase() === 'authorization' || k.toLowerCase() === 'token') {
+          let v = localStorage.getItem(k);
+          if (v && v !== 'null' && v !== 'Bearer null') token = v;
+        }
+      }
+    }
+
+    if (token) {
+      const fullSession = {
+        golike_token: token.startsWith('Bearer ') ? token : ('Bearer ' + token),
+        golike_t_header: window.__lastT || '',
+        golike_g_auth: window.__lastGAuth || '',
+        golike_device_id: deviceId,
+        golike_username: username,
+        golike_user_id: userId,
+        golike_signing_key: signingKey,
+        golike_web_data: webData,
+        golike_web_cookies: document.cookie || '',
+        golike_header: {},
+        golike_tiktok_map: {},
+        golike_version_app: '3.0',
+        golike_web_version: '3.0',
+        golike_web_version_text: window.__lastVersionText || '26.09.17.1',
+        golike_protocol: 'v2',
+        golike_gauth_version: '1.0',
+        golike_scheme: 'https'
+      };
+
+      try {
+        window.parent.postMessage({ type: 'GOLIKE_SESSION', session: fullSession }, '*');
+      } catch(e) {}
+
+      try {
+        fetch('/submit-session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fullSession)
+        }).catch(function(){});
+      } catch(e) {}
+    }
+  } catch(e) {}
+}
+window.sendSessionToParent = sendSessionToParent;
+
+window.GoMaxApp = {
+  sendAuthData: function(auth, t) {
+    if (auth && auth !== 'Bearer null' && auth !== 'null') {
+      window.__lastAuth = auth;
+      if (t) window.__lastT = t;
+      sendSessionToParent();
+    }
+  },
+  sendGatewayHeaders: function(gAuth, gDeviceId, gUsername) {
+    if (gAuth) window.__lastGAuth = gAuth;
+    if (gDeviceId) window.__lastGDeviceId = gDeviceId;
+    if (gUsername) window.__lastGUsername = gUsername;
+    sendSessionToParent();
+  },
+  sendSessionStore: function(signingKey, userId, webData, versionText) {
+    if (signingKey) window.__lastSigningKey = signingKey;
+    if (userId) window.__lastUserId = userId;
+    if (webData) window.__lastWebData = webData;
+    if (versionText) window.__lastVersionText = versionText;
+    sendSessionToParent();
+  }
+};
+
+window.NativeBridge = {
+  onStoreCaptured: function(signingKey, userId, webData, deviceId, username, version, versionText) {
+    window.GoMaxApp.sendSessionStore(signingKey, userId, webData, versionText);
+    if (deviceId || username) window.GoMaxApp.sendGatewayHeaders('', deviceId, username);
+  },
+  onHeadersCaptured: function(auth, t, gAuth, gDeviceId, gUsername, gVersion, gClient, gScheme) {
+    window.GoMaxApp.sendAuthData(auth, t);
+    window.GoMaxApp.sendGatewayHeaders(gAuth, gDeviceId, gUsername);
+  }
+};
+</script>
+<script>
+${GOMAX_INJECT_JS}
+</script>
+`;
+
+      if (html.includes('</head>')) {
+        html = html.replace('</head>', `${injectBridge}</head>`);
+      } else {
+        html = `${injectBridge}${html}`;
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(html);
+      return;
+    } catch(err) {
+      res.writeHead(502, { 'Content-Type': 'text/plain' });
+      res.end('Webview proxy error: ' + err.message);
+      return;
+    }
+  }
+
+  // Proxy các tài nguyên khác (/assets, styles, scripts, fonts)
+  if (req.method === 'GET') {
+    try {
+      const targetUrl = `https://app.golike.net${url.pathname}${url.search}`;
+      const upstream = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': GOMAX_USER_AGENT,
+          'Referer': 'https://app.golike.net/'
+        }
+      });
+
+      const headers = {};
+      for (const [k, v] of upstream.headers.entries()) {
+        if (!['content-encoding', 'content-length', 'transfer-encoding'].includes(k.toLowerCase())) {
+          headers[k] = v;
+        }
+      }
+      headers['access-control-allow-origin'] = '*';
+
+      res.writeHead(upstream.status, headers);
+      const buffer = await upstream.arrayBuffer();
+      res.end(Buffer.from(buffer));
+      return;
+    } catch(err) {
+      res.writeHead(502, { 'Content-Type': 'text/plain' });
+      res.end('Proxy asset error: ' + err.message);
+      return;
+    }
   }
 
   res.writeHead(404, { 'Content-Type': 'application/json' });

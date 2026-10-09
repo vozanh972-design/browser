@@ -1164,6 +1164,41 @@ async fn start_app_update(
   .map_err(|e| format!("Task join error: {}", e))?
 }
 
+#[tauri::command]
+fn start_golike_bridge() -> Result<bool, String> {
+  if std::net::TcpStream::connect("127.0.0.1:18899").is_ok() {
+    return Ok(true);
+  }
+
+  #[cfg(windows)]
+  {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    const DETACHED_PROCESS: u32 = 0x0000_0008;
+
+    let candidates = [
+      r"C:\Users\Admin\AppData\Local\Programs\Python\Python313\Lib\site-packages\playwright\driver\node.exe",
+      r"node.exe",
+      r"node",
+    ];
+
+    let script = r"scripts\golike-login.cjs";
+
+    for exe in candidates {
+      if std::path::Path::new(exe).exists() || exe == "node" {
+        let mut cmd = std::process::Command::new(exe);
+        cmd.arg(script);
+        cmd.creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS);
+        if cmd.spawn().is_ok() {
+          return Ok(true);
+        }
+      }
+    }
+  }
+
+  Ok(false)
+}
+
 // ============================================================
 // Tauri app entry point
 // ============================================================
@@ -1182,6 +1217,8 @@ pub fn run() {
 
   #[cfg(windows)]
   {
+    let _ = start_golike_bridge();
+
     // Kiểm tra cấu hình chuyển ổ đĩa lưu trữ (ưu tiên ổ D đến Z nếu tồn tại file .portable)
     for letter in b'D'..=b'Z' {
       let candidate = format!("{}:\\AutoLunex\\.portable", letter as char);
@@ -1217,6 +1254,7 @@ pub fn run() {
       open_storage_folder,
       start_app_update,
       fetch_remote_version_json,
+      start_golike_bridge,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
