@@ -1182,21 +1182,37 @@ fn start_golike_bridge() -> Result<bool, String> {
       r"node",
     ];
 
-    let script = r"scripts\golike-login.cjs";
+    let script_candidates = [
+      r"D:\browser\scripts\golike-login.cjs",
+      r"D:\AutoLunex\scripts\golike-login.cjs",
+      r"scripts\golike-login.cjs",
+    ];
+
+    let script_path = script_candidates
+      .iter()
+      .find(|s| std::path::Path::new(s).exists())
+      .copied()
+      .unwrap_or(r"D:\browser\scripts\golike-login.cjs");
 
     for exe in candidates {
-      if std::path::Path::new(exe).exists() || exe == "node" {
+      if std::path::Path::new(exe).exists() || exe == "node" || exe == "node.exe" {
         let mut cmd = std::process::Command::new(exe);
-        cmd.arg(script);
+        cmd.arg(script_path);
+        if let Some(parent) = std::path::Path::new(script_path).parent() {
+          cmd.current_dir(parent);
+        }
         cmd.creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS);
         if cmd.spawn().is_ok() {
-          return Ok(true);
+          std::thread::sleep(std::time::Duration::from_millis(600));
+          if std::net::TcpStream::connect("127.0.0.1:18899").is_ok() {
+            return Ok(true);
+          }
         }
       }
     }
   }
 
-  Ok(false)
+  Ok(std::net::TcpStream::connect("127.0.0.1:18899").is_ok())
 }
 
 // ============================================================

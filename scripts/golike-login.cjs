@@ -102,6 +102,7 @@ function extractFromLevelDb() {
             records = [buf];
           }
 
+          let latestInFile = null;
           for (const rec of records) {
             const str = rec.toString('latin1');
             const marker = '_gx_48923a15c3af';
@@ -119,16 +120,17 @@ function extractFromLevelDb() {
                   const parsed = JSON.parse(dec);
                   if (parsed && (parsed.token || parsed.user)) {
                     const cleanTok = String(parsed.token || '').replace(/^Bearer\s+/i, '').trim();
-                    if (cleanTok && clearedTokens.has(cleanTok)) {
-                      idx = str.indexOf(marker, idx + marker.length);
-                      continue;
+                    if (!cleanTok || !clearedTokens.has(cleanTok)) {
+                      latestInFile = parsed;
                     }
-                    return parsed;
                   }
                 } catch(e) {}
               }
               idx = str.indexOf(marker, idx + marker.length);
             }
+          }
+          if (latestInFile && (latestInFile.token || latestInFile.user)) {
+            return latestInFile;
           }
         } catch(e) {}
       }
