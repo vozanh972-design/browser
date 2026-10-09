@@ -2,16 +2,20 @@
 
 import {
   AlertCircle,
+  ArrowLeft,
   Check,
   ChevronDown,
   ChevronUp,
   Clipboard,
-  ExternalLink,
   Globe,
   Key,
   Loader2,
+  Lock,
+  RefreshCw,
   ShieldCheck,
+  Smartphone,
   Sparkles,
+  X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -44,34 +48,65 @@ interface GolikeLoginDialogProps {
 }
 
 const BRIDGE_URL = "http://127.0.0.1:18899";
+const GOLIKE_LOGIN_URL = "https://app.golike.net/login";
 
 export function GolikeLoginDialog({
   isOpen,
   onClose,
   onLoginSuccess,
 }: GolikeLoginDialogProps) {
+  const [showWebview, setShowWebview] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
   const [inputText, setInputText] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isWaitingBrowser, setIsWaitingBrowser] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
+  const [iframeLoading, setIframeLoading] = useState(true);
 
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Dọn dẹp timer khi đóng dialog
+  // Dọn dẹp khi đóng dialog
   useEffect(() => {
     if (!isOpen) {
       if (pollTimerRef.current) {
         clearInterval(pollTimerRef.current);
         pollTimerRef.current = null;
       }
-      setIsWaitingBrowser(false);
+      setShowWebview(false);
       setLoading(false);
       setStatusMessage("");
       setError("");
+      setShowManualInput(false);
     }
   }, [isOpen]);
+
+  // Lắng nghe postMessage từ iframe hoặc webview
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      try {
+        const data = event.data;
+        if (!data) return;
+
+        // Bắt sự kiện session từ script tiêm
+        if (
+          (data.type === "GOLIKE_SESSION" || data.type === "GOLIKE_HEADERS") &&
+          data.session?.golike_token
+        ) {
+          setStatusMessage("Đã nhận phiên đăng nhập! Đang đồng bộ...");
+          await handleCompleteLogin(data.session);
+        } else if (data.golike_token) {
+          await handleCompleteLogin(data);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const startPollingSession = () => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
@@ -83,75 +118,39 @@ export function GolikeLoginDialog({
 
         const data = await res.json();
         if (data?.hasSession && data?.session?.golike_token) {
-          // Đã bắt được session từ browser!
           if (pollTimerRef.current) {
             clearInterval(pollTimerRef.current);
             pollTimerRef.current = null;
           }
 
-          setStatusMessage("Đã bắt đủ 17 trường! Đang đồng bộ Protocol GoLike...");
+          setStatusMessage("Đã nhận đủ phiên làm việc! Đang đồng bộ...");
           await handleCompleteLogin(data.session);
         }
       } catch {
-        // bridge chưa sẵn sàng hoặc đang chờ
+        // bridge chưa sẵn sàng hoặc không bật
       }
     }, 1200);
   };
 
-  const handleOpenAutoBrowser = async () => {
+  const handleOpenInAppWebview = () => {
     setError("");
-    setLoading(true);
-    setIsWaitingBrowser(true);
-    setStatusMessage("Đang khởi động trình duyệt đăng nhập GoLike (Chuẩn GoMax)...");
+    setShowWebview(true);
+    setIframeLoading(true);
+    setIframeKey((prev) => prev + 1);
+    startPollingSession();
+  };
 
-    try {
-      // 1. Thử gọi Local Bridge API mở browser tự động
-      let bridgeTriggered = false;
-      try {
-        const pingRes = await fetch(`${BRIDGE_URL}/ping`, { cache: "no-store" });
-        if (pingRes.ok) {
-          const openRes = await fetch(`${BRIDGE_URL}/open-login`, {
-            method: "POST",
-          });
-          if (openRes.ok) {
-            bridgeTriggered = true;
-          }
-        }
-      } catch {
-        bridgeTriggered = false;
-      }
-
-      // 2. Nếu bridge server chưa mở sẵn, dùng plugin-opener để khởi chạy launcher bat
-      if (!bridgeTriggered) {
-        try {
-          const { openUrl } = await import("@tauri-apps/plugin-opener");
-          await openUrl("D:\\AutoLunex\\start-golike-login.bat").catch(async () => {
-            await openUrl("D:\\browser\\scripts\\start-golike-login.bat");
-          });
-          bridgeTriggered = true;
-        } catch {
-          // Fallback mở web thông thường
-          window.open("https://app.golike.net/login", "_blank");
-        }
-      }
-
-      setStatusMessage(
-        "Cửa sổ GoLike đã mở. Vui lòng đăng nhập tài khoản trên cửa sổ vừa mở (Hệ thống sẽ tự động bắt phiên 17 trường và đóng cửa sổ khi thành công)...",
-      );
-
-      // 3. Bắt đầu polling lắng nghe session
-      startPollingSession();
-    } catch (err: unknown) {
-      setLoading(false);
-      setIsWaitingBrowser(false);
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Không thể tự mở trình duyệt: ${msg}`);
-    }
+  const handleReloadIframe = () => {
+    setIframeLoading(true);
+    setIframeKey((prev) => prev + 1);
   };
 
   const handleCompleteLogin = async (sessionData: Partial<GolikeSessionData>) => {
+    setLoading(true);
+    setError("");
+
     try {
-      // 1. Lưu đủ 17 trường vào bộ nhớ
+      // 1. Lưu đủ 17 trường vào storage
       const fullSession = saveGolikeSession(sessionData);
 
       // 2. Đồng bộ Protocol với Golike Gateway
@@ -161,12 +160,11 @@ export function GolikeLoginDialog({
         // ignore
       }
 
-      // 3. Lấy thông tin user và coin
+      // 3. Xác thực và lấy số coin
       const res = await getGolikeUser(fullSession);
 
       if (!res.success || !res.user) {
         setLoading(false);
-        setIsWaitingBrowser(false);
         setError(
           res.error ||
             "Phiên làm việc GoLike không hợp lệ hoặc đã hết hạn. Vui lòng thử lại.",
@@ -184,10 +182,8 @@ export function GolikeLoginDialog({
       }
 
       setLoading(false);
-      setIsWaitingBrowser(false);
-
       showSuccessToast(
-        `Đăng nhập GoLike chuẩn GoMax thành công! Chào mừng ${res.user.username}`,
+        `Đăng nhập GoLike thành công! Chào mừng ${res.user.username}`,
       );
 
       onLoginSuccess({
@@ -200,7 +196,6 @@ export function GolikeLoginDialog({
       onClose();
     } catch (err: unknown) {
       setLoading(false);
-      setIsWaitingBrowser(false);
       const msg = err instanceof Error ? err.message : String(err);
       setError(`Lỗi hoàn tất đăng nhập: ${msg}`);
     }
@@ -213,7 +208,6 @@ export function GolikeLoginDialog({
       return;
     }
 
-    // Chặn người dùng dán nhầm toàn bộ mã script JS vào ô token
     if (
       raw.includes("function") ||
       raw.includes("=>") ||
@@ -221,7 +215,7 @@ export function GolikeLoginDialog({
       raw.includes("localStorage.getItem")
     ) {
       setError(
-        "Bạn vừa dán đoạn mã JavaScript! Vui lòng không dán script vào ô này. Hãy bấm nút 'Mở Trình Duyệt Đăng Nhập GoLike' ở trên để hệ thống tự động đăng nhập 100%.",
+        "Bạn vừa dán đoạn mã JavaScript! Vui lòng không dán script vào ô này. Hãy bấm 'Mở WebView đăng nhập' để đăng nhập trực tiếp trên giao diện web.",
       );
       return;
     }
@@ -269,7 +263,6 @@ export function GolikeLoginDialog({
         return;
       }
     } else {
-      // Dán chuỗi Token thông thường
       const cleanToken = raw
         .replace(/^Bearer\s+/i, "")
         .replace(/[^\x20-\x7E\xA0-\xFF]/g, "")
@@ -303,140 +296,259 @@ export function GolikeLoginDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden rounded-2xl border border-border/80 shadow-2xl bg-card">
-        {/* Header */}
-        <DialogHeader className="p-5 pb-3 border-b border-border/40">
-          <div className="flex items-center gap-3">
-            <div className="flex size-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-              <ShieldCheck className="size-5" />
+      <DialogContent
+        className={`p-0 gap-0 overflow-hidden rounded-2xl border border-border/80 shadow-2xl bg-card transition-all duration-300 ${
+          showWebview ? "max-w-md w-full" : "max-w-lg"
+        }`}
+      >
+        {/* Header Dialog */}
+        <DialogHeader className="p-4 pb-3 border-b border-border/40">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex size-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                {showWebview ? (
+                  <Smartphone className="size-4.5" />
+                ) : (
+                  <ShieldCheck className="size-4.5" />
+                )}
+              </div>
+              <div>
+                <DialogTitle className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <span>
+                    {showWebview
+                      ? "WebView GoLike (Chế độ Mobile)"
+                      : "Đăng nhập tài khoản GoLike"}
+                  </span>
+                </DialogTitle>
+                <DialogDescription className="text-[11px] text-muted-foreground mt-0.5">
+                  {showWebview
+                    ? "Đăng nhập trực tiếp trên WebView bên trong app để lưu phiên làm việc."
+                    : "Mở giao diện web và đăng nhập tài khoản GoLike để tự động lưu phiên làm việc."}
+                </DialogDescription>
+              </div>
             </div>
-            <div>
-              <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                <span>Đăng nhập tài khoản GoLike</span>
-                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-                  Chuẩn GoMax 17 Trường
-                </span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Cơ chế tự mở web đăng nhập & tự động bắt toàn bộ 17 trường Session chuẩn GoMax.
-              </DialogDescription>
-            </div>
+
+            {showWebview && (
+              <button
+                type="button"
+                onClick={() => setShowWebview(false)}
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 cursor-pointer"
+                title="Quay lại"
+              >
+                <ArrowLeft className="size-4" />
+              </button>
+            )}
           </div>
         </DialogHeader>
 
-        <div className="p-5 flex flex-col gap-4 text-xs">
-          {/* Card nổi bật: Tự động mở web đăng nhập */}
-          <div className="p-4 rounded-xl border border-cyan-500/30 bg-linear-to-b from-cyan-500/10 to-transparent flex flex-col gap-3">
-            <div className="flex items-start gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/20 text-cyan-400 shrink-0 mt-0.5">
-                <Globe className="size-5" />
+        {/* Nội dung: WebView Mode hoặc Mode Khởi chạy */}
+        {showWebview ? (
+          /* GIAO DIỆN WEBVIEW TRỰC TIẾP TRONG APP (PHONE FRAME MOCKUP) */
+          <div className="flex flex-col bg-background/50">
+            {/* Thanh điều hướng giả lập trình duyệt di động */}
+            <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border/50 text-xs">
+              <div className="flex items-center gap-1.5 flex-1 min-w-0 mr-2">
+                <Lock className="size-3 text-emerald-400 shrink-0" />
+                <span className="font-mono text-[11px] text-muted-foreground truncate">
+                  app.golike.net/login
+                </span>
               </div>
-              <div className="flex flex-col gap-1">
-                <h4 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
-                  <span>Tự động mở trình duyệt GoLike</span>
-                  <Sparkles className="size-3.5 text-cyan-400" />
-                </h4>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Trình duyệt sẽ tự động mở trang đăng nhập GoLike (chế độ Mobile iOS chuẩn GoMax giúp dễ dàng vượt Captcha Cloudflare). Bạn chỉ cần đăng nhập, hệ thống sẽ <b>tự động thu thập đủ 17 trường</b> và đóng cửa sổ khi hoàn tất.
-                </p>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={handleReloadIframe}
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                  title="Tải lại trang"
+                >
+                  <RefreshCw className="size-3.5" />
+                </button>
               </div>
             </div>
 
-            {isWaitingBrowser ? (
-              <div className="p-3 rounded-lg bg-cyan-500/15 border border-cyan-500/30 flex items-center gap-3">
-                <Loader2 className="size-4 text-cyan-400 animate-spin shrink-0" />
-                <span className="text-[11px] text-cyan-200 font-medium">
-                  {statusMessage}
-                </span>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleOpenAutoBrowser}
-                disabled={loading}
-                className="w-full h-9 text-xs font-semibold cursor-pointer bg-cyan-600 hover:bg-cyan-700 text-white gap-2 shadow-sm"
-              >
-                <ExternalLink className="size-3.5" />
-                <span>Mở Trình Duyệt Đăng Nhập GoLike (Tự Động 100%)</span>
-              </Button>
-            )}
-          </div>
-
-          {/* Nút bật/tắt nhập thủ công */}
-          <div className="pt-1">
-            <button
-              type="button"
-              onClick={() => setShowManualInput(!showManualInput)}
-              className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer font-medium transition-colors"
-            >
-              {showManualInput ? (
-                <ChevronUp className="size-3.5" />
-              ) : (
-                <ChevronDown className="size-3.5" />
+            {/* Khung WebView Mobile */}
+            <div className="relative w-full h-[540px] bg-white overflow-hidden">
+              {iframeLoading && (
+                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-xs gap-2">
+                  <Loader2 className="size-6 text-cyan-400 animate-spin" />
+                  <span className="text-xs text-muted-foreground font-medium">
+                    Đang tải WebView GoLike...
+                  </span>
+                </div>
               )}
-              <span>Hoặc dán Token / JSON 17 trường thủ công (Dự phòng)</span>
-            </button>
-          </div>
 
-          {/* Form nhập thủ công (Collapsible) */}
-          {showManualInput && (
-            <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-muted/20 border border-border/60">
-              <div className="flex items-center justify-between">
-                <Label
-                  htmlFor="golike-manual-input"
-                  className="text-xs font-semibold text-foreground flex items-center gap-1.5"
-                >
-                  <Key className="size-3.5 text-cyan-400" />
-                  <span>Dán Token hoặc JSON 17 Trường</span>
-                </Label>
-                <button
-                  type="button"
-                  onClick={handlePasteClipboard}
-                  className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 cursor-pointer font-medium"
-                >
-                  <Clipboard className="size-3" />
-                  <span>Dán</span>
-                </button>
-              </div>
-
-              <Textarea
-                id="golike-manual-input"
-                rows={3}
-                placeholder="Dán mã Authorization Token (Bearer ...) hoặc JSON 17 trường tại đây..."
-                value={inputText}
-                onChange={(e) => {
-                  setInputText(e.target.value);
-                  if (error) setError("");
-                }}
-                className="text-xs font-mono resize-none bg-background/60"
+              <iframe
+                key={iframeKey}
+                ref={iframeRef}
+                src={GOLIKE_LOGIN_URL}
+                onLoad={() => setIframeLoading(false)}
+                className="w-full h-full border-0"
+                allow="clipboard-read; clipboard-write"
+                title="GoLike Login Mobile WebView"
               />
+            </div>
 
-              <div className="flex justify-end pt-1">
+            {/* Thanh điều khiển dưới WebView */}
+            <div className="p-3 bg-muted/30 border-t border-border/40 flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[11px] text-muted-foreground">
+                  Sau khi đăng nhập xong trên web, bấm nút bên phải:
+                </span>
                 <Button
                   type="button"
                   size="sm"
-                  variant="secondary"
-                  onClick={handleManualLogin}
-                  disabled={loading || !inputText.trim()}
-                  className="h-7 text-[11px] px-3 cursor-pointer"
+                  onClick={() => setShowManualInput(!showManualInput)}
+                  variant="outline"
+                  className="h-7 text-[11px] px-2.5 cursor-pointer"
                 >
-                  {loading ? "Đang xác thực..." : "Xác nhận & Đồng bộ"}
+                  <Key className="size-3 mr-1 text-cyan-400" />
+                  <span>Dán Token thủ công</span>
                 </Button>
               </div>
-            </div>
-          )}
 
-          {/* Thông báo lỗi nếu có */}
-          {error && (
-            <div className="p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-[11px] text-destructive flex items-start gap-2">
-              <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
-              <span className="leading-tight font-medium">{error}</span>
+              {showManualInput && (
+                <div className="flex flex-col gap-1.5 p-2 rounded-lg bg-background/80 border border-border/60">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground font-medium">
+                      Dán Authorization Token hoặc JSON Session:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handlePasteClipboard}
+                      className="text-[10px] text-cyan-400 hover:text-cyan-300 cursor-pointer font-medium"
+                    >
+                      Dán nhanh
+                    </button>
+                  </div>
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      placeholder="Bearer eyJhbGci..."
+                      className="flex-1 h-7 text-xs font-mono px-2 rounded-md bg-muted/40 border border-border/60"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleManualLogin}
+                      disabled={loading || !inputText.trim()}
+                      className="h-7 text-xs bg-cyan-600 hover:bg-cyan-700 text-white cursor-pointer px-3"
+                    >
+                      {loading ? "Đang lưu..." : "Lưu"}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          /* GIAO DIỆN CHÍNH: NÚT MỞ WEBVIEW & TÙY CHỌN DỰ PHÒNG */
+          <div className="p-5 flex flex-col gap-4 text-xs">
+            {/* Card chính: Mở WebView Mobile bên trong app */}
+            <div className="p-4 rounded-xl border border-cyan-500/30 bg-linear-to-b from-cyan-500/10 to-transparent flex flex-col gap-3">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-cyan-500/20 text-cyan-400 shrink-0 mt-0.5">
+                  <Smartphone className="size-5" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <h4 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
+                    <span>Mở WebView đăng nhập bên trong app</span>
+                    <Sparkles className="size-3.5 text-cyan-400" />
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">
+                    Tạo cửa sổ WebView giao diện Mobile trực tiếp trong ứng dụng. Bạn chỉ cần nhập tài khoản và mật khẩu, hệ thống sẽ tự động lưu phiên làm việc đầy đủ mà không cần mở trình duyệt bên ngoài.
+                  </p>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                onClick={handleOpenInAppWebview}
+                disabled={loading}
+                className="w-full h-9 text-xs font-semibold cursor-pointer bg-cyan-600 hover:bg-cyan-700 text-white gap-2 shadow-sm"
+              >
+                <Globe className="size-3.5" />
+                <span>Mở WebView Đăng Nhập GoLike</span>
+              </Button>
+            </div>
+
+            {/* Nút bật/tắt nhập thủ công */}
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => setShowManualInput(!showManualInput)}
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer font-medium transition-colors"
+              >
+                {showManualInput ? (
+                  <ChevronUp className="size-3.5" />
+                ) : (
+                  <ChevronDown className="size-3.5" />
+                )}
+                <span>Hoặc dán Token / JSON Session thủ công (Dự phòng)</span>
+              </button>
+            </div>
+
+            {/* Form nhập thủ công (Collapsible) */}
+            {showManualInput && (
+              <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-muted/20 border border-border/60">
+                <div className="flex items-center justify-between">
+                  <Label
+                    htmlFor="golike-manual-input"
+                    className="text-xs font-semibold text-foreground flex items-center gap-1.5"
+                  >
+                    <Key className="size-3.5 text-cyan-400" />
+                    <span>Dán Token hoặc JSON Session</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={handlePasteClipboard}
+                    className="flex items-center gap-1 text-[11px] text-cyan-400 hover:text-cyan-300 cursor-pointer font-medium"
+                  >
+                    <Clipboard className="size-3" />
+                    <span>Dán</span>
+                  </button>
+                </div>
+
+                <Textarea
+                  id="golike-manual-input"
+                  rows={3}
+                  placeholder="Dán mã Authorization Token (Bearer ...) hoặc chuỗi JSON session tại đây..."
+                  value={inputText}
+                  onChange={(e) => {
+                    setInputText(e.target.value);
+                    if (error) setError("");
+                  }}
+                  className="text-xs font-mono resize-none bg-background/60"
+                />
+
+                <div className="flex justify-end pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={handleManualLogin}
+                    disabled={loading || !inputText.trim()}
+                    className="h-7 text-[11px] px-3 cursor-pointer"
+                  >
+                    {loading ? "Đang xác thực..." : "Xác nhận & Đồng bộ"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Thông báo lỗi nếu có */}
+            {error && (
+              <div className="p-2.5 rounded-lg bg-destructive/10 border border-destructive/20 text-[11px] text-destructive flex items-start gap-2">
+                <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
+                <span className="leading-tight font-medium">{error}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer */}
-        <DialogFooter className="p-4 bg-muted/20 border-t border-border/40">
+        <DialogFooter className="p-3 bg-muted/20 border-t border-border/40">
           <Button
             type="button"
             variant="outline"
