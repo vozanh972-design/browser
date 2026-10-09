@@ -32,7 +32,7 @@ import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import { GolikeLoginDialog } from "@/components/golike-login-dialog";
-import { clearGolikeSession, loadGolikeSession } from "@/lib/golike-session";
+import { clearGolikeSession, loadGolikeSession, syncGolikeSessionFromBridge } from "@/lib/golike-session";
 import {
   checkFacebookAccountFull,
   checkLiveApi,
@@ -266,6 +266,24 @@ export default function HomePage() {
       // ignore storage error
     }
   }, [accounts]);
+
+  // Tự động đồng bộ tài khoản GoLike từ bridge/LevelDB khi mở app
+  useEffect(() => {
+    let isMounted = true;
+    syncGolikeSessionFromBridge().then((res) => {
+      if (isMounted && res?.success && res.user) {
+        setGolikeAccount({
+          username: res.user.username,
+          balance: res.user.balance,
+          token: res.user.token,
+          isLoggedIn: true,
+        });
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Tự động kiểm tra phiên bản ứng dụng ngầm định kỳ
   useEffect(() => {

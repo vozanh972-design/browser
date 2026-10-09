@@ -437,3 +437,43 @@ export async function syncGolikeProtocol(
     };
   }
 }
+
+/**
+ * Đồng bộ Session GoLike từ Local Bridge (LevelDB / Port 18899)
+ */
+export async function syncGolikeSessionFromBridge(): Promise<{
+  success: boolean;
+  user?: { username: string; balance: string; token: string; coin: number };
+  session?: GolikeSessionData;
+} | null> {
+  try {
+    const res = await fetch("http://127.0.0.1:18899/extract-session", {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data?.success && data?.user?.token) {
+      const saved = saveGolikeSession({
+        ...(data.session || {}),
+        golike_token: data.user.token,
+        golike_username: data.user.username,
+      });
+      try {
+        localStorage.setItem("golike_username", data.user.username);
+        localStorage.setItem("golike_balance", data.user.balance);
+        localStorage.setItem("golike_token", data.user.token);
+      } catch {
+        // ignore
+      }
+      return {
+        success: true,
+        user: data.user,
+        session: saved,
+      };
+    }
+  } catch {
+    // Bridge offline
+  }
+  return null;
+}

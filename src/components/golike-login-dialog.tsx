@@ -2,13 +2,13 @@
 
 import {
   AlertCircle,
-  Battery,
   Check,
+  ChevronLeft,
   Key,
   Loader2,
+  Lock,
   RefreshCw,
-  Signal,
-  Wifi,
+  Sparkles,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -37,6 +37,7 @@ interface GolikeLoginDialogProps {
 }
 
 const GOLIKE_LOGIN_URL = "https://app.golike.net/login";
+const BRIDGE_API = "http://127.0.0.1:18899";
 
 export function GolikeLoginDialog({
   isOpen,
@@ -48,42 +49,75 @@ export function GolikeLoginDialog({
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState("");
-  const [currentTime, setCurrentTime] = useState("9:41");
   const [showTokenInput, setShowTokenInput] = useState(false);
   const [tokenInput, setTokenInput] = useState("");
+  const [detectedUser, setDetectedUser] = useState<{
+    username: string;
+    balance: string;
+    token: string;
+    session?: Partial<GolikeSessionData>;
+  } | null>(null);
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cập nhật giờ thời gian thực theo chuẩn iPhone
-  useEffect(() => {
-    const updateTime = () => {
-      const now = new Date();
-      const hours = now.getHours().toString().padStart(2, "0");
-      const minutes = now.getMinutes().toString().padStart(2, "0");
-      setCurrentTime(`${hours}:${minutes}`);
-    };
-    updateTime();
-    const interval = setInterval(updateTime, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Thử trích xuất session từ Bridge / LevelDB
+  const checkSessionFromBridge = async (silent = true) => {
+    try {
+      const res = await fetch(`${BRIDGE_API}/extract-session`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data?.success && data?.user?.token) {
+        const u = {
+          username: data.user.username || "GoLike User",
+          balance: data.user.balance || "0 coin",
+          token: data.user.token,
+          session: data.session || {},
+        };
+        setDetectedUser(u);
+        return u;
+      }
+    } catch {
+      // Bridge server có thể chưa mở nếu chạy độc lập
+    }
+    return null;
+  };
 
-  // Reset khi mở/đóng dialog
+  // Reset và kích hoạt polling khi mở dialog
   useEffect(() => {
     if (!isOpen) {
+      if (pollingRef.current) clearInterval(pollingRef.current);
       setLoading(false);
       setStatusMessage("");
       setError("");
       setShowTokenInput(false);
       setTokenInput("");
+      setDetectedUser(null);
       return;
     }
 
     setIframeLoading(true);
     setError("");
     setStatusMessage("");
+    setDetectedUser(null);
+
+    // Kiểm tra ngay khi vừa mở
+    checkSessionFromBridge(true);
+
+    // Polling nhẹ mỗi 1.5s để tự động bắt phiên ngay khi người dùng đăng nhập
+    pollingRef.current = setInterval(async () => {
+      await checkSessionFromBridge(true);
+    }, 1500);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
   }, [isOpen]);
 
-  // Lắng nghe postMessage từ iframe (nếu có script hook gửi phiên)
+  // Lắng nghe postMessage từ iframe (nếu có hook)
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       try {
@@ -112,23 +146,37 @@ export function GolikeLoginDialog({
     setIframeKey((prev) => prev + 1);
   };
 
-  // Hoàn tất lưu phiên làm việc, đồng bộ và tự động đóng
-  const handleCompleteLogin = async (sessionData?: Partial<GolikeSessionData>) => {
+  // Hoàn tất lưu phiên làm việc, lưu đủ 17 trường và đồng bộ UI
+  const handleCompleteLogin = async (manualSession?: Partial<GolikeSessionData>) => {
     setLoading(true);
-    setStatusMessage("Đang kiểm tra và đồng bộ tài khoản GoLike...");
+    setStatusMessage("Đang kiểm tra và đồng bộ phiên GoLike...");
     setError("");
 
     try {
-      let tokenToUse = sessionData?.golike_token || tokenInput.trim();
+      // 1. Ưu tiên kiểm tra dữ liệu từ Bridge / LevelDB mới nhất
+      let activeUser = detectedUser;
+      if (!activeUser && !manualSession && !tokenInput.trim()) {
+        activeUser = await checkSessionFromBridge(false);
+      }
+
+      let tokenToUse =
+        manualSession?.golike_token ||
+        tokenInput.trim() ||
+        activeUser?.token ||
+        "";
+
       let fullSession: GolikeSessionData;
 
       if (tokenToUse) {
         if (!tokenToUse.startsWith("Bearer ")) {
           tokenToUse = `Bearer ${tokenToUse}`;
         }
+
         fullSession = saveGolikeSession({
-          ...sessionData,
+          ...(activeUser?.session || {}),
+          ...manualSession,
           golike_token: tokenToUse,
+          golike_username: activeUser?.username || manualSession?.golike_username || "",
         });
 
         try {
@@ -142,35 +190,43 @@ export function GolikeLoginDialog({
           fullSession = existing;
         } else {
           setLoading(false);
-          setError("Chưa nhận được phiên đăng nhập. Vui lòng đăng nhập trên điện thoại hoặc nhập Token.");
+          setError("Chưa nhận diện được phiên đăng nhập. Vui lòng đăng nhập trên màn hình hoặc dán mã Token.");
           return;
         }
       }
 
-      // Xác thực API và lấy tên + số coin thực tế
-      const userRes = await getGolikeUser(fullSession);
+      let username = activeUser?.username || "";
+      let balance = activeUser?.balance || "";
 
-      if (!userRes.success || !userRes.user) {
-        setLoading(false);
-        setError(
-          userRes.error ||
-            "Không thể xác thực số coin. Vui lòng kiểm tra lại tài khoản hoặc nhập mã Token."
-        );
-        return;
+      // Nếu chưa có username hoặc balance, gọi API gateway để lấy chuẩn
+      if (!username || !balance || username === "GoLike User") {
+        setStatusMessage("Đang truy vấn số coin thực tế...");
+        const userRes = await getGolikeUser(fullSession);
+        if (userRes.success && userRes.user) {
+          username = userRes.user.username;
+          balance = `${userRes.user.coin.toLocaleString("vi-VN")} coin`;
+        }
       }
 
-      const username = userRes.user.username;
-      const balance = `${userRes.user.coin.toLocaleString("vi-VN")} coin`;
+      if (!username) username = "GoLike User";
+      if (!balance) balance = "0 coin";
+
+      // Lưu 17 trường và dữ liệu hiển thị vào localStorage
+      saveGolikeSession({
+        ...fullSession,
+        golike_username: username,
+      });
 
       try {
         localStorage.setItem("golike_username", username);
         localStorage.setItem("golike_balance", balance);
+        localStorage.setItem("golike_token", fullSession.golike_token);
       } catch {
         // ignore
       }
 
       setLoading(false);
-      showSuccessToast(`Đăng nhập GoLike thành công! ${username} (${balance})`);
+      showSuccessToast(`Đăng nhập GoLike thành công: ${username} (${balance})`);
 
       onLoginSuccess({
         username,
@@ -189,147 +245,182 @@ export function GolikeLoginDialog({
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="p-0 border-0 bg-transparent shadow-none max-w-sm w-full focus:outline-none flex flex-col items-center justify-center">
-        {/* ================= KHUNG ĐIỆN THOẠI iPHONE (iMAC MIRRORING VIEW) ================= */}
-        <div className="relative w-[360px] bg-[#1c1c1e] p-[10px] rounded-[52px] border-[5px] border-[#3a3a3c] shadow-[0_25px_80px_rgba(0,0,0,0.85)] ring-1 ring-white/10 select-none">
-          {/* Nút vật lý sườn máy (iPhone Hardware Buttons) */}
-          {/* Phím Action & Âm lượng bên trái */}
-          <div className="absolute -left-[9px] top-[105px] w-[5px] h-[26px] bg-[#3a3a3c] rounded-l-md border-r border-black/40" />
-          <div className="absolute -left-[9px] top-[145px] w-[5px] h-[48px] bg-[#3a3a3c] rounded-l-md border-r border-black/40" />
-          <div className="absolute -left-[9px] top-[205px] w-[5px] h-[48px] bg-[#3a3a3c] rounded-l-md border-r border-black/40" />
-          {/* Phím Nguồn bên phải */}
-          <div className="absolute -right-[9px] top-[155px] w-[5px] h-[64px] bg-[#3a3a3c] rounded-r-md border-l border-black/40" />
+        {/* ================= macOS iPhone Mirroring / Liquid Glass Window ================= */}
+        <div className="relative w-[380px] bg-zinc-950/80 backdrop-blur-3xl rounded-[34px] border border-white/20 shadow-[0_30px_90px_rgba(0,0,0,0.85)] ring-1 ring-white/10 overflow-hidden flex flex-col select-none">
+          {/* 1. THANH SAFARI HEADER (LIQUID GLASS CAPSULE & SSL LOCK) */}
+          <div className="relative z-30 h-13 w-full px-4.5 bg-zinc-900/60 backdrop-blur-xl border-b border-white/10 flex items-center justify-between gap-3 shrink-0">
+            {/* Nút Back Safari */}
+            <button
+              type="button"
+              onClick={handleReloadIframe}
+              className="size-7 rounded-full bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="Tải lại trang"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
 
-          {/* Màn hình OLED viền cong bên trong */}
-          <div className="relative w-full h-[620px] bg-black rounded-[42px] overflow-hidden flex flex-col border border-white/5 shadow-inner">
-            {/* 1. THANH TRẠNG THÁI iOS (STATUS BAR & DYNAMIC ISLAND) */}
-            <div className="relative z-30 h-10 w-full px-6 flex items-center justify-between text-white text-[12px] font-semibold bg-black shrink-0">
-              {/* Giờ hiện tại */}
-              <span className="tracking-tight">{currentTime}</span>
-
-              {/* Dynamic Island (Viên thuốc đen đặc trưng iPhone) */}
-              <div className="absolute left-1/2 -translate-x-1/2 top-2 h-[22px] w-[95px] bg-[#0c0c0e] rounded-full flex items-center justify-between px-2.5 border border-white/10 shadow-sm">
-                {/* Camera trước */}
-                <div className="size-2.5 rounded-full bg-[#18181b] border border-white/5 flex items-center justify-center">
-                  <div className="size-1 rounded-full bg-blue-950/70" />
-                </div>
-                {/* Cảm biến FaceID */}
-                <div className="size-2 rounded-full bg-[#121214]" />
+            {/* Thanh địa chỉ Safari Floating Pill */}
+            <div className="h-8 flex-1 max-w-[230px] rounded-full bg-black/50 border border-white/15 px-3 flex items-center justify-between text-xs text-zinc-300 shadow-inner group">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Lock className="size-3 text-emerald-400 shrink-0" />
+                <span className="font-medium tracking-tight text-[11.5px] truncate text-zinc-200">
+                  app.golike.net
+                </span>
               </div>
-
-              {/* Biểu tượng Sóng 5G, Wi-Fi & Pin iOS */}
-              <div className="flex items-center gap-1.5 text-white/90">
-                <Signal className="size-3" />
-                <Wifi className="size-3" />
-                <div className="flex items-center gap-0.5">
-                  <Battery className="size-4 text-emerald-400" />
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={handleReloadIframe}
+                className="text-zinc-400 hover:text-white transition-colors cursor-pointer ml-1"
+                title="Làm mới"
+              >
+                <RefreshCw className="size-3" />
+              </button>
             </div>
 
-            {/* 2. MÀN HÌNH NỘI DUNG WEBVIEW GOLIKE */}
-            <div className="relative flex-1 w-full bg-white overflow-hidden">
-              {(iframeLoading || loading) && (
-                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/85 backdrop-blur-xs gap-3">
-                  <Loader2 className="size-8 text-cyan-400 animate-spin" />
-                  <span className="text-xs text-foreground font-medium text-center px-4">
-                    {statusMessage ||
-                      (iframeLoading
-                        ? "Đang nạp màn hình GoLike..."
-                        : "Đang lưu và đồng bộ...")}
-                  </span>
-                </div>
-              )}
+            {/* Nút Đóng cửa sổ */}
+            <button
+              type="button"
+              onClick={onClose}
+              className="size-7 rounded-full bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+              title="Đóng cửa sổ"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
 
-              <iframe
-                key={iframeKey}
-                ref={iframeRef}
-                src={GOLIKE_LOGIN_URL}
-                onLoad={() => setIframeLoading(false)}
-                className="w-full h-full border-0"
-                allow="clipboard-read; clipboard-write"
-                title="GoLike iPhone Mirroring View"
-              />
+          {/* 2. MÀN HÌNH NỘI DUNG WEBVIEW GOLIKE NẠP TRỰC TIẾP */}
+          <div className="relative w-full h-[580px] bg-white overflow-hidden">
+            {(iframeLoading || loading) && (
+              <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-zinc-950/85 backdrop-blur-xs gap-3">
+                <Loader2 className="size-8 text-cyan-400 animate-spin" />
+                <span className="text-xs text-zinc-200 font-medium text-center px-4">
+                  {statusMessage ||
+                    (iframeLoading
+                      ? "Đang nạp trực tiếp giao diện GoLike..."
+                      : "Đang lưu và đồng bộ phiên...")}
+                </span>
+              </div>
+            )}
+
+            <iframe
+              key={iframeKey}
+              ref={iframeRef}
+              src={GOLIKE_LOGIN_URL}
+              onLoad={() => setIframeLoading(false)}
+              className="w-full h-full border-0"
+              allow="clipboard-read; clipboard-write"
+              title="GoLike Safari View"
+            />
+          </div>
+
+          {/* 3. THANH ĐÁY SAFARI NAVIGATION & LIVE SYNC BAR (LIQUID GLASS) */}
+          <div className="relative z-30 bg-zinc-950/90 backdrop-blur-2xl px-4 pt-3 pb-3 flex flex-col gap-2.5 shrink-0 border-t border-white/10">
+            {/* Live Status Badge */}
+            <div className="flex items-center justify-between px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-[11px]">
+              <div className="flex items-center gap-2 min-w-0">
+                <span
+                  className={`size-2 rounded-full shrink-0 ${
+                    detectedUser
+                      ? "bg-emerald-400 shadow-[0_0_8px_#34d399]"
+                      : "bg-cyan-400 animate-pulse"
+                  }`}
+                />
+                <span className="truncate text-zinc-300">
+                  {detectedUser ? (
+                    <span className="text-emerald-300 font-medium">
+                      Đã nhận diện: {detectedUser.username} ({detectedUser.balance})
+                    </span>
+                  ) : (
+                    <span>Đang chờ đăng nhập trên GoLike...</span>
+                  )}
+                </span>
+              </div>
+
+              {detectedUser && (
+                <Sparkles className="size-3 text-emerald-400 shrink-0" />
+              )}
             </div>
 
-            {/* 3. THANH ĐÁY iPHONE (HOME INDICATOR BAR & NÚT ĐIỀU KHIỂN NHANH) */}
-            <div className="relative z-30 bg-black/95 px-4 pt-2 pb-2.5 flex flex-col gap-2 shrink-0 border-t border-white/10">
-              {/* Form nhập Token nhanh nếu cần đồng bộ coin chính xác */}
-              {showTokenInput && (
-                <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-zinc-900 border border-white/10 animate-in fade-in zoom-in-95 duration-200">
-                  <input
-                    type="text"
-                    value={tokenInput}
-                    onChange={(e) => setTokenInput(e.target.value)}
-                    placeholder="Dán mã Authorization Token..."
-                    className="flex-1 h-7 text-[11px] font-mono px-2 rounded-lg bg-black/50 text-white border border-white/10 focus:outline-none"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => handleCompleteLogin()}
-                    disabled={loading || !tokenInput.trim()}
-                    className="h-7 text-[11px] bg-cyan-600 hover:bg-cyan-700 text-white px-2.5 rounded-lg cursor-pointer"
-                  >
-                    Lưu
-                  </Button>
-                </div>
-              )}
+            {/* Form nhập Token nhanh nếu cần đồng bộ thủ công */}
+            {showTokenInput && (
+              <div className="flex items-center gap-1.5 p-1.5 rounded-xl bg-zinc-900 border border-white/15 animate-in fade-in zoom-in-95 duration-200">
+                <input
+                  type="text"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value)}
+                  placeholder="Dán mã Authorization Token (Bearer...)"
+                  className="flex-1 h-7 text-[11px] font-mono px-2.5 rounded-lg bg-black/60 text-white border border-white/10 focus:outline-none focus:border-cyan-500/50"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => handleCompleteLogin()}
+                  disabled={loading || !tokenInput.trim()}
+                  className="h-7 text-[11px] bg-cyan-600 hover:bg-cyan-700 text-white px-2.5 rounded-lg cursor-pointer"
+                >
+                  Xác nhận
+                </Button>
+              </div>
+            )}
 
-              {/* Thông báo lỗi nếu có */}
-              {error && (
-                <div className="px-2.5 py-1.5 rounded-lg bg-destructive/15 border border-destructive/30 text-[10px] text-red-400 flex items-start gap-1.5">
-                  <AlertCircle className="size-3 shrink-0 mt-0.5" />
-                  <span className="leading-tight">{error}</span>
-                </div>
-              )}
+            {/* Thông báo lỗi nếu có */}
+            {error && (
+              <div className="px-2.5 py-1.5 rounded-lg bg-destructive/15 border border-destructive/30 text-[10.5px] text-red-400 flex items-start gap-1.5">
+                <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
+                <span className="leading-tight">{error}</span>
+              </div>
+            )}
 
-              {/* Nút hành động */}
-              <div className="flex items-center justify-between gap-2">
+            {/* Hàng nút điều khiển & Đồng bộ */}
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={handleReloadIframe}
+                className="size-7 rounded-full bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="Tải lại trang GoLike"
+              >
+                <RefreshCw className="size-3.5" />
+              </button>
+
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={handleReloadIframe}
-                  className="size-7 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-white/80 flex items-center justify-center cursor-pointer transition-colors"
-                  title="Tải lại trang"
+                  onClick={() => setShowTokenInput(!showTokenInput)}
+                  className="h-7.5 px-3 rounded-full bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white text-[11.5px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors border border-white/10"
+                  title="Dán mã Token thủ công nếu cần"
                 >
-                  <RefreshCw className="size-3.5" />
+                  <Key className="size-3 text-cyan-400" />
+                  <span>Mã Token</span>
                 </button>
 
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => setShowTokenInput(!showTokenInput)}
-                    className="h-7 px-2.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-white/80 text-[11px] flex items-center gap-1 cursor-pointer transition-colors"
-                    title="Nhập Token nếu chưa đồng bộ được"
-                  >
-                    <Key className="size-3 text-cyan-400" />
-                    <span>Mã Token</span>
-                  </button>
-
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => handleCompleteLogin()}
-                    disabled={loading}
-                    className="h-7 px-3 text-[11px] font-medium cursor-pointer bg-cyan-600 hover:bg-cyan-700 text-white rounded-full gap-1 shadow-sm"
-                  >
-                    <Check className="size-3" />
-                    <span>Lưu & Hoàn tất</span>
-                  </Button>
-                </div>
-
-                <button
+                <Button
                   type="button"
-                  onClick={onClose}
-                  className="size-7 rounded-full bg-zinc-800/80 hover:bg-zinc-700 text-white/80 flex items-center justify-center cursor-pointer transition-colors"
-                  title="Đóng iPhone View"
+                  size="sm"
+                  onClick={() => handleCompleteLogin()}
+                  disabled={loading}
+                  className="h-7.5 px-3.5 text-[11.5px] font-medium cursor-pointer bg-cyan-600 hover:bg-cyan-500 text-white rounded-full gap-1.5 shadow-[0_2px_12px_rgba(6,182,212,0.35)] transition-all"
                 >
-                  <X className="size-3.5" />
-                </button>
+                  {loading ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Check className="size-3.5" />
+                  )}
+                  <span>Lưu & Hoàn tất</span>
+                </Button>
               </div>
 
-              {/* Home Indicator Bar (Thanh gạt về Home của iPhone) */}
-              <div className="w-28 h-1 bg-white/40 rounded-full mx-auto mt-0.5" />
+              <button
+                type="button"
+                onClick={onClose}
+                className="size-7 rounded-full bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="Đóng"
+              >
+                <X className="size-3.5" />
+              </button>
             </div>
+
+            {/* Home Indicator Bar (Thanh gạt Home iPhone) */}
+            <div className="w-32 h-1 bg-white/30 rounded-full mx-auto mt-0.5" />
           </div>
         </div>
       </DialogContent>
