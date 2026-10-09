@@ -326,8 +326,10 @@ export function loadGolikeSession(): GolikeSessionData | null {
 /**
  * Xóa sạch toàn bộ 17 trường khi đăng xuất
  */
-export function clearGolikeSession(): void {
+export function clearGolikeSession(token?: string): void {
   if (typeof window === "undefined") return;
+
+  const currentTok = token || localStorage.getItem("golike_token") || "";
 
   try {
     for (const key of GOLIKE_STORAGE_KEYS) {
@@ -335,6 +337,18 @@ export function clearGolikeSession(): void {
     }
     localStorage.removeItem("golike_session_v1");
     localStorage.removeItem("golike_balance");
+    localStorage.removeItem("golike_token");
+    localStorage.removeItem("golike_username");
+  } catch {
+    // ignore
+  }
+
+  try {
+    fetch("http://127.0.0.1:18899/clear-session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: currentTok }),
+    }).catch(() => {});
   } catch {
     // ignore
   }
@@ -447,6 +461,13 @@ export async function syncGolikeSessionFromBridge(): Promise<{
   session?: GolikeSessionData;
 } | null> {
   try {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("start_golike_bridge");
+    } catch {
+      // ignore
+    }
+
     const res = await fetch("http://127.0.0.1:18899/extract-session", {
       method: "GET",
       headers: { Accept: "application/json" },

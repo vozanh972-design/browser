@@ -20,6 +20,7 @@ const SESSION_PATHS = [
 
 let currentSession = null;
 let isBrowserOpen = false;
+const clearedTokens = new Set();
 
 // Tải session đã lưu nếu có
 for (const p of SESSION_PATHS) {
@@ -117,6 +118,11 @@ function extractFromLevelDb() {
                   const dec = decryptAES(b64, key);
                   const parsed = JSON.parse(dec);
                   if (parsed && (parsed.token || parsed.user)) {
+                    const cleanTok = String(parsed.token || '').replace(/^Bearer\s+/i, '').trim();
+                    if (cleanTok && clearedTokens.has(cleanTok)) {
+                      idx = str.indexOf(marker, idx + marker.length);
+                      continue;
+                    }
                     return parsed;
                   }
                 } catch(e) {}
@@ -233,13 +239,17 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // fallback: Đọc session từ file
+    // fallback: Đọc session từ file nếu không bị cleared
     for (const p of SESSION_PATHS) {
       try {
         if (fs.existsSync(p)) {
           const content = fs.readFileSync(p, 'utf8');
-          currentSession = JSON.parse(content);
-          break;
+          const parsed = JSON.parse(content);
+          const cleanTok = String(parsed?.golike_token || '').replace(/^Bearer\s+/i, '').trim();
+          if (!clearedTokens.has(cleanTok)) {
+            currentSession = parsed;
+            break;
+          }
         }
       } catch (e) {}
     }
@@ -253,65 +263,41 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  if (url.pathname === '/submit-session' && req.method === 'POST') {
-    let body = '';
-    req.on('data', chunk => { body += chunk; });
-    req.on('end', async () => {
+  if (url.pathname === '/clear-session') {
+    let bodyStr = '';
+    req.on('data', chunk => { bodyStr += chunk; });
+    req.on('end', () => {
       try {
-        const data = JSON.parse(body || '{}');
-        if (data && data.golike_token) {
-          if (!currentSession) {
-            currentSession = {
-              golike_token: '',
-              golike_t_header: '',
-              golike_g_auth: '',
-              golike_device_id: '',
-              golike_username: '',
-              golike_user_id: '',
-              golike_signing_key: '',
-              golike_web_data: 'null',
-              golike_web_cookies: '',
-              golike_header: {},
-              golike_tiktok_map: {},
-              golike_version_app: '3.0',
-              golike_web_version: '3.0',
-              golike_web_version_text: '26.09.17.1',
-              golike_protocol: 'v2',
-              golike_gauth_version: '1.0',
-              golike_scheme: 'https'
-            };
+        if (bodyStr) {
+          const b = JSON.parse(bodyStr);
+          if (b && b.token) {
+            clearedTokens.add(String(b.token).replace(/^Bearer\s+/i, '').trim());
           }
-          Object.assign(currentSession, data);
-          if (currentSession.golike_token && !currentSession.golike_token.startsWith('Bearer ')) {
-            currentSession.golike_token = `Bearer ${currentSession.golike_token}`;
-          }
-          await syncProtocol(currentSession);
-          for (const p of SESSION_PATHS) {
-            try {
-              const dir = path.dirname(p);
-              if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-              fs.writeFileSync(p, JSON.stringify(currentSession, null, 2), 'utf8');
-            } catch(e) {}
-          }
-          console.log('[GOMAX] Saved session from in-app WebView:', currentSession.golike_username || 'success');
         }
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: true, session: currentSession }));
-      } catch(err) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: err.message }));
+      } catch (e) {}
+
+      const qToken = url.searchParams.get('token');
+      if (qToken) {
+        clearedTokens.add(String(qToken).replace(/^Bearer\s+/i, '').trim());
       }
+
+      if (currentSession?.golike_token) {
+        clearedTokens.add(currentSession.golike_token.replace(/^Bearer\s+/i, '').trim());
+      }
+      currentSession = null;
+      for (const p of SESSION_PATHS) {
+        try {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        } catch (e) {}
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
     });
     return;
   }
 
-  if (url.pathname === '/clear-session' && req.method === 'POST') {
-    currentSession = null;
-    for (const p of SESSION_PATHS) {
-      try {
-        if (fs.existsSync(p)) fs.unlinkSync(p);
-      } catch (e) {}
-    }
+  if (url.pathname === '/reset-clear') {
+    clearedTokens.clear();
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true }));
     return;

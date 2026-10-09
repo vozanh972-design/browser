@@ -433,7 +433,7 @@ export default function HomePage() {
   };
 
   const handleGolikeLogout = () => {
-    clearGolikeSession();
+    clearGolikeSession(golikeAccount.token);
     setGolikeAccount({
       username: "",
       balance: "",
