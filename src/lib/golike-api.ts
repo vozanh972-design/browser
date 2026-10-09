@@ -46,7 +46,7 @@ export async function getGolikeUser(tokenOrSession?: string | GolikeSessionData)
         if (!raw) {
           return { success: false, error: "Vui lòng nhập Authorization Token GoLike" };
         }
-        const cleanToken = raw.replace(/^Bearer\s+/i, "").trim();
+        const cleanToken = raw.replace(/^Bearer\s+/i, "").replace(/[^\x20-\x7E\xA0-\xFF]/g, "").trim();
         headers = {
           Authorization: `Bearer ${cleanToken}`,
           "g-client": "web",
@@ -55,7 +55,7 @@ export async function getGolikeUser(tokenOrSession?: string | GolikeSessionData)
           "Content-Type": "application/json;charset=utf-8",
           Accept: "application/json, text/plain, */*",
           "User-Agent":
-            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
           Origin: "https://app.golike.net",
           Referer: "https://app.golike.net/",
         };

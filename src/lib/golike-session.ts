@@ -346,23 +346,29 @@ export function clearGolikeSession(): void {
 export function buildGolikeHeaders(
   session: GolikeSessionData,
 ): Record<string, string> {
-  const token = session.golike_token.startsWith("Bearer ")
-    ? session.golike_token
-    : `Bearer ${session.golike_token}`;
+  const sanitize = (val: string): string => {
+    if (!val) return "";
+    return val.replace(/[^\x20-\x7E\xA0-\xFF]/g, "").trim();
+  };
+
+  const rawToken = session.golike_token || "";
+  const token = rawToken.startsWith("Bearer ")
+    ? rawToken
+    : `Bearer ${rawToken}`;
 
   const versionText = session.golike_web_version_text || "26.09.17.1";
 
   const headers: Record<string, string> = {
-    Authorization: token,
-    t: session.golike_t_header || "",
-    "g-auth": session.golike_g_auth || "",
-    "g-device-id": session.golike_device_id || "",
-    "g-username": session.golike_username || "",
-    "g-version": versionText,
+    Authorization: sanitize(token),
+    t: sanitize(session.golike_t_header || ""),
+    "g-auth": sanitize(session.golike_g_auth || ""),
+    "g-device-id": sanitize(session.golike_device_id || ""),
+    "g-username": sanitize(session.golike_username || ""),
+    "g-version": sanitize(versionText),
     "g-client": "web",
-    "g-scheme": session.golike_scheme || "https",
+    "g-scheme": sanitize(session.golike_scheme || "https"),
     "User-Agent":
-      "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Mobile/15E148 Safari/604.1",
     Origin: "https://app.golike.net",
     Referer: "https://app.golike.net/",
     "Content-Type": "application/json;charset=utf-8",
@@ -370,7 +376,7 @@ export function buildGolikeHeaders(
   };
 
   if (session.golike_web_cookies) {
-    headers.Cookie = session.golike_web_cookies;
+    headers.Cookie = sanitize(session.golike_web_cookies);
   }
 
   return headers;
