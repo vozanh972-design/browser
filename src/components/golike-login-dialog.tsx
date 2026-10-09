@@ -2,13 +2,13 @@
 
 import {
   AlertCircle,
+  Check,
   Loader2,
   Lock,
   RefreshCw,
   Smartphone,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,6 +20,7 @@ import {
 import { getGolikeUser } from "@/lib/golike-api";
 import {
   type GolikeSessionData,
+  loadGolikeSession,
   saveGolikeSession,
   syncGolikeProtocol,
 } from "@/lib/golike-session";
@@ -35,8 +36,7 @@ interface GolikeLoginDialogProps {
   }) => void;
 }
 
-const BRIDGE_URL = "http://127.0.0.1:18899";
-const GOLIKE_FALLBACK_URL = "https://app.golike.net/login";
+const GOLIKE_LOGIN_URL = "https://app.golike.net/login";
 
 export function GolikeLoginDialog({
   isOpen,
@@ -44,83 +44,33 @@ export function GolikeLoginDialog({
   onLoginSuccess,
 }: GolikeLoginDialogProps) {
   const [iframeKey, setIframeKey] = useState(0);
-  const [iframeSrc, setIframeSrc] = useState(`${BRIDGE_URL}/login`);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [error, setError] = useState("");
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const isCompletedRef = useRef(false);
 
-  // Khởi tạo bridge và dọn dẹp khi đóng dialog
+  // Reset khi mở/đóng dialog
   useEffect(() => {
     if (!isOpen) {
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
       setLoading(false);
       setStatusMessage("");
       setError("");
-      isCompletedRef.current = false;
       return;
     }
 
-    // Khi mở dialog: reset và kiểm tra kết nối bridge
-    isCompletedRef.current = false;
     setIframeLoading(true);
     setError("");
     setStatusMessage("");
-
-    const checkAndInitBridge = async () => {
-      try {
-        const pingRes = await fetch(`${BRIDGE_URL}/ping`, { cache: "no-store" });
-        if (pingRes.ok) {
-          setIframeSrc(`${BRIDGE_URL}/login`);
-          startPollingSession();
-          return;
-        }
-      } catch {
-        // bridge chưa mở
-      }
-
-      // Thử gọi command Tauri để mở bridge ngầm
-      try {
-        await invoke("start_golike_bridge");
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        const retryRes = await fetch(`${BRIDGE_URL}/ping`, { cache: "no-store" });
-        if (retryRes.ok) {
-          setIframeSrc(`${BRIDGE_URL}/login`);
-          startPollingSession();
-          return;
-        }
-      } catch {
-        // Không gọi được invoke hoặc lỗi
-      }
-
-      // Fallback sang URL chính nếu không kết nối được bridge cục bộ
-      setIframeSrc(`${BRIDGE_URL}/login`);
-      startPollingSession();
-    };
-
-    void checkAndInitBridge();
-
-    return () => {
-      if (pollTimerRef.current) {
-        clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
-    };
   }, [isOpen]);
 
-  // Lắng nghe postMessage từ iframe (script tiêm tự động gửi khi đăng nhập thành công)
+  // Lắng nghe postMessage từ iframe (nếu có sự kiện phiên đăng nhập)
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       try {
         const data = event.data;
-        if (!data || isCompletedRef.current) return;
+        if (!data) return;
 
         if (
           (data.type === "GOLIKE_SESSION" || data.type === "GOLIKE_HEADERS") &&
@@ -139,67 +89,42 @@ export function GolikeLoginDialog({
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
-  const startPollingSession = () => {
-    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-
-    pollTimerRef.current = setInterval(async () => {
-      if (isCompletedRef.current) return;
-
-      try {
-        const res = await fetch(`${BRIDGE_URL}/session`, { cache: "no-store" });
-        if (!res.ok) return;
-
-        const data = await res.json();
-        if (data?.hasSession && data?.session?.golike_token) {
-          if (pollTimerRef.current) {
-            clearInterval(pollTimerRef.current);
-            pollTimerRef.current = null;
-          }
-          await handleCompleteLogin(data.session);
-        }
-      } catch {
-        // bridge chưa sẵn sàng
-      }
-    }, 1000);
-  };
-
   const handleReloadIframe = () => {
     setIframeLoading(true);
     setIframeKey((prev) => prev + 1);
   };
 
   // Hoàn tất lưu phiên làm việc, đồng bộ và tự động đóng webview
-  const handleCompleteLogin = async (sessionData: Partial<GolikeSessionData>) => {
-    if (isCompletedRef.current) return;
-    isCompletedRef.current = true;
-
-    if (pollTimerRef.current) {
-      clearInterval(pollTimerRef.current);
-      pollTimerRef.current = null;
-    }
-
+  const handleCompleteLogin = async (sessionData?: Partial<GolikeSessionData>) => {
     setLoading(true);
-    setStatusMessage("Đã đăng nhập thành công! Đang lưu phiên làm việc...");
+    setStatusMessage("Đang hoàn tất đăng nhập và kiểm tra tài khoản...");
+    setError("");
 
     try {
-      // 1. Lưu đủ 17 trường chuẩn GoMax vào storage
-      const fullSession = saveGolikeSession(sessionData);
+      let fullSession: GolikeSessionData;
 
-      // 2. Đồng bộ Protocol với Gateway GoLike
-      try {
-        await syncGolikeProtocol(fullSession);
-      } catch {
-        // ignore
+      if (sessionData?.golike_token) {
+        fullSession = saveGolikeSession(sessionData);
+        try {
+          await syncGolikeProtocol(fullSession);
+        } catch {
+          // ignore
+        }
+      } else {
+        const existing = loadGolikeSession();
+        fullSession = existing || saveGolikeSession({});
       }
 
-      // 3. Lấy thông tin user (username & số coin)
-      const userRes = await getGolikeUser(fullSession);
+      // Xác thực hoặc lấy thông tin người dùng nếu có token
       let username = fullSession.golike_username || "GoLike User";
       let balance = "0 coin";
 
-      if (userRes.success && userRes.user) {
-        username = userRes.user.username;
-        balance = `${userRes.user.coin.toLocaleString("vi-VN")} coin`;
+      if (fullSession.golike_token) {
+        const userRes = await getGolikeUser(fullSession);
+        if (userRes.success && userRes.user) {
+          username = userRes.user.username;
+          balance = `${userRes.user.coin.toLocaleString("vi-VN")} coin`;
+        }
       }
 
       try {
@@ -215,16 +140,14 @@ export function GolikeLoginDialog({
       onLoginSuccess({
         username,
         balance,
-        token: fullSession.golike_token,
+        token: fullSession.golike_token || "",
       });
 
-      // 4. Tự động đóng webview sau khi lưu xong
       onClose();
     } catch (err: unknown) {
       setLoading(false);
-      isCompletedRef.current = false;
       const msg = err instanceof Error ? err.message : String(err);
-      setError(`Lỗi lưu phiên làm việc: ${msg}`);
+      setError(`Lỗi: ${msg}`);
     }
   };
 
@@ -245,7 +168,7 @@ export function GolikeLoginDialog({
           </div>
         </DialogHeader>
 
-        {/* Khung WebView Mobile trực tiếp trong app */}
+        {/* Khung WebView Mobile nạp trực tiếp */}
         <div className="flex flex-col bg-background/50">
           {/* Thanh điều hướng WebView */}
           <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b border-border/50 text-xs">
@@ -276,8 +199,8 @@ export function GolikeLoginDialog({
                 <span className="text-xs text-foreground font-medium">
                   {statusMessage ||
                     (iframeLoading
-                      ? "Đang tải WebView GoLike..."
-                      : "Đang lưu phiên làm việc...")}
+                      ? "Đang tải giao diện GoLike..."
+                      : "Đang xử lý...")}
                 </span>
               </div>
             )}
@@ -285,7 +208,7 @@ export function GolikeLoginDialog({
             <iframe
               key={iframeKey}
               ref={iframeRef}
-              src={iframeSrc}
+              src={GOLIKE_LOGIN_URL}
               onLoad={() => setIframeLoading(false)}
               className="w-full h-full border-0"
               allow="clipboard-read; clipboard-write"
@@ -303,7 +226,7 @@ export function GolikeLoginDialog({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="p-3 bg-muted/20 border-t border-border/40">
+        <DialogFooter className="p-3 bg-muted/20 border-t border-border/40 flex items-center justify-between sm:justify-between">
           <Button
             type="button"
             variant="outline"
@@ -312,6 +235,17 @@ export function GolikeLoginDialog({
             className="text-xs cursor-pointer"
           >
             Đóng
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => handleCompleteLogin()}
+            disabled={loading}
+            className="text-xs cursor-pointer bg-cyan-600 hover:bg-cyan-700 text-white gap-1.5 shadow-sm"
+          >
+            <Check className="size-3.5" />
+            <span>Hoàn tất đăng nhập</span>
           </Button>
         </DialogFooter>
       </DialogContent>
