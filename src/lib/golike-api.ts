@@ -1,3 +1,9 @@
+import {
+  buildGolikeHeaders,
+  loadGolikeSession,
+  type GolikeSessionData,
+} from "./golike-session";
+
 export interface GolikeUser {
   username: string;
   coin: number;
@@ -17,26 +23,48 @@ export interface GolikeUserResponse {
   error?: string;
 }
 
-export async function getGolikeUser(token: string): Promise<{
+export async function getGolikeUser(tokenOrSession?: string | GolikeSessionData): Promise<{
   success: boolean;
   user?: GolikeUser;
   error?: string;
 }> {
-  const trimmed = token.replace(/^Bearer\s+/i, "").trim();
-  if (!trimmed) {
-    return { success: false, error: "Vui lòng nhập Authorization Token GoLike" };
-  }
-
   try {
+    let headers: Record<string, string>;
+
+    if (tokenOrSession && typeof tokenOrSession === "object") {
+      headers = buildGolikeHeaders(tokenOrSession);
+    } else {
+      const savedSession = loadGolikeSession();
+      if (savedSession && savedSession.golike_token) {
+        headers = buildGolikeHeaders(savedSession);
+        if (typeof tokenOrSession === "string" && tokenOrSession.trim()) {
+          const cleanToken = tokenOrSession.replace(/^Bearer\s+/i, "").trim();
+          headers.Authorization = `Bearer ${cleanToken}`;
+        }
+      } else {
+        const raw = typeof tokenOrSession === "string" ? tokenOrSession.trim() : "";
+        if (!raw) {
+          return { success: false, error: "Vui lòng nhập Authorization Token GoLike" };
+        }
+        const cleanToken = raw.replace(/^Bearer\s+/i, "").trim();
+        headers = {
+          Authorization: `Bearer ${cleanToken}`,
+          "g-client": "web",
+          "g-scheme": "https",
+          "g-version": "26.09.17.1",
+          "Content-Type": "application/json;charset=utf-8",
+          Accept: "application/json, text/plain, */*",
+          "User-Agent":
+            "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+          Origin: "https://app.golike.net",
+          Referer: "https://app.golike.net/",
+        };
+      }
+    }
+
     const res = await fetch("https://gateway.golike.net/api/users/me", {
       method: "GET",
-      headers: {
-        Authorization: `Bearer ${trimmed}`,
-        "Content-Type": "application/json",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "application/json",
-      },
+      headers,
     });
 
     const data = (await res.json()) as GolikeUserResponse;
@@ -71,7 +99,6 @@ export async function getGolikeUser(token: string): Promise<{
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Nếu token có dạng hợp lệ nhưng bị lỗi kết nối mạng, cho phép fallback dựa trên token
     return {
       success: false,
       error: `Lỗi kết nối máy chủ GoLike: ${msg}`,

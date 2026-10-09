@@ -32,6 +32,7 @@ import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import { GolikeLoginDialog } from "@/components/golike-login-dialog";
+import { clearGolikeSession, loadGolikeSession } from "@/lib/golike-session";
 import {
   checkFacebookAccountFull,
   checkLiveApi,
@@ -166,8 +167,9 @@ export default function HomePage() {
     if (typeof window === "undefined") {
       return { username: "", balance: "", token: "", isLoggedIn: false };
     }
-    const token = localStorage.getItem("golike_token") || "";
-    const username = localStorage.getItem("golike_username") || "";
+    const session = loadGolikeSession();
+    const token = session?.golike_token || localStorage.getItem("golike_token") || "";
+    const username = session?.golike_username || localStorage.getItem("golike_username") || "";
     const balance = localStorage.getItem("golike_balance") || "";
     return {
       username,
@@ -413,13 +415,7 @@ export default function HomePage() {
   };
 
   const handleGolikeLogout = () => {
-    try {
-      localStorage.removeItem("golike_token");
-      localStorage.removeItem("golike_username");
-      localStorage.removeItem("golike_balance");
-    } catch {
-      // ignore
-    }
+    clearGolikeSession();
     setGolikeAccount({
       username: "",
       balance: "",
