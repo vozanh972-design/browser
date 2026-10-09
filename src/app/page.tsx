@@ -31,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
+import { GolikeLoginDialog } from "@/components/golike-login-dialog";
 import {
   checkFacebookAccountFull,
   checkLiveApi,
@@ -135,6 +136,7 @@ export default function HomePage() {
     useState<AppVersionCheckResult | null>(null);
   const [isAddFacebookOpen, setIsAddFacebookOpen] = useState(false);
   const [isXsmmLoginOpen, setIsXsmmLoginOpen] = useState(false);
+  const [isGolikeLoginOpen, setIsGolikeLoginOpen] = useState(false);
   const [isUtilitiesChoiceOpen, setIsUtilitiesChoiceOpen] = useState(false);
   const [xsmmAccount, setXsmmAccount] = useState<{
     username: string;
@@ -148,6 +150,25 @@ export default function HomePage() {
     const token = localStorage.getItem("xsmm_token") || "";
     const username = localStorage.getItem("xsmm_username") || "";
     const balance = localStorage.getItem("xsmm_balance") || "";
+    return {
+      username,
+      balance,
+      token,
+      isLoggedIn: !!token,
+    };
+  });
+  const [golikeAccount, setGolikeAccount] = useState<{
+    username: string;
+    balance: string;
+    token: string;
+    isLoggedIn: boolean;
+  }>(() => {
+    if (typeof window === "undefined") {
+      return { username: "", balance: "", token: "", isLoggedIn: false };
+    }
+    const token = localStorage.getItem("golike_token") || "";
+    const username = localStorage.getItem("golike_username") || "";
+    const balance = localStorage.getItem("golike_balance") || "";
     return {
       username,
       balance,
@@ -370,6 +391,44 @@ export default function HomePage() {
       isLoggedIn: false,
     });
     showSuccessToast("Đã đăng xuất tài khoản XSMM");
+  };
+
+  const handleGolikeLoginSuccess = (user: {
+    username: string;
+    balance: string;
+    token: string;
+  }) => {
+    try {
+      localStorage.setItem("golike_token", user.token);
+      localStorage.setItem("golike_username", user.username);
+      localStorage.setItem("golike_balance", user.balance);
+    } catch {
+      // ignore
+    }
+    setGolikeAccount({
+      ...user,
+      isLoggedIn: true,
+    });
+    showSuccessToast(`Đăng nhập GoLike thành công! Chào mừng ${user.username}`);
+  };
+
+  const handleGolikeLogout = () => {
+    try {
+      localStorage.removeItem("golike_token");
+      localStorage.removeItem("golike_username");
+      localStorage.removeItem("golike_balance");
+    } catch {
+      // ignore
+    }
+    setGolikeAccount({
+      username: "",
+      balance: "",
+      token: "",
+      isLoggedIn: false,
+    });
+    showSuccessToast(
+      tr("Đã đăng xuất tài khoản GoLike thành công!", "Signed out of GoLike!"),
+    );
   };
 
   // Đăng xuất key bản quyền ứng dụng (giữ nguyên toàn bộ tài khoản và phiên XSMM)
@@ -923,6 +982,15 @@ export default function HomePage() {
   };
 
   const handleRunAccount = (acc: FacebookAccount) => {
+    if (currentPage === "gl") {
+      showSuccessToast(
+        tr(
+          "Tính năng chạy nhiệm vụ GoLike đang được phát triển!",
+          "GoLike job automation is under development!",
+        ),
+      );
+      return;
+    }
     if (acc.status === "checkpoint" || acc.status === "die") {
       showSuccessToast(
         tr(
@@ -966,6 +1034,15 @@ export default function HomePage() {
   };
 
   const handleRunPage = (acc: FacebookAccount, p: FacebookPageItem) => {
+    if (currentPage === "gl") {
+      showSuccessToast(
+        tr(
+          "Tính năng chạy nhiệm vụ GoLike đang được phát triển!",
+          "GoLike job automation is under development!",
+        ),
+      );
+      return;
+    }
     const pageKey = `page_${acc.id}_${p.pageId}`;
     if (xsmmRunner.isRunning(pageKey)) {
       xsmmRunner.stopAccount(pageKey);
@@ -1016,6 +1093,15 @@ export default function HomePage() {
 
   const handleRunSelected = () => {
     if (selectedIds.length === 0) return;
+    if (currentPage === "gl") {
+      showSuccessToast(
+        tr(
+          "Tính năng chạy nhiệm vụ GoLike đang được phát triển!",
+          "GoLike job automation is under development!",
+        ),
+      );
+      return;
+    }
     const runnableAccounts = accounts.filter(
       (a) =>
         selectedIds.includes(a.id) &&
@@ -1138,7 +1224,7 @@ export default function HomePage() {
       case "nvc":
         return "NVC";
       case "gl":
-        return "GL";
+        return "";
       case "account":
         return tr("Tiện ích / Nuôi Acc", "Utilities / Account Farm");
       case "reg-page":
@@ -1179,22 +1265,26 @@ export default function HomePage() {
           }}
         />
       )}
-      {/* Top titlebar với drag region & thông tin XSMM */}
+      {/* Top titlebar với drag region & thông tin XSMM / GoLike */}
       <AppHeader
         activePlatform={currentPlatform}
         onPlatformChange={setCurrentPlatform}
         pageTitle={getPageTitle(currentPage)}
-        showXsmm={currentPage !== "account" && currentPage !== "reg-page"}
+        showXsmm={currentPage === "profiles"}
         xsmmAccount={xsmmAccount}
         onXsmmLoginClick={() => setIsXsmmLoginOpen(true)}
         onXsmmLogoutClick={handleXsmmLogout}
+        showGolike={currentPage === "gl"}
+        golikeAccount={golikeAccount}
+        onGolikeLoginClick={() => setIsGolikeLoginOpen(true)}
+        onGolikeLogoutClick={handleGolikeLogout}
         onNewClick={() => setIsAddFacebookOpen(true)}
       />
 
       {/* Main content area */}
       <div className="flex min-h-0 flex-1 flex-col">
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-5">
-          {(currentPage === "profiles" || currentPage === "account") && (
+          {(currentPage === "profiles" || currentPage === "account" || currentPage === "gl") && (
             <div className="flex w-full flex-1 flex-col">
               {/* Sub-navigation switcher for Tiện ích */}
               {currentPage === "account" && (
@@ -1408,6 +1498,37 @@ export default function HomePage() {
                             {tr(
                               "Đăng nhập tài khoản XSMM",
                               "Sign in XSMM account",
+                            )}
+                          </span>
+                        </Button>
+                      </div>
+                    ) : currentPage === "gl" && !golikeAccount.isLoggedIn ? (
+                      <div className="flex flex-col items-center gap-2.5">
+                        <div className="flex size-12 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                          <ShieldCheck className="size-6" />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground">
+                          {tr(
+                            "Chưa kết nối tài khoản GoLike",
+                            "GoLike account not connected",
+                          )}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground max-w-xs leading-relaxed">
+                          {tr(
+                            "Vui lòng đăng nhập tài khoản GoLike để quản lý và tự động hóa tài khoản.",
+                            "Please sign in to GoLike account to manage and automate accounts.",
+                          )}
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsGolikeLoginOpen(true)}
+                          className="mt-2 h-7.5 text-xs bg-cyan-600 hover:bg-cyan-700 text-white font-semibold cursor-pointer gap-1.5"
+                        >
+                          <Key className="size-3.5" />
+                          <span>
+                            {tr(
+                              "Đăng nhập tài khoản GoLike",
+                              "Sign in GoLike account",
                             )}
                           </span>
                         </Button>
@@ -2049,8 +2170,7 @@ export default function HomePage() {
           )}
 
           {(currentPage === "ttc" ||
-            currentPage === "nvc" ||
-            currentPage === "gl") && (
+            currentPage === "nvc") && (
             <motion.div
               key={currentPage}
               initial={{ opacity: 0, y: 8 }}
@@ -2156,6 +2276,13 @@ export default function HomePage() {
         isOpen={isXsmmLoginOpen}
         onClose={() => setIsXsmmLoginOpen(false)}
         onLoginSuccess={handleXsmmLoginSuccess}
+      />
+
+      {/* Dialog Đăng nhập GoLike */}
+      <GolikeLoginDialog
+        isOpen={isGolikeLoginOpen}
+        onClose={() => setIsGolikeLoginOpen(false)}
+        onLoginSuccess={handleGolikeLoginSuccess}
       />
 
       {/* Settings Dialog */}

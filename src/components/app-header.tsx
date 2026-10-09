@@ -15,6 +15,12 @@ export interface XsmmAccountInfo {
   isLoggedIn: boolean;
 }
 
+export interface GolikeAccountInfo {
+  username: string;
+  balance: string;
+  isLoggedIn: boolean;
+}
+
 interface AppHeaderProps {
   pageTitle?: string;
   activePlatform?: "facebook" | "instagram";
@@ -22,8 +28,12 @@ interface AppHeaderProps {
   xsmmAccount?: XsmmAccountInfo;
   onXsmmLoginClick?: () => void;
   onXsmmLogoutClick?: () => void;
+  golikeAccount?: GolikeAccountInfo;
+  onGolikeLoginClick?: () => void;
+  onGolikeLogoutClick?: () => void;
   onNewClick?: () => void;
   showXsmm?: boolean;
+  showGolike?: boolean;
 }
 
 export function AppHeader({
@@ -33,8 +43,12 @@ export function AppHeader({
   xsmmAccount,
   onXsmmLoginClick,
   onXsmmLogoutClick,
+  golikeAccount,
+  onGolikeLoginClick,
+  onGolikeLogoutClick,
   onNewClick,
   showXsmm = true,
+  showGolike = false,
 }: AppHeaderProps) {
   const { i18n } = useTranslation();
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
@@ -146,6 +160,50 @@ export function AppHeader({
               >
                 <Key className="size-3" />
                 <span>{isVi ? "Đăng nhập XSMM" : "Sign in XSMM"}</span>
+              </button>
+            )
+          ))}
+
+        {showGolike &&
+          (golikeAccount?.isLoggedIn ? (
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
+              {/* User */}
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <User className="size-3.5 text-cyan-400" />
+                <span className="max-w-[120px] truncate">
+                  {golikeAccount.username}
+                </span>
+              </div>
+
+              <span className="h-3 w-px bg-border" />
+
+              {/* Balance */}
+              <div className="flex items-center gap-1 font-semibold text-cyan-400">
+                <Coins className="size-3.5 text-cyan-400" />
+                <span>{golikeAccount.balance}</span>
+              </div>
+
+              {/* Logout button */}
+              {onGolikeLogoutClick && (
+                <button
+                  type="button"
+                  onClick={onGolikeLogoutClick}
+                  title={isVi ? "Đăng xuất GoLike" : "Sign out GoLike"}
+                  className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
+                >
+                  <LogOut className="size-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            onGolikeLoginClick && (
+              <button
+                type="button"
+                onClick={onGolikeLoginClick}
+                className="flex h-7 items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-2.5 text-xs font-medium text-cyan-400 hover:bg-cyan-500/20 transition-colors cursor-pointer"
+              >
+                <Key className="size-3" />
+                <span>{isVi ? "Đăng nhập GoLike" : "Sign in GoLike"}</span>
               </button>
             )
           ))}
