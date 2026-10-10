@@ -2282,6 +2282,7 @@ export default function HomePage() {
         onAddAccounts={handleAddAccounts}
         isXsmmLoggedIn={xsmmAccount.isLoggedIn}
         platform={currentPlatform}
+        isGolike={currentPage === "gl"}
         onXsmmLoginSuccess={handleXsmmLoginSuccess}
       />
 

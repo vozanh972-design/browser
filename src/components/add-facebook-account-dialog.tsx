@@ -24,6 +24,7 @@ interface AddFacebookAccountDialogProps {
   onAddAccounts?: (accounts: string[], format: string) => void;
   isXsmmLoggedIn?: boolean;
   platform?: "facebook" | "instagram";
+  isGolike?: boolean;
   onXsmmLoginSuccess?: (user: {
     username: string;
     balance: string;
@@ -51,6 +52,7 @@ export function AddFacebookAccountDialog({
   onAddAccounts,
   isXsmmLoggedIn = false,
   platform = "facebook",
+  isGolike = false,
   onXsmmLoginSuccess,
 }: AddFacebookAccountDialogProps) {
   const isInstagram = platform === "instagram";
@@ -250,71 +252,73 @@ export function AddFacebookAccountDialog({
             />
           </div>
 
-          {/* Khu vực Đăng nhập XSMM */}
-          <div className="rounded-xl border border-border/80 bg-muted/30 p-3.5 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Key className="size-4 text-primary" />
-                <span className="text-xs font-medium text-foreground">
-                  {isAuthedXsmm
-                    ? "Đã đăng nhập XSMM"
-                    : "Bạn cần đăng nhập XSMM trước"}
-                </span>
-              </div>
-              {!isAuthedXsmm ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={showTokenInput ? "secondary" : "default"}
-                  onClick={() => setShowTokenInput((v) => !v)}
-                  className="h-7 text-xs px-3 cursor-pointer"
-                >
-                  {showTokenInput ? "Đóng" : "Đăng nhập"}
-                </Button>
-              ) : (
-                <span className="flex items-center gap-1 text-xs text-success font-medium">
-                  <Check className="size-3.5" />
-                  Đã xác thực
-                </span>
-              )}
-            </div>
-
-            {/* Dòng hiện ra để nhập Token khi bấm nút Đăng nhập */}
-            {showTokenInput && !isAuthedXsmm && (
-              <div className="flex flex-col gap-2 pt-2 border-t border-border/50 animate-in fade-in duration-200">
-                <Label className="text-[11px] text-muted-foreground">
-                  Nhập Access Token XSMM của bạn:
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="text"
-                    value={xsmmToken}
-                    onChange={(e) => {
-                      setXsmmToken(e.target.value);
-                      if (tokenError) setTokenError("");
-                    }}
-                    placeholder="Dán token XSMM vào đây..."
-                    className="h-8 text-xs font-mono flex-1"
-                    disabled={tokenLoading}
-                  />
+          {/* Khu vực Đăng nhập XSMM (Ẩn hoàn toàn khi ở tab GoLike) */}
+          {!isGolike && (
+            <div className="rounded-xl border border-border/80 bg-muted/30 p-3.5 flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Key className="size-4 text-primary" />
+                  <span className="text-xs font-medium text-foreground">
+                    {isAuthedXsmm
+                      ? "Đã đăng nhập XSMM"
+                      : "Bạn cần đăng nhập XSMM trước"}
+                  </span>
+                </div>
+                {!isAuthedXsmm ? (
                   <Button
                     type="button"
                     size="sm"
-                    onClick={handleSaveToken}
-                    disabled={!xsmmToken.trim() || tokenLoading}
-                    className="h-8 text-xs cursor-pointer px-4"
+                    variant={showTokenInput ? "secondary" : "default"}
+                    onClick={() => setShowTokenInput((v) => !v)}
+                    className="h-7 text-xs px-3 cursor-pointer"
                   >
-                    {tokenLoading ? "Đang xác thực..." : "Xác nhận"}
+                    {showTokenInput ? "Đóng" : "Đăng nhập"}
                   </Button>
-                </div>
-                {tokenError && (
-                  <p className="text-[11px] text-destructive font-medium">
-                    {tokenError}
-                  </p>
+                ) : (
+                  <span className="flex items-center gap-1 text-xs text-success font-medium">
+                    <Check className="size-3.5" />
+                    Đã xác thực
+                  </span>
                 )}
               </div>
-            )}
-          </div>
+
+              {/* Dòng hiện ra để nhập Token khi bấm nút Đăng nhập */}
+              {showTokenInput && !isAuthedXsmm && (
+                <div className="flex flex-col gap-2 pt-2 border-t border-border/50 animate-in fade-in duration-200">
+                  <Label className="text-[11px] text-muted-foreground">
+                    Nhập Access Token XSMM của bạn:
+                  </Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="text"
+                      value={xsmmToken}
+                      onChange={(e) => {
+                        setXsmmToken(e.target.value);
+                        if (tokenError) setTokenError("");
+                      }}
+                      placeholder="Dán token XSMM vào đây..."
+                      className="h-8 text-xs font-mono flex-1"
+                      disabled={tokenLoading}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleSaveToken}
+                      disabled={!xsmmToken.trim() || tokenLoading}
+                      className="h-8 text-xs cursor-pointer px-4"
+                    >
+                      {tokenLoading ? "Đang xác thực..." : "Xác nhận"}
+                    </Button>
+                  </div>
+                  {tokenError && (
+                    <p className="text-[11px] text-destructive font-medium">
+                      {tokenError}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">

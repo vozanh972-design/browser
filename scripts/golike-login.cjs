@@ -76,14 +76,19 @@ function decryptAES(ciphertextBase64, passphrase) {
 }
 
 function extractFromLevelDb() {
-  const BLOCK_SIZE = 32768;
   const key = '426dbb3397e15b7628b5cc8b150107e5';
 
   for (const dbDir of candidateDirs) {
     if (!fs.existsSync(dbDir)) continue;
     try {
       const files = fs.readdirSync(dbDir).filter(f => f.endsWith('.ldb') || f.endsWith('.log'));
-      files.sort((a, b) => fs.statSync(path.join(dbDir, b)).mtimeMs - fs.statSync(path.join(dbDir, a)).mtimeMs);
+      // File WAL (.log) luôn chứa dữ liệu ghi tức thì mới nhất của GoLike khi đăng nhập
+      files.sort((a, b) => {
+        const aIsLog = a.endsWith('.log') ? 1 : 0;
+        const bIsLog = b.endsWith('.log') ? 1 : 0;
+        if (aIsLog !== bIsLog) return bIsLog - aIsLog;
+        return fs.statSync(path.join(dbDir, b)).mtimeMs - fs.statSync(path.join(dbDir, a)).mtimeMs;
+      });
 
       for (const f of files) {
         try {
@@ -92,55 +97,26 @@ function extractFromLevelDb() {
           if (stat.size === 0) continue;
           const buf = fs.readFileSync(filePath);
           if (!buf || buf.length === 0) continue;
-          let records = [];
-          if (f.endsWith('.log')) {
-            let offset = 0;
-            let chunks = [];
-            while (offset + 7 < buf.length) {
-              const rem = BLOCK_SIZE - (offset % BLOCK_SIZE);
-              if (rem < 7) { offset += rem; continue; }
-              const length = buf.readUInt16LE(offset + 4);
-              const type = buf[offset + 6];
-              chunks.push({ type, data: buf.subarray(offset + 7, offset + 7 + length) });
-              offset += 7 + length;
-            }
-            let currentRecord = Buffer.alloc(0);
-            for (const c of chunks) {
-              if (c.type === 1) records.push(c.data);
-              else if (c.type === 2) currentRecord = c.data;
-              else if (c.type === 3) currentRecord = Buffer.concat([currentRecord, c.data]);
-              else if (c.type === 4) { currentRecord = Buffer.concat([currentRecord, c.data]); records.push(currentRecord); currentRecord = Buffer.alloc(0); }
-            }
-          } else {
-            records = [buf];
-          }
 
-          let latestInFile = null;
-          for (const rec of records) {
-            const str = rec.toString('latin1');
-            const marker = '_gx_48923a15c3af';
-            let idx = str.indexOf(marker);
-            while (idx !== -1) {
-              const uIdx = str.indexOf('U2FsdGVkX1', idx);
-              if (uIdx !== -1 && uIdx - idx < 50) {
-                let b64 = '';
-                for (let i = uIdx; i < str.length; i++) {
-                  if (/[a-zA-Z0-9+\/=]/.test(str[i])) b64 += str[i];
-                  else break;
-                }
-                try {
-                  const dec = decryptAES(b64, key);
-                  const parsed = JSON.parse(dec);
-                  if (parsed && (parsed.token || parsed.user)) {
-                    latestInFile = parsed;
-                  }
-                } catch(e) {}
-              }
-              idx = str.indexOf(marker, idx + marker.length);
+          // Quét trực tiếp chuỗi AES CryptoJS (luôn bắt đầu bằng U2FsdGVkX1)
+          const str = buf.toString('latin1');
+          let uIdx = str.indexOf('U2FsdGVkX1');
+          while (uIdx !== -1) {
+            let b64 = '';
+            for (let i = uIdx; i < str.length; i++) {
+              if (/[a-zA-Z0-9+\/=]/.test(str[i])) b64 += str[i];
+              else break;
             }
-          }
-          if (latestInFile && (latestInFile.token || latestInFile.user)) {
-            return latestInFile;
+            if (b64.length > 50) {
+              try {
+                const dec = decryptAES(b64, key);
+                const parsed = JSON.parse(dec);
+                if (parsed && (parsed.token || parsed.user)) {
+                  return parsed;
+                }
+              } catch(e) {}
+            }
+            uIdx = str.indexOf('U2FsdGVkX1', uIdx + 10);
           }
         } catch(e) {}
       }

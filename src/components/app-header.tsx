@@ -1,6 +1,6 @@
 "use client";
 
-import { Coins, Key, LogOut, Plus, User } from "lucide-react";
+import { Coins, Key, LogOut, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
@@ -214,7 +214,6 @@ export function AppHeader({
             onClick={onNewClick}
             className="flex h-7 items-center gap-1 px-2.5 text-xs cursor-pointer shadow-xs font-medium"
           >
-            <Plus className="size-3.5" />
             <span>{isVi ? "+ Mới" : "+ New"}</span>
           </Button>
         )}

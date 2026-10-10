@@ -38,9 +38,31 @@ export function GolikeLoginDialog({
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const isCompletedRef = useRef(false);
 
-  // Trích xuất session: ưu tiên Tauri native invoke, fallback sang HTTP bridge
+  // Trích xuất session: ưu tiên HTTP Bridge 18899 (phản hồi siêu tốc 2ms), fallback sang Tauri invoke
   const checkSession = async () => {
-    // 1. Thử gọi trực tiếp từ Rust Tauri (nhanh nhất, không phụ thuộc port)
+    // 1. Thử gọi qua HTTP Bridge 18899 (nhanh nhất 2ms vì server resident sẵn trong RAM)
+    try {
+      const res = await fetch(`${BRIDGE_API}/extract-session`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if ((data?.success || data?.hasSession) && data?.user?.token) {
+          return {
+            username: data.user.username || "GoLike User",
+            balance: data.user.balance || "0 coin",
+            token: data.user.token,
+            coin: data.user.coin,
+            session: data.session || {},
+          };
+        }
+      }
+    } catch {
+      // Bridge server có thể đang khởi động
+    }
+
+    // 2. Fallback sang Rust Tauri invoke
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const data: any = await invoke("extract_golike_session");
@@ -57,26 +79,6 @@ export function GolikeLoginDialog({
       // ignore
     }
 
-    // 2. Thử gọi qua HTTP Bridge 18899
-    try {
-      const res = await fetch(`${BRIDGE_API}/extract-session`, {
-        method: "GET",
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      if ((data?.success || data?.hasSession) && data?.user?.token) {
-        return {
-          username: data.user.username || "GoLike User",
-          balance: data.user.balance || "0 coin",
-          token: data.user.token,
-          coin: data.user.coin,
-          session: data.session || {},
-        };
-      }
-    } catch {
-      // Bridge server có thể đang khởi động
-    }
     return null;
   };
 
@@ -203,14 +205,14 @@ export function GolikeLoginDialog({
       }
     })();
 
-    // Tự động lắng nghe và phát hiện đăng nhập thành công mỗi 600ms
+    // Tự động lắng nghe và phát hiện đăng nhập thành công mỗi 300ms (tương đương tốc độ GoMax)
     pollingRef.current = setInterval(async () => {
       if (isCompletedRef.current) return;
       const detected = await checkSession();
       if (detected && detected.token) {
         await handleAutoLoginSuccess(detected, detected.session);
       }
-    }, 600);
+    }, 300);
 
     return () => {
       if (pollingRef.current) {
