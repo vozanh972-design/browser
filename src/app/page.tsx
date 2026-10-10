@@ -169,10 +169,6 @@ export default function HomePage() {
     }
     const session = loadGolikeSession();
     const token = session?.golike_token || localStorage.getItem("golike_token") || "";
-    const blacklisted = localStorage.getItem("golike_blacklist_token");
-    if (blacklisted && (token === blacklisted || token.includes(blacklisted))) {
-      return { username: "", balance: "", token: "", isLoggedIn: false };
-    }
     const username = session?.golike_username || localStorage.getItem("golike_username") || "";
     const balance = localStorage.getItem("golike_balance") || "";
     return {
@@ -284,23 +280,8 @@ export default function HomePage() {
           : "") ||
         "";
 
-      // Nếu người dùng không có token (chưa login hoặc đã đăng xuất), tuyệt đối không tự quét lại token cũ
+      // Nếu người dùng không có token (chưa login hoặc đã đăng xuất), không tự quét
       if (!token) {
-        return;
-      }
-
-      // Kiểm tra token có nằm trong blacklist (vừa logout) không
-      const blacklisted = typeof window !== "undefined" ? localStorage.getItem("golike_blacklist_token") : null;
-      if (blacklisted && (token === blacklisted || token.includes(blacklisted))) {
-        await clearGolikeSession(token);
-        if (isMounted) {
-          setGolikeAccount({
-            username: "",
-            balance: "",
-            token: "",
-            isLoggedIn: false,
-          });
-        }
         return;
       }
 
@@ -318,8 +299,8 @@ export default function HomePage() {
             isLoggedIn: true,
           });
           return;
-        } else if (res.error && (res.error.includes("401") || !res.success)) {
-          // Token không còn hợp lệ trên máy chủ GoLike -> Dọn dẹp session
+        } else if (res.error && res.error.includes("401")) {
+          // Chỉ xóa khi máy chủ GoLike phản hồi rõ ràng 401 Unauthorized
           await clearGolikeSession(token);
           if (isMounted) {
             setGolikeAccount({
@@ -331,7 +312,7 @@ export default function HomePage() {
           }
         }
       } catch {
-        // ignore
+        // Lỗi mạng tạm thời hoặc mất kết nối: Tuyệt đối giữ nguyên session đã lưu
       }
     };
 

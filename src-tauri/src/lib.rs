@@ -1170,26 +1170,8 @@ fn start_golike_bridge() -> Result<bool, String> {
   Ok(true)
 }
 
-static GOLIKE_BLACKLIST: Mutex<Option<std::collections::HashSet<String>>> = Mutex::new(None);
-
 #[tauri::command]
-fn clear_golike_session(token: Option<String>) -> Result<bool, String> {
-  // Ghi nhận token vào blacklist để extract_golike_session không bao giờ nhận diện lại token cũ này
-  if let Some(tok) = token {
-    let clean = tok.trim().to_string();
-    if !clean.is_empty() {
-      if let Ok(mut lock) = GOLIKE_BLACKLIST.lock() {
-        let set = lock.get_or_insert_with(std::collections::HashSet::new);
-        set.insert(clean.clone());
-        if clean.starts_with("Bearer ") {
-          set.insert(clean[7..].trim().to_string());
-        } else {
-          set.insert(format!("Bearer {}", clean));
-        }
-      }
-    }
-  }
-
+fn clear_golike_session(_token: Option<String>) -> Result<bool, String> {
   // Chỉ xóa các file session GoLike trên đĩa, tuyệt đối KHÔNG đụng đến LevelDB của app
   let session_paths = [
     r"D:\AutoLunex\golike_session.json",
@@ -1204,9 +1186,192 @@ fn clear_golike_session(token: Option<String>) -> Result<bool, String> {
   Ok(true)
 }
 
+const PS_EXTRACT_SCRIPT: &str = r#"$keyStr = "426dbb3397e15b7628b5cc8b150107e5"
+$candidateDirs = @(
+    Join-Path $env:LOCALAPPDATA "com.autolunex.app\EBWebView\Default\Local Storage\leveldb"
+)
+68..90 | ForEach-Object {
+    $candidateDirs += "$([char]$_):\AutoLunex\webview_data\Default\Local Storage\leveldb"
+}
+
+function EvpBytesToKey($passphraseBytes, $saltBytes, $keyLen, $ivLen) {
+    $md5 = [System.Security.Cryptography.MD5]::Create()
+    $d = [System.Collections.Generic.List[byte]]::new()
+    $d_i = [byte[]]@()
+    while ($d.Count -lt ($keyLen + $ivLen)) {
+        $ms = [System.IO.MemoryStream]::new()
+        if ($d_i.Length -gt 0) { $ms.Write($d_i, 0, $d_i.Length) }
+        $ms.Write($passphraseBytes, 0, $passphraseBytes.Length)
+        $ms.Write($saltBytes, 0, $saltBytes.Length)
+        $d_i = $md5.ComputeHash($ms.ToArray())
+        $d.AddRange($d_i)
+    }
+    $all = $d.ToArray()
+    $key = New-Object byte[] $keyLen
+    $iv = New-Object byte[] $ivLen
+    [System.Array]::Copy($all, 0, $key, 0, $keyLen)
+    [System.Array]::Copy($all, $keyLen, $iv, 0, $ivLen)
+    return @{ Key = $key; IV = $iv }
+}
+
+function Decrypt-CryptoJS($b64, $pass) {
+    try {
+        $raw = [System.Convert]::FromBase64String($b64)
+        if ($raw.Length -lt 16) { return $null }
+        $header = [System.Text.Encoding]::ASCII.GetString($raw, 0, 8)
+        if ($header -ne "Salted__") { return $null }
+        $salt = New-Object byte[] 8
+        [System.Array]::Copy($raw, 8, $salt, 0, 8)
+        $cipherBytes = New-Object byte[] ($raw.Length - 16)
+        [System.Array]::Copy($raw, 16, $cipherBytes, 0, $raw.Length - 16)
+
+        $passBytes = [System.Text.Encoding]::UTF8.GetBytes($pass)
+        $res = EvpBytesToKey $passBytes $salt 32 16
+
+        $aes = [System.Security.Cryptography.Aes]::Create()
+        $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
+        $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
+        $aes.Key = $res.Key
+        $aes.IV = $res.IV
+
+        $dec = $aes.CreateDecryptor()
+        $ms = [System.IO.MemoryStream]::new($cipherBytes)
+        $cs = [System.Security.Cryptography.CryptoStream]::new($ms, $dec, [System.Security.Cryptography.CryptoStreamMode]::Read)
+        $sr = [System.IO.StreamReader]::new($cs, [System.Text.Encoding]::UTF8)
+        return $sr.ReadToEnd()
+    } catch {
+        return $null
+    }
+}
+
+foreach ($dbDir in $candidateDirs) {
+    if (-not (Test-Path $dbDir)) { continue }
+    $files = Get-ChildItem -Path $dbDir | Where-Object { $_.Extension -in ".ldb", ".log" } | Sort-Object LastWriteTime -Descending
+    foreach ($f in $files) {
+        try {
+            $bytes = [System.IO.File]::ReadAllBytes($f.FullName)
+            if (-not $bytes -or $bytes.Length -eq 0) { continue }
+            $latin1 = [System.Text.Encoding]::GetEncoding("iso-8859-1").GetString($bytes)
+            $idx = $latin1.IndexOf("U2FsdGVkX1")
+            while ($idx -ne -1) {
+                $sb = [System.Text.StringBuilder]::new()
+                for ($i = $idx; $i -lt $latin1.Length; $i++) {
+                    $c = $latin1[$i]
+                    if (($c -ge 'a' -and $c -le 'z') -or ($c -ge 'A' -and $c -le 'Z') -or ($c -ge '0' -and $c -le '9') -or $c -eq '+' -or $c -eq '/' -or $c -eq '=') {
+                        [void]$sb.Append($c)
+                    } else {
+                        break
+                    }
+                }
+                $b64 = $sb.ToString()
+                if ($b64.Length -gt 50) {
+                    $dec = Decrypt-CryptoJS $b64 $keyStr
+                    if ($dec -and $dec.Contains('"token"')) {
+                        $parsed = $dec | ConvertFrom-Json
+                        if ($parsed.token) {
+                            $rawTok = [string]$parsed.token
+                            $tok = if ($rawTok.StartsWith("Bearer ")) { $rawTok } else { "Bearer $rawTok" }
+                            $uname = if ($parsed.user -and $parsed.user.username) { [string]$parsed.user.username } else { "GoLike User" }
+                            $coinVal = 0
+                            if ($parsed.user -and $parsed.user.coin -ne $null) {
+                                $coinVal = [int64]$parsed.user.coin
+                            } elseif ($parsed.current_coin -ne $null) {
+                                $coinVal = [int64]$parsed.current_coin
+                            }
+                            $uId = if ($parsed.user -and $parsed.user.id) { [string]$parsed.user.id } else { "" }
+
+                            $outObj = [PSCustomObject]@{
+                                success = $true
+                                hasSession = $true
+                                user = [PSCustomObject]@{
+                                    username = $uname
+                                    balance = "$($coinVal.ToString('N0')) coin"
+                                    token = $tok
+                                    coin = $coinVal
+                                }
+                                session = [PSCustomObject]@{
+                                    golike_token = $tok
+                                    golike_username = $uname
+                                    golike_user_id = $uId
+                                    golike_device_id = "d41d8cd98f00b204e9800998ecf8427e"
+                                    golike_web_data = if ($parsed.user) { ($parsed.user | ConvertTo-Json -Compress) } else { "{}" }
+                                }
+                            }
+                            $outObj | ConvertTo-Json -Compress
+                            exit 0
+                        }
+                    }
+                }
+                $idx = $latin1.IndexOf("U2FsdGVkX1", $idx + 10)
+            }
+        } catch {}
+    }
+}
+
+Write-Output '{"success":false,"hasSession":false}'
+"#;
+
 #[tauri::command]
 fn extract_golike_session() -> Result<serde_json::Value, String> {
-  // 1. Giải mã trực tiếp LevelDB CryptoJS AES qua engine CLI của GoMax
+  // 1. Giải mã trực tiếp LevelDB CryptoJS AES qua PowerShell stdin native (100% tự hành trên mọi bản Windows)
+  #[cfg(windows)]
+  {
+    use std::io::Write;
+    use std::os::windows::process::CommandExt;
+
+    let mut cmd = std::process::Command::new("powershell.exe");
+    cmd.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "-"]);
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    cmd.stdin(std::process::Stdio::piped());
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::null());
+
+    if let Ok(mut child) = cmd.spawn() {
+      if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(PS_EXTRACT_SCRIPT.as_bytes());
+      }
+      if let Ok(output) = child.wait_with_output() {
+        if output.status.success() {
+          let stdout = String::from_utf8_lossy(&output.stdout);
+          let trimmed = stdout.trim();
+          if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed) {
+            if val.get("success").and_then(|s| s.as_bool()).unwrap_or(false) {
+              return Ok(val);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Fallback: Đọc trực tiếp từ file session json trên đĩa nếu có
+  let session_paths = [
+    r"D:\AutoLunex\golike_session.json",
+    r"D:\browser\golike_session.json",
+  ];
+  for p in session_paths {
+    if let Ok(content) = std::fs::read_to_string(p) {
+      if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+        if let Some(tok) = val.get("golike_token").and_then(|t| t.as_str()) {
+          let clean = tok.trim();
+          if clean.len() >= 50 {
+            let u = val.get("golike_username").and_then(|u| u.as_str()).unwrap_or("GoLike User");
+            return Ok(serde_json::json!({
+              "success": true,
+              "hasSession": true,
+              "user": {
+                "username": u,
+                "token": clean
+              },
+              "session": val
+            }));
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Fallback: Thử với node.exe nếu có
   let node_candidates = [
     r"C:\Users\Admin\AppData\Local\Programs\Python\Python313\Lib\site-packages\playwright\driver\node.exe",
     r"node",
@@ -1234,151 +1399,8 @@ fn extract_golike_session() -> Result<serde_json::Value, String> {
             let stdout = String::from_utf8_lossy(&output.stdout);
             if let Ok(val) = serde_json::from_str::<serde_json::Value>(stdout.trim()) {
               if val.get("success").and_then(|s| s.as_bool()).unwrap_or(false) {
-                if let Some(tok) = val.pointer("/user/token").and_then(|t| t.as_str()) {
-                  let clean_tok = tok.trim();
-                  let is_blacklisted = if let Ok(lock) = GOLIKE_BLACKLIST.lock() {
-                    if let Some(ref set) = *lock {
-                      set.contains(clean_tok)
-                        || (clean_tok.starts_with("Bearer ") && set.contains(&clean_tok[7..]))
-                    } else {
-                      false
-                    }
-                  } else {
-                    false
-                  };
-
-                  if !is_blacklisted {
-                    return Ok(val);
-                  }
-                }
+                return Ok(val);
               }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 2. Quét trực tiếp LevelDB của WebView2 trong 1ms (phương án phụ)
-  let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
-  let db_dir = format!(r"{}\com.autolunex.app\EBWebView\Default\Local Storage\leveldb", local_app_data);
-  let p = std::path::Path::new(&db_dir);
-  if p.exists() {
-    if let Ok(entries) = std::fs::read_dir(p) {
-      let mut files: Vec<_> = entries.flatten().map(|e| e.path()).collect();
-      // Ưu tiên các file WAL .log mới nhất
-      files.sort_by(|a, b| {
-        let a_log = a.extension().and_then(|s| s.to_str()) == Some("log");
-        let b_log = b.extension().and_then(|s| s.to_str()) == Some("log");
-        b_log.cmp(&a_log)
-      });
-
-      for file in files {
-        let ext = file.extension().and_then(|s| s.to_str()).unwrap_or("");
-        if ext == "log" || ext == "ldb" {
-          if let Ok(bytes) = std::fs::read(&file) {
-            let content = String::from_utf8_lossy(&bytes);
-            
-            // Quét từ cuối file lên đầu để luôn lấy token mới nhất được ghi vào storage
-            let mut search_pos = content.len();
-            while let Some(rel_idx) = content[..search_pos].rfind("Bearer eyJ") {
-              let tok_start = rel_idx;
-              search_pos = rel_idx;
-
-              let jwt_start = tok_start + 7;
-              let jwt_slice = &content[jwt_start..];
-              let jwt_len = jwt_slice
-                .find(|c: char| !c.is_alphanumeric() && c != '_' && c != '-' && c != '.')
-                .unwrap_or(jwt_slice.len());
-
-              if jwt_len >= 50 {
-                let full_token = format!("Bearer {}", &jwt_slice[..jwt_len]);
-                let raw_jwt = &jwt_slice[..jwt_len];
-
-                let is_blacklisted = if let Ok(lock) = GOLIKE_BLACKLIST.lock() {
-                  if let Some(ref set) = *lock {
-                    set.contains(&full_token) || set.contains(raw_jwt)
-                  } else {
-                    false
-                  }
-                } else {
-                  false
-                };
-
-                if !is_blacklisted {
-                  let window_start = tok_start.saturating_sub(1000);
-                  let window_end = (tok_start + 1000).min(content.len());
-                  let window_slice = &content[window_start..window_end];
-
-                  let mut username = "GoLike User".to_string();
-                  if let Some(u_idx) = window_slice.find("golike_username") {
-                    let u_slice = &window_slice[u_idx + 15..];
-                    let mut u = String::new();
-                    for ch in u_slice.chars() {
-                      if ch.is_alphanumeric() || ch == '_' || ch == '-' {
-                        u.push(ch);
-                      } else if !u.is_empty() {
-                        break;
-                      }
-                    }
-                    if !u.is_empty() {
-                      username = u;
-                    }
-                  }
-
-                  return Ok(serde_json::json!({
-                    "success": true,
-                    "hasSession": true,
-                    "user": {
-                      "username": username,
-                      "token": full_token
-                    },
-                    "session": {
-                      "golike_token": full_token,
-                      "golike_username": username
-                    }
-                  }));
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 2. Đọc trực tiếp từ file session json trên đĩa nếu có
-  let session_paths = [
-    r"D:\AutoLunex\golike_session.json",
-    r"D:\browser\golike_session.json",
-  ];
-  for p in session_paths {
-    if let Ok(content) = std::fs::read_to_string(p) {
-      if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
-        if let Some(tok) = val.get("golike_token").and_then(|t| t.as_str()) {
-          let clean = tok.trim();
-          if clean.len() >= 50 {
-            let is_blacklisted = if let Ok(lock) = GOLIKE_BLACKLIST.lock() {
-              if let Some(ref set) = *lock {
-                set.contains(clean)
-              } else {
-                false
-              }
-            } else {
-              false
-            };
-
-            if !is_blacklisted {
-              let u = val.get("golike_username").and_then(|u| u.as_str()).unwrap_or("GoLike User");
-              return Ok(serde_json::json!({
-                "success": true,
-                "hasSession": true,
-                "user": {
-                  "username": u,
-                  "token": clean
-                },
-                "session": val
-              }));
             }
           }
         }

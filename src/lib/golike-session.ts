@@ -356,17 +356,7 @@ export async function clearGolikeSession(token?: string): Promise<void> {
     }
   }
 
-  // 2. Ghi nhận token cũ vào blacklist để dialog và Rust không bao giờ tự nhận diện lại
-  if (currentTok) {
-    try {
-      localStorage.setItem("golike_blacklist_token", currentTok);
-      localStorage.setItem("golike_logged_out_time", Date.now().toString());
-    } catch {
-      // ignore
-    }
-  }
-
-  // 3. Xóa sạch 17 trường trong localStorage
+  // 2. Xóa sạch 17 trường trong localStorage và các cờ tạm
   try {
     for (const key of GOLIKE_STORAGE_KEYS) {
       localStorage.removeItem(key);
@@ -375,11 +365,13 @@ export async function clearGolikeSession(token?: string): Promise<void> {
     localStorage.removeItem("golike_balance");
     localStorage.removeItem("golike_token");
     localStorage.removeItem("golike_username");
+    localStorage.removeItem("golike_blacklist_token");
+    localStorage.removeItem("golike_logged_out_time");
   } catch {
     // ignore
   }
 
-  // 4. Báo cho Rust Tauri xóa file json và đưa token vào blacklist backend
+  // 3. Báo cho Rust Tauri xóa file json session nếu có
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("clear_golike_session", { token: currentTok || null });

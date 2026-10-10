@@ -120,37 +120,29 @@ export function GolikeLoginDialog({
         const rawToken = (data.user.token || "").trim();
         const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
 
-        // 1. Kiểm tra blacklist token (tài khoản vừa bấm đăng xuất)
-        const blacklisted = typeof window !== "undefined" ? localStorage.getItem("golike_blacklist_token") : null;
-        if (blacklisted) {
-          const cleanBlacklist = blacklisted.replace(/^Bearer\s+/i, "").trim();
-          const cleanFull = fullToken.replace(/^Bearer\s+/i, "").trim();
-          if (cleanBlacklist === cleanFull || fullToken.includes(cleanBlacklist) || blacklisted.includes(cleanFull)) {
-            return null;
-          }
-        }
+        let coin = Number(data.user.coin ?? 0);
+        let balance = data.user.balance || `${coin.toLocaleString("vi-VN")} coin`;
+        let username = data.user.username || "GoLike User";
 
-        // 2. BẮT BUỘC: Xác thực trực tiếp với Gateway GoLike /api/users/me lấy số xu thật
+        // Thử làm mới số xu trực tiếp với Gateway GoLike /api/users/me
         try {
           const freshUser = await getGolikeUser(fullToken);
           if (freshUser.success && freshUser.user) {
-            const coin = freshUser.user.coin ?? 0;
-            const balance = `${coin.toLocaleString("vi-VN")} coin`;
-            const username = freshUser.user.username || data.user.username || "GoLike User";
-
-            return {
-              username,
-              balance,
-              token: fullToken,
-              coin,
-              session: data.session || {},
-            };
+            coin = freshUser.user.coin ?? coin;
+            balance = `${coin.toLocaleString("vi-VN")} coin`;
+            username = freshUser.user.username || username;
           }
         } catch {
           // ignore
         }
 
-        return null;
+        return {
+          username,
+          balance,
+          token: fullToken,
+          coin,
+          session: data.session || {},
+        };
       }
     } catch {
       // ignore
