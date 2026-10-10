@@ -34,21 +34,12 @@ export async function getGolikeUser(tokenOrSession?: string | GolikeSessionData)
     if (tokenOrSession && typeof tokenOrSession === "object") {
       headers = buildGolikeHeaders(tokenOrSession);
     } else {
-      const savedSession = loadGolikeSession();
-      if (savedSession && savedSession.golike_token) {
-        headers = buildGolikeHeaders(savedSession);
-        if (typeof tokenOrSession === "string" && tokenOrSession.trim()) {
-          const cleanToken = tokenOrSession.replace(/^Bearer\s+/i, "").trim();
-          headers.Authorization = `Bearer ${cleanToken}`;
-        }
-      } else {
-        const raw = typeof tokenOrSession === "string" ? tokenOrSession.trim() : "";
-        if (!raw) {
-          return { success: false, error: "Vui lòng nhập Authorization Token GoLike" };
-        }
-        const cleanToken = raw.replace(/^Bearer\s+/i, "").replace(/[^\x20-\x7E\xA0-\xFF]/g, "").trim();
+      const raw = typeof tokenOrSession === "string" ? tokenOrSession.trim() : "";
+      if (raw) {
+        // Dùng token trực tiếp với headers sạch, không bị lẫn header của tài khoản cũ
+        const cleanToken = raw.startsWith("Bearer ") ? raw : `Bearer ${raw}`;
         headers = {
-          Authorization: `Bearer ${cleanToken}`,
+          Authorization: cleanToken,
           "g-client": "web",
           "g-scheme": "https",
           "g-version": "26.09.17.1",
@@ -59,6 +50,13 @@ export async function getGolikeUser(tokenOrSession?: string | GolikeSessionData)
           Origin: "https://app.golike.net",
           Referer: "https://app.golike.net/",
         };
+      } else {
+        const savedSession = loadGolikeSession();
+        if (savedSession && savedSession.golike_token) {
+          headers = buildGolikeHeaders(savedSession);
+        } else {
+          return { success: false, error: "Vui lòng nhập Authorization Token GoLike" };
+        }
       }
     }
 

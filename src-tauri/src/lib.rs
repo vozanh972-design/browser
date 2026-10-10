@@ -1170,8 +1170,26 @@ fn start_golike_bridge() -> Result<bool, String> {
   Ok(true)
 }
 
+static GOLIKE_BLACKLIST: Mutex<Option<std::collections::HashSet<String>>> = Mutex::new(None);
+
 #[tauri::command]
-fn clear_golike_session() -> Result<bool, String> {
+fn clear_golike_session(token: Option<String>) -> Result<bool, String> {
+  // Ghi nhận token vào blacklist để extract_golike_session không bao giờ nhận diện lại token cũ này
+  if let Some(tok) = token {
+    let clean = tok.trim().to_string();
+    if !clean.is_empty() {
+      if let Ok(mut lock) = GOLIKE_BLACKLIST.lock() {
+        let set = lock.get_or_insert_with(std::collections::HashSet::new);
+        set.insert(clean.clone());
+        if clean.starts_with("Bearer ") {
+          set.insert(clean[7..].trim().to_string());
+        } else {
+          set.insert(format!("Bearer {}", clean));
+        }
+      }
+    }
+  }
+
   // Chỉ xóa các file session GoLike trên đĩa, tuyệt đối KHÔNG đụng đến LevelDB của app
   let session_paths = [
     r"D:\AutoLunex\golike_session.json",
@@ -1207,42 +1225,72 @@ fn extract_golike_session() -> Result<serde_json::Value, String> {
         if ext == "log" || ext == "ldb" {
           if let Ok(bytes) = std::fs::read(&file) {
             let content = String::from_utf8_lossy(&bytes);
-            if let Some(tok_idx) = content.find("Bearer eyJ") {
-              let slice = &content[tok_idx..];
-              let end = slice.find(|c: char| c.is_whitespace() || c == '\0' || c == '"' || c == '\'')
-                .unwrap_or(slice.len().min(500));
-              let token = slice[..end].trim().to_string();
+            
+            // Quét từ cuối file lên đầu để luôn lấy token mới nhất được ghi vào storage
+            let mut search_pos = content.len();
+            while let Some(rel_idx) = content[..search_pos].rfind("Bearer eyJ") {
+              let tok_start = rel_idx;
+              search_pos = rel_idx; // Lùi vị trí tìm kiếm cho vòng lặp sau
 
-              // Trích xuất username nếu có trong cùng bản ghi
-              let mut username = "GoLike User".to_string();
-              if let Some(u_idx) = content.find("golike_username") {
-                let u_slice = &content[u_idx + 15..];
-                let mut u = String::new();
-                for ch in u_slice.chars() {
-                  if ch.is_alphanumeric() || ch == '_' || ch == '-' {
-                    u.push(ch);
-                  } else if !u.is_empty() {
-                    break;
+              let jwt_start = tok_start + 7; // Bỏ qua tiền tố "Bearer "
+              let jwt_slice = &content[jwt_start..];
+              // Chuỗi JWT Base64 chỉ chứa các ký tự: chữ, số, _, -, .
+              let jwt_len = jwt_slice
+                .find(|c: char| !c.is_alphanumeric() && c != '_' && c != '-' && c != '.')
+                .unwrap_or(jwt_slice.len());
+
+              // Token JWT hợp lệ của GoLike luôn có độ dài >= 50 ký tự
+              if jwt_len >= 50 {
+                let full_token = format!("Bearer {}", &jwt_slice[..jwt_len]);
+                let raw_jwt = &jwt_slice[..jwt_len];
+
+                // Kiểm tra blacklist (nếu tài khoản này vừa bấm đăng xuất thì bỏ qua)
+                let is_blacklisted = if let Ok(lock) = GOLIKE_BLACKLIST.lock() {
+                  if let Some(ref set) = *lock {
+                    set.contains(&full_token) || set.contains(raw_jwt)
+                  } else {
+                    false
                   }
-                }
-                if !u.is_empty() {
-                  username = u;
+                } else {
+                  false
+                };
+
+                if !is_blacklisted {
+                  // Trích xuất username trong phạm vi bản ghi
+                  let window_start = tok_start.saturating_sub(1000);
+                  let window_end = (tok_start + 1000).min(content.len());
+                  let window_slice = &content[window_start..window_end];
+
+                  let mut username = "GoLike User".to_string();
+                  if let Some(u_idx) = window_slice.find("golike_username") {
+                    let u_slice = &window_slice[u_idx + 15..];
+                    let mut u = String::new();
+                    for ch in u_slice.chars() {
+                      if ch.is_alphanumeric() || ch == '_' || ch == '-' {
+                        u.push(ch);
+                      } else if !u.is_empty() {
+                        break;
+                      }
+                    }
+                    if !u.is_empty() {
+                      username = u;
+                    }
+                  }
+
+                  return Ok(serde_json::json!({
+                    "success": true,
+                    "hasSession": true,
+                    "user": {
+                      "username": username,
+                      "token": full_token
+                    },
+                    "session": {
+                      "golike_token": full_token,
+                      "golike_username": username
+                    }
+                  }));
                 }
               }
-
-              return Ok(serde_json::json!({
-                "success": true,
-                "hasSession": true,
-                "user": {
-                  "username": username,
-                  "balance": "0 coin",
-                  "token": token
-                },
-                "session": {
-                  "golike_token": token,
-                  "golike_username": username
-                }
-              }));
             }
           }
         }
@@ -1259,18 +1307,30 @@ fn extract_golike_session() -> Result<serde_json::Value, String> {
     if let Ok(content) = std::fs::read_to_string(p) {
       if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
         if let Some(tok) = val.get("golike_token").and_then(|t| t.as_str()) {
-          if !tok.is_empty() {
-            let u = val.get("golike_username").and_then(|u| u.as_str()).unwrap_or("GoLike User");
-            return Ok(serde_json::json!({
-              "success": true,
-              "hasSession": true,
-              "user": {
-                "username": u,
-                "balance": "0 coin",
-                "token": tok
-              },
-              "session": val
-            }));
+          let clean = tok.trim();
+          if clean.len() >= 50 {
+            let is_blacklisted = if let Ok(lock) = GOLIKE_BLACKLIST.lock() {
+              if let Some(ref set) = *lock {
+                set.contains(clean)
+              } else {
+                false
+              }
+            } else {
+              false
+            };
+
+            if !is_blacklisted {
+              let u = val.get("golike_username").and_then(|u| u.as_str()).unwrap_or("GoLike User");
+              return Ok(serde_json::json!({
+                "success": true,
+                "hasSession": true,
+                "user": {
+                  "username": u,
+                  "token": clean
+                },
+                "session": val
+              }));
+            }
           }
         }
       }

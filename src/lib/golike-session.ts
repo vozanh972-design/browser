@@ -255,6 +255,9 @@ export function saveGolikeSession(
 
     // 2. Lưu trọn gói vào bundle cô lập golike_session_v1
     localStorage.setItem("golike_session_v1", JSON.stringify(merged));
+    // Xóa blacklist token nếu có đăng nhập mới thành công
+    localStorage.removeItem("golike_blacklist_token");
+    localStorage.removeItem("golike_logged_out_time");
   } catch {
     // ignore storage error
   }
@@ -329,8 +332,41 @@ export function loadGolikeSession(): GolikeSessionData | null {
 export async function clearGolikeSession(token?: string): Promise<void> {
   if (typeof window === "undefined") return;
 
-  const currentTok = token || localStorage.getItem("golike_token") || "";
+  const rawTok = token || localStorage.getItem("golike_token") || "";
+  const currentTok = rawTok.trim();
 
+  // 1. Gọi trực tiếp API logout tới GoLike Gateway để hủy token trên server GoLike
+  if (currentTok) {
+    try {
+      const authHeader = currentTok.startsWith("Bearer ") ? currentTok : `Bearer ${currentTok}`;
+      await fetch("https://gateway.golike.net/api/logout", {
+        method: "POST",
+        headers: {
+          Authorization: authHeader,
+          "g-client": "web",
+          "g-scheme": "https",
+          "g-version": "26.09.17.1",
+          "Content-Type": "application/json;charset=utf-8",
+          Origin: "https://app.golike.net",
+          Referer: "https://app.golike.net/",
+        },
+      });
+    } catch {
+      // ignore
+    }
+  }
+
+  // 2. Ghi nhận token cũ vào blacklist để dialog và Rust không bao giờ tự nhận diện lại
+  if (currentTok) {
+    try {
+      localStorage.setItem("golike_blacklist_token", currentTok);
+      localStorage.setItem("golike_logged_out_time", Date.now().toString());
+    } catch {
+      // ignore
+    }
+  }
+
+  // 3. Xóa sạch 17 trường trong localStorage
   try {
     for (const key of GOLIKE_STORAGE_KEYS) {
       localStorage.removeItem(key);
@@ -343,10 +379,10 @@ export async function clearGolikeSession(token?: string): Promise<void> {
     // ignore
   }
 
-  // Xóa trực tiếp file session thông qua Rust Tauri invoke
+  // 4. Báo cho Rust Tauri xóa file json và đưa token vào blacklist backend
   try {
     const { invoke } = await import("@tauri-apps/api/core");
-    await invoke("clear_golike_session");
+    await invoke("clear_golike_session", { token: currentTok || null });
   } catch {
     // ignore
   }
@@ -470,13 +506,16 @@ export async function syncGolikeSessionFromBridge(): Promise<{
       try {
         const { getGolikeUser } = await import("./golike-api");
         const freshUser = await getGolikeUser(data.user.token);
-        if (freshUser.success && freshUser.user) {
-          username = freshUser.user.username;
-          coin = freshUser.user.coin;
-          balance = `${coin.toLocaleString("vi-VN")} coin`;
+        if (!freshUser.success || !freshUser.user) {
+          // Token không còn hợp lệ trên máy chủ GoLike -> Bỏ qua, không lưu
+          return null;
         }
+
+        username = freshUser.user.username;
+        coin = freshUser.user.coin ?? 0;
+        balance = `${coin.toLocaleString("vi-VN")} coin`;
       } catch {
-        // ignore
+        return null;
       }
 
       const saved = saveGolikeSession({

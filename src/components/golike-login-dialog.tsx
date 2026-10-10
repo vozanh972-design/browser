@@ -43,29 +43,43 @@ export function GolikeLoginDialog({
       const { invoke } = await import("@tauri-apps/api/core");
       const data: any = await invoke("extract_golike_session");
       if ((data?.success || data?.hasSession) && data?.user?.token) {
-        let username = data.user.username || "GoLike User";
-        let balance = data.user.balance || "0 coin";
-        let coin = data.user.coin;
+        const rawToken = (data.user.token || "").trim();
+        const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
 
-        // Trích xuất số dư thực tế trực tiếp từ GoLike Gateway
+        // 1. Kiểm tra blacklist token (tài khoản vừa bấm đăng xuất)
+        const blacklisted = typeof window !== "undefined" ? localStorage.getItem("golike_blacklist_token") : null;
+        if (blacklisted) {
+          const cleanBlacklist = blacklisted.replace(/^Bearer\s+/i, "").trim();
+          const cleanFull = fullToken.replace(/^Bearer\s+/i, "").trim();
+          if (cleanBlacklist === cleanFull || fullToken.includes(cleanBlacklist) || blacklisted.includes(cleanFull)) {
+            // Token của tài khoản vừa đăng xuất -> Tuyệt đối không tự động đăng nhập lại!
+            return null;
+          }
+        }
+
+        // 2. BẮT BUỘC: Xác thực trực tiếp với Gateway GoLike /api/users/me lấy số xu thật
+        // Chỉ khi Gateway trả về 200 thành công mới công nhận phiên đăng nhập!
         try {
-          const freshUser = await getGolikeUser(data.user.token);
+          const freshUser = await getGolikeUser(fullToken);
           if (freshUser.success && freshUser.user) {
-            username = freshUser.user.username;
-            coin = freshUser.user.coin;
-            balance = `${coin.toLocaleString("vi-VN")} coin`;
+            const coin = freshUser.user.coin ?? 0;
+            const balance = `${coin.toLocaleString("vi-VN")} coin`;
+            const username = freshUser.user.username || data.user.username || "GoLike User";
+
+            return {
+              username,
+              balance,
+              token: fullToken,
+              coin,
+              session: data.session || {},
+            };
           }
         } catch {
           // ignore
         }
 
-        return {
-          username,
-          balance,
-          token: data.user.token,
-          coin,
-          session: data.session || {},
-        };
+        // Nếu token không còn hợp lệ trên máy chủ GoLike (401 hoặc đã logout) -> Không tự động login
+        return null;
       }
     } catch {
       // ignore
@@ -101,10 +115,10 @@ export function GolikeLoginDialog({
           : sessionData?.golike_username || "GoLike User";
 
       const balance =
-        user.balance && user.balance !== "0 coin"
-          ? user.balance
-          : user.coin !== undefined
-            ? `${user.coin.toLocaleString("vi-VN")} coin`
+        user.coin !== undefined
+          ? `${user.coin.toLocaleString("vi-VN")} coin`
+          : user.balance && user.balance !== "0 coin"
+            ? user.balance
             : "0 coin";
 
       // Lưu đầy đủ 17 trường chuẩn GoMax
@@ -118,6 +132,8 @@ export function GolikeLoginDialog({
         localStorage.setItem("golike_username", username);
         localStorage.setItem("golike_balance", balance);
         localStorage.setItem("golike_token", fullSession.golike_token);
+        localStorage.removeItem("golike_blacklist_token");
+        localStorage.removeItem("golike_logged_out_time");
       } catch {
         // ignore
       }
@@ -135,30 +151,12 @@ export function GolikeLoginDialog({
       // Tự động đóng webview ngay lập tức - Không đơ, không chờ đợi
       onClose();
 
-      // Đồng bộ protocol và làm mới số dư nếu cần (chạy ngầm sau khi đã đóng webview)
+      // Đồng bộ protocol ngầm sau khi đã đóng webview
       void (async () => {
         try {
           await syncGolikeProtocol(fullSession);
         } catch {
           // ignore
-        }
-
-        if (!balance || balance === "0 coin" || username === "GoLike User") {
-          try {
-            const userRes = await getGolikeUser(fullSession);
-            if (userRes.success && userRes.user) {
-              const freshBalance = `${userRes.user.coin.toLocaleString("vi-VN")} coin`;
-              localStorage.setItem("golike_username", userRes.user.username);
-              localStorage.setItem("golike_balance", freshBalance);
-              onLoginSuccess({
-                username: userRes.user.username,
-                balance: freshBalance,
-                token: fullSession.golike_token,
-              });
-            }
-          } catch {
-            // ignore
-          }
         }
       })();
     } catch {

@@ -32,7 +32,7 @@ import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import { GolikeLoginDialog } from "@/components/golike-login-dialog";
-import { clearGolikeSession, loadGolikeSession, syncGolikeSessionFromBridge } from "@/lib/golike-session";
+import { clearGolikeSession, loadGolikeSession } from "@/lib/golike-session";
 import {
   checkFacebookAccountFull,
   checkLiveApi,
@@ -169,6 +169,10 @@ export default function HomePage() {
     }
     const session = loadGolikeSession();
     const token = session?.golike_token || localStorage.getItem("golike_token") || "";
+    const blacklisted = localStorage.getItem("golike_blacklist_token");
+    if (blacklisted && (token === blacklisted || token.includes(blacklisted))) {
+      return { username: "", balance: "", token: "", isLoggedIn: false };
+    }
     const username = session?.golike_username || localStorage.getItem("golike_username") || "";
     const balance = localStorage.getItem("golike_balance") || "";
     return {
@@ -280,36 +284,54 @@ export default function HomePage() {
           : "") ||
         "";
 
-      if (token) {
-        try {
-          const { getGolikeUser } = await import("@/lib/golike-api");
-          const res = await getGolikeUser(session || token);
-          if (isMounted && res.success && res.user) {
-            const freshBalance = `${res.user.coin.toLocaleString("vi-VN")} coin`;
-            localStorage.setItem("golike_username", res.user.username);
-            localStorage.setItem("golike_balance", freshBalance);
-            setGolikeAccount({
-              username: res.user.username,
-              balance: freshBalance,
-              token,
-              isLoggedIn: true,
-            });
-            return;
-          }
-        } catch {
-          // ignore
-        }
+      // Nếu người dùng không có token (chưa login hoặc đã đăng xuất), tuyệt đối không tự quét lại token cũ
+      if (!token) {
+        return;
       }
 
-      // Quét session trực tiếp từ native LevelDB nếu chưa có trong state
-      const bridgeRes = await syncGolikeSessionFromBridge();
-      if (isMounted && bridgeRes?.success && bridgeRes.user) {
-        setGolikeAccount({
-          username: bridgeRes.user.username,
-          balance: bridgeRes.user.balance,
-          token: bridgeRes.user.token,
-          isLoggedIn: true,
-        });
+      // Kiểm tra token có nằm trong blacklist (vừa logout) không
+      const blacklisted = typeof window !== "undefined" ? localStorage.getItem("golike_blacklist_token") : null;
+      if (blacklisted && (token === blacklisted || token.includes(blacklisted))) {
+        await clearGolikeSession(token);
+        if (isMounted) {
+          setGolikeAccount({
+            username: "",
+            balance: "",
+            token: "",
+            isLoggedIn: false,
+          });
+        }
+        return;
+      }
+
+      try {
+        const { getGolikeUser } = await import("@/lib/golike-api");
+        const res = await getGolikeUser(token);
+        if (isMounted && res.success && res.user) {
+          const freshBalance = `${res.user.coin.toLocaleString("vi-VN")} coin`;
+          localStorage.setItem("golike_username", res.user.username);
+          localStorage.setItem("golike_balance", freshBalance);
+          setGolikeAccount({
+            username: res.user.username,
+            balance: freshBalance,
+            token,
+            isLoggedIn: true,
+          });
+          return;
+        } else if (res.error && (res.error.includes("401") || !res.success)) {
+          // Token không còn hợp lệ trên máy chủ GoLike -> Dọn dẹp session
+          await clearGolikeSession(token);
+          if (isMounted) {
+            setGolikeAccount({
+              username: "",
+              balance: "",
+              token: "",
+              isLoggedIn: false,
+            });
+          }
+        }
+      } catch {
+        // ignore
       }
     };
 
