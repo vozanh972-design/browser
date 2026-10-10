@@ -1,11 +1,12 @@
 "use client";
 
-import { Loader2, Lock } from "lucide-react";
+import { Loader2, Lock, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { getGolikeUser } from "@/lib/golike-api";
 import {
   type GolikeSessionData,
+  clearGolikeSession,
   saveGolikeSession,
   syncGolikeProtocol,
 } from "@/lib/golike-session";
@@ -37,8 +38,26 @@ export function GolikeLoginDialog({
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const isCompletedRef = useRef(false);
 
-  // Trích xuất session từ Bridge / LevelDB
-  const checkSessionFromBridge = async () => {
+  // Trích xuất session: ưu tiên Tauri native invoke, fallback sang HTTP bridge
+  const checkSession = async () => {
+    // 1. Thử gọi trực tiếp từ Rust Tauri (nhanh nhất, không phụ thuộc port)
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const data: any = await invoke("extract_golike_session");
+      if ((data?.success || data?.hasSession) && data?.user?.token) {
+        return {
+          username: data.user.username || "GoLike User",
+          balance: data.user.balance || "0 coin",
+          token: data.user.token,
+          coin: data.user.coin,
+          session: data.session || {},
+        };
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Thử gọi qua HTTP Bridge 18899
     try {
       const res = await fetch(`${BRIDGE_API}/extract-session`, {
         method: "GET",
@@ -100,7 +119,7 @@ export function GolikeLoginDialog({
       let balance = user.balance;
 
       // Nếu username hoặc balance chưa chuẩn, truy vấn API để lấy số coin chính xác
-      if (!username || username === "GoLike User" || !balance) {
+      if (!username || username === "GoLike User" || !balance || balance === "0 coin") {
         try {
           const userRes = await getGolikeUser(fullSession);
           if (userRes.success && userRes.user) {
@@ -147,6 +166,16 @@ export function GolikeLoginDialog({
     }
   };
 
+  // Đổi tài khoản / Xóa phiên cũ để đăng nhập tài khoản khác
+  const handleResetToLogin = async () => {
+    setIsProcessingLogin(true);
+    await clearGolikeSession();
+    isCompletedRef.current = false;
+    setIsProcessingLogin(false);
+    setIframeLoading(true);
+    setIframeKey((prev) => prev + 1);
+  };
+
   // Reset và kích hoạt polling khi mở dialog
   useEffect(() => {
     if (!isOpen) {
@@ -171,7 +200,7 @@ export function GolikeLoginDialog({
       }
 
       // Kiểm tra ngay lập tức khi vừa mở dialog (nếu đã đăng nhập trên GoLike thì nhận diện và đóng luôn)
-      const detected = await checkSessionFromBridge();
+      const detected = await checkSession();
       if (detected && detected.token) {
         await handleAutoLoginSuccess(detected, detected.session);
       }
@@ -180,7 +209,7 @@ export function GolikeLoginDialog({
     // Tự động lắng nghe và phát hiện đăng nhập thành công mỗi 600ms
     pollingRef.current = setInterval(async () => {
       if (isCompletedRef.current) return;
-      const detected = await checkSessionFromBridge();
+      const detected = await checkSession();
       if (detected && detected.token) {
         await handleAutoLoginSuccess(detected, detected.session);
       }
@@ -277,12 +306,33 @@ export function GolikeLoginDialog({
 
           {/* 3. THANH TRUY CẬP DƯỚI (SAFARI LIQUID GLASS NHƯ IPHONE) */}
           <div className="relative z-30 bg-zinc-950/90 backdrop-blur-2xl px-4 pt-2.5 pb-3 flex flex-col items-center justify-center shrink-0 border-t border-white/10">
-            {/* Thanh địa chỉ Safari Floating Capsule */}
-            <div className="h-9 w-full max-w-[280px] rounded-full bg-zinc-900/90 border border-white/15 px-3.5 flex items-center justify-center gap-2 text-xs text-zinc-300 shadow-inner">
-              <Lock className="size-3 text-emerald-400 shrink-0" />
-              <span className="font-medium tracking-tight text-[12px] text-zinc-200">
-                app.golike.net
-              </span>
+            {/* Thanh địa chỉ Safari Floating Capsule với nút Đổi tài khoản */}
+            <div className="h-9 w-full max-w-[310px] rounded-full bg-zinc-900/90 border border-white/15 px-3.5 flex items-center justify-between text-xs text-zinc-300 shadow-inner">
+              <div className="flex items-center gap-2 min-w-0">
+                <Lock className="size-3 text-emerald-400 shrink-0" />
+                <span className="font-medium tracking-tight text-[12px] text-zinc-200">
+                  app.golike.net
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={handleResetToLogin}
+                  className="text-[10px] text-cyan-400 hover:text-cyan-300 font-medium px-2 py-0.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer"
+                  title="Xóa phiên cũ để đăng nhập tài khoản khác"
+                >
+                  Đổi tài khoản
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIframeKey((prev) => prev + 1)}
+                  className="text-zinc-400 hover:text-white p-1 rounded-full transition-colors cursor-pointer"
+                  title="Tải lại trang"
+                >
+                  <RefreshCw className="size-2.5" />
+                </button>
+              </div>
             </div>
 
             {/* Thanh Home Indicator iPhone (chạm để đóng nếu muốn thoát) */}

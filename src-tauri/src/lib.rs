@@ -1215,6 +1215,116 @@ fn start_golike_bridge() -> Result<bool, String> {
   Ok(std::net::TcpStream::connect("127.0.0.1:18899").is_ok())
 }
 
+#[tauri::command]
+fn clear_golike_session() -> Result<bool, String> {
+  // 1. Delete session files on disk
+  let session_paths = [
+    r"D:\AutoLunex\golike_session.json",
+    r"D:\browser\golike_session.json",
+  ];
+  for p in session_paths {
+    if std::path::Path::new(p).exists() {
+      let _ = std::fs::remove_file(p);
+    }
+  }
+
+  // 2. Wipe LevelDB files for WebView so it starts completely clean on login page
+  let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
+  let db_dirs = [
+    format!(r"{}\com.autolunex.app\EBWebView\Default\Local Storage\leveldb", local_app_data),
+    r"D:\AutoLunex\webview_data\Default\Local Storage\leveldb".to_string(),
+  ];
+
+  for db_dir in db_dirs {
+    let p = std::path::Path::new(&db_dir);
+    if p.exists() {
+      if let Ok(entries) = std::fs::read_dir(p) {
+        for entry in entries.flatten() {
+          let path = entry.path();
+          if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+            if ext == "ldb" || ext == "log" {
+              let _ = std::fs::remove_file(path);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Ok(true)
+}
+
+#[tauri::command]
+fn extract_golike_session() -> Result<serde_json::Value, String> {
+  let candidates = [
+    r"C:\Users\Admin\AppData\Local\Programs\Python\Python313\Lib\site-packages\playwright\driver\node.exe",
+    r"node.exe",
+    r"node",
+  ];
+
+  let script_candidates = [
+    r"D:\browser\scripts\golike-login.cjs",
+    r"D:\AutoLunex\scripts\golike-login.cjs",
+    r"scripts\golike-login.cjs",
+  ];
+
+  let script_path = script_candidates
+    .iter()
+    .find(|s| std::path::Path::new(s).exists())
+    .copied()
+    .unwrap_or(r"D:\browser\scripts\golike-login.cjs");
+
+  for exe in candidates {
+    if std::path::Path::new(exe).exists() || exe == "node" || exe == "node.exe" {
+      let mut cmd = std::process::Command::new(exe);
+      cmd.arg(script_path);
+      cmd.arg("--extract");
+      #[cfg(windows)]
+      {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+      }
+      if let Ok(output) = cmd.output() {
+        if output.status.success() {
+          let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
+          if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
+            return Ok(val);
+          }
+        }
+      }
+    }
+  }
+
+  // Fallback nếu không có node: đọc trực tiếp từ session json file
+  let session_paths = [
+    r"D:\AutoLunex\golike_session.json",
+    r"D:\browser\golike_session.json",
+  ];
+  for p in session_paths {
+    if let Ok(content) = std::fs::read_to_string(p) {
+      if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
+        if let Some(tok) = val.get("golike_token").and_then(|t| t.as_str()) {
+          if !tok.is_empty() {
+            let u = val.get("golike_username").and_then(|u| u.as_str()).unwrap_or("GoLike User");
+            return Ok(serde_json::json!({
+              "success": true,
+              "hasSession": true,
+              "user": {
+                "username": u,
+                "balance": "0 coin",
+                "token": tok
+              },
+              "session": val
+            }));
+          }
+        }
+      }
+    }
+  }
+
+  Ok(serde_json::json!({ "success": false, "hasSession": false }))
+}
+
 // ============================================================
 // Tauri app entry point
 // ============================================================
@@ -1271,6 +1381,8 @@ pub fn run() {
       start_app_update,
       fetch_remote_version_json,
       start_golike_bridge,
+      clear_golike_session,
+      extract_golike_session,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

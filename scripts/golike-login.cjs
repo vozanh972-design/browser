@@ -170,6 +170,98 @@ async function syncProtocol(session) {
   }
 }
 
+// ================= CLI MODE FOR TAURI INVOKE =================
+if (process.argv.includes('--extract')) {
+  const dbData = extractFromLevelDb();
+  if (dbData && dbData.token) {
+    const token = dbData.token.startsWith('Bearer ') ? dbData.token : `Bearer ${dbData.token}`;
+    const username = dbData.user?.username || dbData.user?.name || 'GoLike User';
+    const coin = Number(dbData.user?.coin ?? dbData.current_coin ?? 0);
+    const balance = `${coin.toLocaleString('vi-VN')} coin`;
+    const userId = String(dbData.user?.id || '');
+
+    const session = {
+      golike_token: token,
+      golike_t_header: '',
+      golike_g_auth: '',
+      golike_device_id: dbData.device_token || 'd41d8cd98f00b204e9800998ecf8427e',
+      golike_username: username,
+      golike_user_id: userId,
+      golike_signing_key: String(dbData.signing_key || ''),
+      golike_web_data: JSON.stringify(dbData.user || {}),
+      golike_web_cookies: '',
+      golike_header: {},
+      golike_tiktok_map: {},
+      golike_version_app: '3.0',
+      golike_web_version: '3.0',
+      golike_web_version_text: '26.09.17.1',
+      golike_protocol: 'v2',
+      golike_gauth_version: '1.0',
+      golike_scheme: 'https'
+    };
+
+    console.log(JSON.stringify({
+      success: true,
+      hasSession: true,
+      user: { username, balance, token, coin },
+      session
+    }));
+    process.exit(0);
+  }
+
+  for (const p of SESSION_PATHS) {
+    try {
+      if (fs.existsSync(p)) {
+        const parsed = JSON.parse(fs.readFileSync(p, 'utf8'));
+        if (parsed && parsed.golike_token) {
+          let coin = 0;
+          if (parsed.golike_web_data) {
+            try {
+              const w = typeof parsed.golike_web_data === 'string' ? JSON.parse(parsed.golike_web_data) : parsed.golike_web_data;
+              coin = Number(w?.coin || 0);
+            } catch(e) {}
+          }
+          const balance = coin ? `${coin.toLocaleString('vi-VN')} coin` : (parsed.golike_balance || '0 coin');
+          console.log(JSON.stringify({
+            success: true,
+            hasSession: true,
+            user: {
+              username: parsed.golike_username || 'GoLike User',
+              balance,
+              token: parsed.golike_token,
+              coin
+            },
+            session: parsed
+          }));
+          process.exit(0);
+        }
+      }
+    } catch(e) {}
+  }
+
+  console.log(JSON.stringify({ success: false, hasSession: false }));
+  process.exit(0);
+}
+
+if (process.argv.includes('--clear')) {
+  for (const p of SESSION_PATHS) {
+    try {
+      if (fs.existsSync(p)) fs.unlinkSync(p);
+    } catch (e) {}
+  }
+  for (const dbDir of candidateDirs) {
+    if (!fs.existsSync(dbDir)) continue;
+    try {
+      const files = fs.readdirSync(dbDir).filter(f => f.endsWith('.ldb') || f.endsWith('.log'));
+      for (const f of files) {
+        try { fs.unlinkSync(path.join(dbDir, f)); } catch(e) {}
+      }
+    } catch(e) {}
+  }
+  console.log(JSON.stringify({ success: true }));
+  process.exit(0);
+}
+
 // Khởi chạy HTTP Server cục bộ cho AutoLunex giao tiếp
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -292,8 +384,21 @@ const server = http.createServer(async (req, res) => {
           if (fs.existsSync(p)) fs.unlinkSync(p);
         } catch (e) {}
       }
+
+      for (const dbDir of candidateDirs) {
+        if (!fs.existsSync(dbDir)) continue;
+        try {
+          const files = fs.readdirSync(dbDir).filter(f => f.endsWith('.ldb') || f.endsWith('.log'));
+          for (const f of files) {
+            try {
+              fs.unlinkSync(path.join(dbDir, f));
+            } catch(e) {}
+          }
+        } catch(e) {}
+      }
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true }));
+      res.end(JSON.stringify({ success: true, message: 'Wiped GoLike session and leveldb files' }));
     });
     return;
   }

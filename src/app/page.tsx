@@ -432,8 +432,8 @@ export default function HomePage() {
     showSuccessToast(`Đăng nhập GoLike thành công! Chào mừng ${user.username}`);
   };
 
-  const handleGolikeLogout = () => {
-    clearGolikeSession(golikeAccount.token);
+  const handleGolikeLogout = async () => {
+    await clearGolikeSession(golikeAccount.token);
     setGolikeAccount({
       username: "",
       balance: "",

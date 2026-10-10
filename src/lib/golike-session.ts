@@ -326,7 +326,7 @@ export function loadGolikeSession(): GolikeSessionData | null {
 /**
  * Xóa sạch toàn bộ 17 trường khi đăng xuất
  */
-export function clearGolikeSession(token?: string): void {
+export async function clearGolikeSession(token?: string): Promise<void> {
   if (typeof window === "undefined") return;
 
   const currentTok = token || localStorage.getItem("golike_token") || "";
@@ -343,12 +343,21 @@ export function clearGolikeSession(token?: string): void {
     // ignore
   }
 
+  // Xóa trực tiếp LevelDB & file session thông qua Rust Tauri invoke
   try {
-    fetch("http://127.0.0.1:18899/clear-session", {
+    const { invoke } = await import("@tauri-apps/api/core");
+    await invoke("clear_golike_session");
+  } catch {
+    // ignore
+  }
+
+  // Xóa trên bridge server nếu đang chạy
+  try {
+    await fetch("http://127.0.0.1:18899/clear-session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: currentTok }),
-    }).catch(() => {});
+    });
   } catch {
     // ignore
   }
@@ -460,6 +469,34 @@ export async function syncGolikeSessionFromBridge(): Promise<{
   user?: { username: string; balance: string; token: string; coin: number };
   session?: GolikeSessionData;
 } | null> {
+  // 1. Thử gọi trực tiếp từ Tauri native command (nhanh và không phụ thuộc cổng mạng)
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const data: any = await invoke("extract_golike_session");
+    if (data?.success && data?.user?.token) {
+      const saved = saveGolikeSession({
+        ...(data.session || {}),
+        golike_token: data.user.token,
+        golike_username: data.user.username,
+      });
+      try {
+        localStorage.setItem("golike_username", data.user.username);
+        localStorage.setItem("golike_balance", data.user.balance);
+        localStorage.setItem("golike_token", data.user.token);
+      } catch {
+        // ignore
+      }
+      return {
+        success: true,
+        user: data.user,
+        session: saved,
+      };
+    }
+  } catch {
+    // Bỏ qua nếu môi trường web thuần
+  }
+
+  // 2. Thử gọi qua HTTP Bridge
   try {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
