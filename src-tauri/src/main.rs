@@ -2,5 +2,12 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
+  #[cfg(windows)]
+  {
+    std::env::set_var(
+      "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+      "--disable-web-security --allow-running-insecure-content",
+    );
+  }
   autolunex_lib::run()
 }

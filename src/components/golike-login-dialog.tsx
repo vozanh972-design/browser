@@ -24,6 +24,80 @@ interface GolikeLoginDialogProps {
 
 const GOLIKE_LOGIN_URL = "https://app.golike.net/login";
 
+const GOMAX_INJECT_SNIPPET = `
+(function() {
+  if (window.__hasInjectedGolikeHook) return;
+  window.__hasInjectedGolikeHook = true;
+
+  function readHeader(headers, name) {
+    if (!headers || !name) return '';
+    try {
+      if (typeof headers.get === 'function') 
+        return headers.get(name) || headers.get(name.toLowerCase()) || '';
+    } catch(e) {}
+    try {
+      if (Array.isArray(headers)) {
+        for (let i = 0; i < headers.length; i++) {
+          let h = headers[i] || [];
+          if (String(h[0]).toLowerCase() === name.toLowerCase()) return h[1] || '';
+        }
+      }
+    } catch(e) {}
+    try {
+      if (typeof headers === 'object') {
+        for (let k in headers) {
+          if (k.toLowerCase() === name.toLowerCase()) return headers[k] || '';
+        }
+      }
+    } catch(e) {}
+    return '';
+  }
+
+  function sendAuth(auth, headers) {
+    if (!auth || auth === 'null' || auth === 'Bearer null' || auth.length < 50) return;
+    try {
+      let t = readHeader(headers, 't');
+      let gAuth = readHeader(headers, 'g-auth');
+      let gDevId = readHeader(headers, 'g-device-id');
+      let gUser = readHeader(headers, 'g-username');
+      window.parent.postMessage({
+        type: 'GOLIKE_SESSION',
+        session: {
+          golike_token: auth.startsWith('Bearer ') ? auth : 'Bearer ' + auth,
+          golike_t_header: t,
+          golike_g_auth: gAuth,
+          golike_device_id: gDevId,
+          golike_username: gUser
+        }
+      }, '*');
+    } catch(e) {}
+  }
+
+  let origFetch = window.fetch;
+  window.fetch = function() {
+    try {
+      let opts = arguments[1] || {};
+      let h = (arguments[0] && arguments[0].headers) || opts.headers;
+      let a = readHeader(h, 'authorization');
+      if (a) sendAuth(a, h);
+    } catch(e) {}
+    return origFetch.apply(this, arguments);
+  };
+
+  let origSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+    try {
+      if (!this._headers) this._headers = {};
+      this._headers[String(header).toLowerCase()] = value;
+      if (String(header).toLowerCase() === 'authorization') {
+        sendAuth(value, this._headers);
+      }
+    } catch(e) {}
+    return origSetRequestHeader.apply(this, arguments);
+  };
+})();
+`;
+
 export function GolikeLoginDialog({
   isOpen,
   onClose,
@@ -52,13 +126,11 @@ export function GolikeLoginDialog({
           const cleanBlacklist = blacklisted.replace(/^Bearer\s+/i, "").trim();
           const cleanFull = fullToken.replace(/^Bearer\s+/i, "").trim();
           if (cleanBlacklist === cleanFull || fullToken.includes(cleanBlacklist) || blacklisted.includes(cleanFull)) {
-            // Token của tài khoản vừa đăng xuất -> Tuyệt đối không tự động đăng nhập lại!
             return null;
           }
         }
 
         // 2. BẮT BUỘC: Xác thực trực tiếp với Gateway GoLike /api/users/me lấy số xu thật
-        // Chỉ khi Gateway trả về 200 thành công mới công nhận phiên đăng nhập!
         try {
           const freshUser = await getGolikeUser(fullToken);
           if (freshUser.success && freshUser.user) {
@@ -78,7 +150,6 @@ export function GolikeLoginDialog({
           // ignore
         }
 
-        // Nếu token không còn hợp lệ trên máy chủ GoLike (401 hoặc đã logout) -> Không tự động login
         return null;
       }
     } catch {
@@ -165,6 +236,31 @@ export function GolikeLoginDialog({
     }
   };
 
+  const tryInjectAndInspect = () => {
+    try {
+      const iframe = iframeRef.current;
+      if (!iframe || !iframe.contentWindow) return;
+      const cw = iframe.contentWindow as any;
+
+      // 1. Tiêm script hook vào document của iframe
+      if (!cw.__hasInjectedGolikeHook && cw.document && (cw.document.head || cw.document.documentElement)) {
+        cw.__hasInjectedGolikeHook = true;
+        const s = cw.document.createElement("script");
+        s.textContent = GOMAX_INJECT_SNIPPET;
+        (cw.document.head || cw.document.documentElement).appendChild(s);
+      }
+
+      // 2. Nếu đã vào trang chủ GoLike (như ảnh của user) -> Kích hoạt fetch để bắt header
+      if (cw.location && cw.location.pathname !== "/login") {
+        if (typeof cw.fetch === "function") {
+          cw.fetch("https://gateway.golike.net/api/users/me").catch(() => {});
+        }
+      }
+    } catch {
+      // Cross-origin fallback nếu browser chưa bật cờ
+    }
+  };
+
   // Reset và kích hoạt polling khi mở dialog
   useEffect(() => {
     if (!isOpen) {
@@ -181,6 +277,7 @@ export function GolikeLoginDialog({
 
     // Kiểm tra ngay lập tức khi vừa mở dialog (nếu đã đăng nhập trên GoLike thì nhận diện và đóng luôn)
     (async () => {
+      tryInjectAndInspect();
       const detected = await checkSession();
       if (detected && detected.token) {
         await handleAutoLoginSuccess(detected, detected.session);
@@ -190,6 +287,7 @@ export function GolikeLoginDialog({
     // Tự động lắng nghe và phát hiện đăng nhập thành công mỗi 300ms (tương đương tốc độ GoMax)
     pollingRef.current = setInterval(async () => {
       if (isCompletedRef.current) return;
+      tryInjectAndInspect();
       const detected = await checkSession();
       if (detected && detected.token) {
         await handleAutoLoginSuccess(detected, detected.session);
@@ -204,34 +302,39 @@ export function GolikeLoginDialog({
     };
   }, [isOpen]);
 
-  // Lắng nghe postMessage từ iframe (nếu có hook)
+  // Lắng nghe postMessage từ iframe (chuẩn GoMax)
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       try {
         const data = event.data;
         if (!data || isCompletedRef.current) return;
 
-        if (
-          (data.type === "GOLIKE_SESSION" || data.type === "GOLIKE_HEADERS") &&
-          data.session?.golike_token
-        ) {
-          await handleAutoLoginSuccess(
-            {
-              username: data.session.golike_username || "GoLike User",
-              balance: "0 coin",
-              token: data.session.golike_token,
-            },
-            data.session,
-          );
-        } else if (data.golike_token) {
-          await handleAutoLoginSuccess(
-            {
-              username: data.golike_username || "GoLike User",
-              balance: "0 coin",
-              token: data.golike_token,
-            },
-            data,
-          );
+        const rawToken = data.session?.golike_token || data.golike_token || data.auth;
+        if (rawToken && typeof rawToken === "string" && rawToken.length >= 50) {
+          const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
+
+          // Kiểm tra blacklist
+          const blacklisted = typeof window !== "undefined" ? localStorage.getItem("golike_blacklist_token") : null;
+          if (blacklisted && (fullToken === blacklisted || fullToken.includes(blacklisted))) {
+            return;
+          }
+
+          const freshUser = await getGolikeUser(fullToken);
+          if (freshUser.success && freshUser.user) {
+            const coin = freshUser.user.coin ?? 0;
+            const balance = `${coin.toLocaleString("vi-VN")} coin`;
+            const username = freshUser.user.username || data.session?.golike_username || "GoLike User";
+
+            await handleAutoLoginSuccess(
+              {
+                username,
+                balance,
+                token: fullToken,
+                coin,
+              },
+              data.session || data,
+            );
+          }
         }
       } catch {
         // ignore
@@ -278,7 +381,10 @@ export function GolikeLoginDialog({
               key={iframeKey}
               ref={iframeRef}
               src={GOLIKE_LOGIN_URL}
-              onLoad={() => setIframeLoading(false)}
+              onLoad={() => {
+                setIframeLoading(false);
+                tryInjectAndInspect();
+              }}
               className="w-full h-full border-0"
               allow="clipboard-read; clipboard-write"
               title="GoLike View"

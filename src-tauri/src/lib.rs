@@ -1206,7 +1206,60 @@ fn clear_golike_session(token: Option<String>) -> Result<bool, String> {
 
 #[tauri::command]
 fn extract_golike_session() -> Result<serde_json::Value, String> {
-  // 1. Quét trực tiếp LevelDB của WebView2 trong 1ms không cần qua server trung gian
+  // 1. Giải mã trực tiếp LevelDB CryptoJS AES qua engine CLI của GoMax
+  let node_candidates = [
+    r"C:\Users\Admin\AppData\Local\Programs\Python\Python313\Lib\site-packages\playwright\driver\node.exe",
+    r"node",
+    r"C:\Program Files\nodejs\node.exe",
+  ];
+  let script_candidates = [
+    r"D:\AutoLunex\scripts\golike-login.cjs",
+    r"D:\browser\scripts\golike-login.cjs",
+    r"scripts\golike-login.cjs",
+  ];
+
+  for node_path in &node_candidates {
+    for script_path in &script_candidates {
+      if std::path::Path::new(script_path).exists() {
+        let mut cmd = std::process::Command::new(node_path);
+        cmd.arg(script_path).arg("--extract");
+        #[cfg(windows)]
+        {
+          use std::os::windows::process::CommandExt;
+          cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+
+        if let Ok(output) = cmd.output() {
+          if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if let Ok(val) = serde_json::from_str::<serde_json::Value>(stdout.trim()) {
+              if val.get("success").and_then(|s| s.as_bool()).unwrap_or(false) {
+                if let Some(tok) = val.pointer("/user/token").and_then(|t| t.as_str()) {
+                  let clean_tok = tok.trim();
+                  let is_blacklisted = if let Ok(lock) = GOLIKE_BLACKLIST.lock() {
+                    if let Some(ref set) = *lock {
+                      set.contains(clean_tok)
+                        || (clean_tok.starts_with("Bearer ") && set.contains(&clean_tok[7..]))
+                    } else {
+                      false
+                    }
+                  } else {
+                    false
+                  };
+
+                  if !is_blacklisted {
+                    return Ok(val);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 2. Quét trực tiếp LevelDB của WebView2 trong 1ms (phương án phụ)
   let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
   let db_dir = format!(r"{}\com.autolunex.app\EBWebView\Default\Local Storage\leveldb", local_app_data);
   let p = std::path::Path::new(&db_dir);
@@ -1230,21 +1283,18 @@ fn extract_golike_session() -> Result<serde_json::Value, String> {
             let mut search_pos = content.len();
             while let Some(rel_idx) = content[..search_pos].rfind("Bearer eyJ") {
               let tok_start = rel_idx;
-              search_pos = rel_idx; // Lùi vị trí tìm kiếm cho vòng lặp sau
+              search_pos = rel_idx;
 
-              let jwt_start = tok_start + 7; // Bỏ qua tiền tố "Bearer "
+              let jwt_start = tok_start + 7;
               let jwt_slice = &content[jwt_start..];
-              // Chuỗi JWT Base64 chỉ chứa các ký tự: chữ, số, _, -, .
               let jwt_len = jwt_slice
                 .find(|c: char| !c.is_alphanumeric() && c != '_' && c != '-' && c != '.')
                 .unwrap_or(jwt_slice.len());
 
-              // Token JWT hợp lệ của GoLike luôn có độ dài >= 50 ký tự
               if jwt_len >= 50 {
                 let full_token = format!("Bearer {}", &jwt_slice[..jwt_len]);
                 let raw_jwt = &jwt_slice[..jwt_len];
 
-                // Kiểm tra blacklist (nếu tài khoản này vừa bấm đăng xuất thì bỏ qua)
                 let is_blacklisted = if let Ok(lock) = GOLIKE_BLACKLIST.lock() {
                   if let Some(ref set) = *lock {
                     set.contains(&full_token) || set.contains(raw_jwt)
@@ -1256,7 +1306,6 @@ fn extract_golike_session() -> Result<serde_json::Value, String> {
                 };
 
                 if !is_blacklisted {
-                  // Trích xuất username trong phạm vi bản ghi
                   let window_start = tok_start.saturating_sub(1000);
                   let window_end = (tok_start + 1000).min(content.len());
                   let window_slice = &content[window_start..window_end];

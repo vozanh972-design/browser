@@ -27,6 +27,11 @@ const candidateDirs = [
   path.join(process.env.LOCALAPPDATA || '', 'com.autolunex.app/EBWebView/Default/Local Storage/leveldb')
 ];
 
+for (let i = 68; i <= 90; i++) {
+  const letter = String.fromCharCode(i);
+  candidateDirs.push(`${letter}:/AutoLunex/webview_data/Default/Local Storage/leveldb`);
+}
+
 function safeWipeFile(filePath) {
   try {
     fs.unlinkSync(filePath);
