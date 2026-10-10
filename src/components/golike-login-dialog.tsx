@@ -267,26 +267,44 @@ export function GolikeLoginDialog({
     setIframeLoading(true);
     setIframeKey((prev) => prev + 1);
 
+    // Timeout an toàn: Nếu iframe tải quá 5s vẫn chưa kích hoạt onLoad thì tự động tắt overlay loading
+    const loadTimeout = setTimeout(() => {
+      setIframeLoading(false);
+    }, 5000);
+
     // Kiểm tra ngay lập tức khi vừa mở dialog (nếu đã đăng nhập trên GoLike thì nhận diện và đóng luôn)
+    let isChecking = false;
     (async () => {
-      tryInjectAndInspect();
-      const detected = await checkSession();
-      if (detected && detected.token) {
-        await handleAutoLoginSuccess(detected, detected.session);
+      if (isChecking || isCompletedRef.current) return;
+      isChecking = true;
+      try {
+        tryInjectAndInspect();
+        const detected = await checkSession();
+        if (detected && detected.token) {
+          await handleAutoLoginSuccess(detected, detected.session);
+        }
+      } finally {
+        isChecking = false;
       }
     })();
 
-    // Tự động lắng nghe và phát hiện đăng nhập thành công mỗi 300ms (tương đương tốc độ GoMax)
+    // Tự động lắng nghe và phát hiện đăng nhập thành công một cách mượt mà (có khóa isChecking chống nghẽn)
     pollingRef.current = setInterval(async () => {
-      if (isCompletedRef.current) return;
-      tryInjectAndInspect();
-      const detected = await checkSession();
-      if (detected && detected.token) {
-        await handleAutoLoginSuccess(detected, detected.session);
+      if (isCompletedRef.current || isChecking) return;
+      isChecking = true;
+      try {
+        tryInjectAndInspect();
+        const detected = await checkSession();
+        if (detected && detected.token) {
+          await handleAutoLoginSuccess(detected, detected.session);
+        }
+      } finally {
+        isChecking = false;
       }
-    }, 300);
+    }, 800);
 
     return () => {
+      clearTimeout(loadTimeout);
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
         pollingRef.current = null;

@@ -31,6 +31,10 @@ hmac = "0.12"
 sha2 = "0.10"
 obfstr = "0.4"
 zeroize = "1"
+aes = "0.8"
+cbc = "0.1"
+md5 = "0.7"
+base64 = "0.22"
 
 # tauri-plugin-window-state removed: saves state files to disk (violates no-file policy)
 # tauri-plugin-log removed: writes log files to disk (violates no-file policy)

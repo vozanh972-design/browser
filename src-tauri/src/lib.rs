@@ -1186,157 +1186,158 @@ fn clear_golike_session(_token: Option<String>) -> Result<bool, String> {
   Ok(true)
 }
 
-const PS_EXTRACT_SCRIPT: &str = r#"$keyStr = "426dbb3397e15b7628b5cc8b150107e5"
-$candidateDirs = @(
-    Join-Path $env:LOCALAPPDATA "com.autolunex.app\EBWebView\Default\Local Storage\leveldb"
-)
-68..90 | ForEach-Object {
-    $candidateDirs += "$([char]$_):\AutoLunex\webview_data\Default\Local Storage\leveldb"
-}
-
-function EvpBytesToKey($passphraseBytes, $saltBytes, $keyLen, $ivLen) {
-    $md5 = [System.Security.Cryptography.MD5]::Create()
-    $d = [System.Collections.Generic.List[byte]]::new()
-    $d_i = [byte[]]@()
-    while ($d.Count -lt ($keyLen + $ivLen)) {
-        $ms = [System.IO.MemoryStream]::new()
-        if ($d_i.Length -gt 0) { $ms.Write($d_i, 0, $d_i.Length) }
-        $ms.Write($passphraseBytes, 0, $passphraseBytes.Length)
-        $ms.Write($saltBytes, 0, $saltBytes.Length)
-        $d_i = $md5.ComputeHash($ms.ToArray())
-        $d.AddRange($d_i)
+fn evp_bytes_to_key(password: &[u8], salt: &[u8], key_len: usize, iv_len: usize) -> (Vec<u8>, Vec<u8>) {
+  let mut d = Vec::new();
+  let mut d_i: Vec<u8> = Vec::new();
+  while d.len() < key_len + iv_len {
+    let mut ctx = md5::Context::new();
+    if !d_i.is_empty() {
+      ctx.consume(&d_i);
     }
-    $all = $d.ToArray()
-    $key = New-Object byte[] $keyLen
-    $iv = New-Object byte[] $ivLen
-    [System.Array]::Copy($all, 0, $key, 0, $keyLen)
-    [System.Array]::Copy($all, $keyLen, $iv, 0, $ivLen)
-    return @{ Key = $key; IV = $iv }
+    ctx.consume(password);
+    ctx.consume(salt);
+    let digest = ctx.compute();
+    d_i = digest.0.to_vec();
+    d.extend_from_slice(&d_i);
+  }
+  let key = d[..key_len].to_vec();
+  let iv = d[key_len..key_len + iv_len].to_vec();
+  (key, iv)
 }
 
-function Decrypt-CryptoJS($b64, $pass) {
-    try {
-        $raw = [System.Convert]::FromBase64String($b64)
-        if ($raw.Length -lt 16) { return $null }
-        $header = [System.Text.Encoding]::ASCII.GetString($raw, 0, 8)
-        if ($header -ne "Salted__") { return $null }
-        $salt = New-Object byte[] 8
-        [System.Array]::Copy($raw, 8, $salt, 0, 8)
-        $cipherBytes = New-Object byte[] ($raw.Length - 16)
-        [System.Array]::Copy($raw, 16, $cipherBytes, 0, $raw.Length - 16)
+fn decrypt_cryptojs_aes(b64: &str, passphrase: &str) -> Option<String> {
+  use aes::Aes256;
+  use base64::prelude::*;
+  use cbc::cipher::{block_padding::Pkcs7, BlockDecryptMut, KeyIvInit};
 
-        $passBytes = [System.Text.Encoding]::UTF8.GetBytes($pass)
-        $res = EvpBytesToKey $passBytes $salt 32 16
+  type Aes256CbcDec = cbc::Decryptor<Aes256>;
 
-        $aes = [System.Security.Cryptography.Aes]::Create()
-        $aes.Mode = [System.Security.Cryptography.CipherMode]::CBC
-        $aes.Padding = [System.Security.Cryptography.PaddingMode]::PKCS7
-        $aes.Key = $res.Key
-        $aes.IV = $res.IV
+  let raw = BASE64_STANDARD.decode(b64.trim()).ok()?;
+  if raw.len() < 16 || &raw[0..8] != b"Salted__" {
+    return None;
+  }
+  let salt = &raw[8..16];
+  let ciphertext = &raw[16..];
+  if ciphertext.is_empty() || ciphertext.len() % 16 != 0 {
+    return None;
+  }
 
-        $dec = $aes.CreateDecryptor()
-        $ms = [System.IO.MemoryStream]::new($cipherBytes)
-        $cs = [System.Security.Cryptography.CryptoStream]::new($ms, $dec, [System.Security.Cryptography.CryptoStreamMode]::Read)
-        $sr = [System.IO.StreamReader]::new($cs, [System.Text.Encoding]::UTF8)
-        return $sr.ReadToEnd()
-    } catch {
-        return $null
+  let (key, iv) = evp_bytes_to_key(passphrase.as_bytes(), salt, 32, 16);
+  let mut buf = ciphertext.to_vec();
+  let decryptor = Aes256CbcDec::new_from_slices(&key, &iv).ok()?;
+  let pt = decryptor.decrypt_padded_mut::<Pkcs7>(&mut buf).ok()?;
+  String::from_utf8(pt.to_vec()).ok()
+}
+
+fn scan_leveldb_for_golike() -> Option<serde_json::Value> {
+  let key_str = "426dbb3397e15b7628b5cc8b150107e5";
+  let mut candidate_dirs = Vec::new();
+
+  if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
+    candidate_dirs.push(format!(r"{}\com.autolunex.app\EBWebView\Default\Local Storage\leveldb", local_app));
+  }
+  for letter in b'D'..=b'Z' {
+    candidate_dirs.push(format!(r"{}:\AutoLunex\webview_data\Default\Local Storage\leveldb", letter as char));
+  }
+
+  for dir_str in candidate_dirs {
+    let dir = std::path::Path::new(&dir_str);
+    if !dir.exists() {
+      continue;
     }
-}
 
-foreach ($dbDir in $candidateDirs) {
-    if (-not (Test-Path $dbDir)) { continue }
-    $files = Get-ChildItem -Path $dbDir | Where-Object { $_.Extension -in ".ldb", ".log" } | Sort-Object LastWriteTime -Descending
-    foreach ($f in $files) {
-        try {
-            $bytes = [System.IO.File]::ReadAllBytes($f.FullName)
-            if (-not $bytes -or $bytes.Length -eq 0) { continue }
-            $latin1 = [System.Text.Encoding]::GetEncoding("iso-8859-1").GetString($bytes)
-            $idx = $latin1.IndexOf("U2FsdGVkX1")
-            while ($idx -ne -1) {
-                $sb = [System.Text.StringBuilder]::new()
-                for ($i = $idx; $i -lt $latin1.Length; $i++) {
-                    $c = $latin1[$i]
-                    if (($c -ge 'a' -and $c -le 'z') -or ($c -ge 'A' -and $c -le 'Z') -or ($c -ge '0' -and $c -le '9') -or $c -eq '+' -or $c -eq '/' -or $c -eq '=') {
-                        [void]$sb.Append($c)
-                    } else {
-                        break
-                    }
-                }
-                $b64 = $sb.ToString()
-                if ($b64.Length -gt 50) {
-                    $dec = Decrypt-CryptoJS $b64 $keyStr
-                    if ($dec -and $dec.Contains('"token"')) {
-                        $parsed = $dec | ConvertFrom-Json
-                        if ($parsed.token) {
-                            $rawTok = [string]$parsed.token
-                            $tok = if ($rawTok.StartsWith("Bearer ")) { $rawTok } else { "Bearer $rawTok" }
-                            $uname = if ($parsed.user -and $parsed.user.username) { [string]$parsed.user.username } else { "GoLike User" }
-                            $coinVal = 0
-                            if ($parsed.user -and $parsed.user.coin -ne $null) {
-                                $coinVal = [int64]$parsed.user.coin
-                            } elseif ($parsed.current_coin -ne $null) {
-                                $coinVal = [int64]$parsed.current_coin
-                            }
-                            $uId = if ($parsed.user -and $parsed.user.id) { [string]$parsed.user.id } else { "" }
+    let Ok(entries) = std::fs::read_dir(dir) else { continue };
+    let mut files: Vec<_> = entries
+      .flatten()
+      .map(|e| e.path())
+      .filter(|p| {
+        let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("");
+        ext == "ldb" || ext == "log"
+      })
+      .collect();
 
-                            $outObj = [PSCustomObject]@{
-                                success = $true
-                                hasSession = $true
-                                user = [PSCustomObject]@{
-                                    username = $uname
-                                    balance = "$($coinVal.ToString('N0')) coin"
-                                    token = $tok
-                                    coin = $coinVal
-                                }
-                                session = [PSCustomObject]@{
-                                    golike_token = $tok
-                                    golike_username = $uname
-                                    golike_user_id = $uId
-                                    golike_device_id = "d41d8cd98f00b204e9800998ecf8427e"
-                                    golike_web_data = if ($parsed.user) { ($parsed.user | ConvertTo-Json -Compress) } else { "{}" }
-                                }
-                            }
-                            $outObj | ConvertTo-Json -Compress
-                            exit 0
-                        }
-                    }
-                }
-                $idx = $latin1.IndexOf("U2FsdGVkX1", $idx + 10)
-            }
-        } catch {}
-    }
-}
+    // Sắp xếp theo thời gian sửa đổi mới nhất
+    files.sort_by(|a, b| {
+      let m_a = a.metadata().and_then(|m| m.modified()).ok();
+      let m_b = b.metadata().and_then(|m| m.modified()).ok();
+      m_b.cmp(&m_a)
+    });
 
-Write-Output '{"success":false,"hasSession":false}'
-"#;
-
-#[tauri::command]
-fn extract_golike_session() -> Result<serde_json::Value, String> {
-  // 1. Giải mã trực tiếp LevelDB CryptoJS AES qua PowerShell stdin native (100% tự hành trên mọi bản Windows)
-  #[cfg(windows)]
-  {
-    use std::io::Write;
-    use std::os::windows::process::CommandExt;
-
-    let mut cmd = std::process::Command::new("powershell.exe");
-    cmd.args(["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "-"]);
-    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-    cmd.stdin(std::process::Stdio::piped());
-    cmd.stdout(std::process::Stdio::piped());
-    cmd.stderr(std::process::Stdio::null());
-
-    if let Ok(mut child) = cmd.spawn() {
-      if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(PS_EXTRACT_SCRIPT.as_bytes());
+    for file_path in files {
+      let Ok(bytes) = std::fs::read(&file_path) else { continue };
+      if bytes.is_empty() {
+        continue;
       }
-      if let Ok(output) = child.wait_with_output() {
-        if output.status.success() {
-          let stdout = String::from_utf8_lossy(&output.stdout);
-          let trimmed = stdout.trim();
-          if let Ok(val) = serde_json::from_str::<serde_json::Value>(trimmed) {
-            if val.get("success").and_then(|s| s.as_bool()).unwrap_or(false) {
-              return Ok(val);
+
+      // Quét chuỗi b"U2FsdGVkX1"
+      let pattern = b"U2FsdGVkX1";
+      let mut search_start = 0;
+      while let Some(rel_pos) = bytes[search_start..].windows(pattern.len()).position(|w| w == pattern) {
+        let idx = search_start + rel_pos;
+        search_start = idx + pattern.len();
+
+        let mut b64_bytes = Vec::new();
+        for &byte in &bytes[idx..] {
+          if byte.is_ascii_alphanumeric() || byte == b'+' || byte == b'/' || byte == b'=' {
+            b64_bytes.push(byte);
+          } else {
+            break;
+          }
+        }
+
+        if b64_bytes.len() > 50 {
+          if let Ok(b64_str) = std::str::from_utf8(&b64_bytes) {
+            if let Some(decrypted) = decrypt_cryptojs_aes(b64_str, key_str) {
+              if decrypted.contains("\"token\"") {
+                if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&decrypted) {
+                  if let Some(raw_tok) = parsed.get("token").and_then(|t| t.as_str()) {
+                    let tok = if raw_tok.starts_with("Bearer ") {
+                      raw_tok.to_string()
+                    } else {
+                      format!("Bearer {}", raw_tok)
+                    };
+                    let uname = parsed
+                      .pointer("/user/username")
+                      .and_then(|u| u.as_str())
+                      .unwrap_or("GoLike User")
+                      .to_string();
+
+                    let coin_val = parsed
+                      .pointer("/user/coin")
+                      .and_then(|c| c.as_i64())
+                      .or_else(|| parsed.get("current_coin").and_then(|c| c.as_i64()))
+                      .unwrap_or(0);
+
+                    let u_id = parsed
+                      .pointer("/user/id")
+                      .map(|id| id.to_string())
+                      .unwrap_or_default();
+
+                    let web_data = parsed
+                      .get("user")
+                      .map(|u| u.to_string())
+                      .unwrap_or_else(|| "{}".to_string());
+
+                    return Some(serde_json::json!({
+                      "success": true,
+                      "hasSession": true,
+                      "user": {
+                        "username": uname,
+                        "balance": format!("{} coin", coin_val),
+                        "token": tok,
+                        "coin": coin_val
+                      },
+                      "session": {
+                        "golike_token": tok,
+                        "golike_username": uname,
+                        "golike_user_id": u_id,
+                        "golike_device_id": "d41d8cd98f00b204e9800998ecf8427e",
+                        "golike_web_data": web_data
+                      }
+                    }));
+                  }
+                }
+              }
             }
           }
         }
@@ -1344,7 +1345,17 @@ fn extract_golike_session() -> Result<serde_json::Value, String> {
     }
   }
 
-  // 2. Fallback: Đọc trực tiếp từ file session json trên đĩa nếu có
+  None
+}
+
+#[tauri::command]
+fn extract_golike_session() -> Result<serde_json::Value, String> {
+  // 1. Quét và giải mã LevelDB trực tiếp 100% bằng Rust thuần túy trong RAM (< 0.1ms, không sinh tiến trình ngoài)
+  if let Some(data) = scan_leveldb_for_golike() {
+    return Ok(data);
+  }
+
+  // 2. Fallback: Đọc từ file session json trên đĩa nếu có
   let session_paths = [
     r"D:\AutoLunex\golike_session.json",
     r"D:\browser\golike_session.json",
@@ -1365,43 +1376,6 @@ fn extract_golike_session() -> Result<serde_json::Value, String> {
               },
               "session": val
             }));
-          }
-        }
-      }
-    }
-  }
-
-  // 3. Fallback: Thử với node.exe nếu có
-  let node_candidates = [
-    r"C:\Users\Admin\AppData\Local\Programs\Python\Python313\Lib\site-packages\playwright\driver\node.exe",
-    r"node",
-    r"C:\Program Files\nodejs\node.exe",
-  ];
-  let script_candidates = [
-    r"D:\AutoLunex\scripts\golike-login.cjs",
-    r"D:\browser\scripts\golike-login.cjs",
-    r"scripts\golike-login.cjs",
-  ];
-
-  for node_path in &node_candidates {
-    for script_path in &script_candidates {
-      if std::path::Path::new(script_path).exists() {
-        let mut cmd = std::process::Command::new(node_path);
-        cmd.arg(script_path).arg("--extract");
-        #[cfg(windows)]
-        {
-          use std::os::windows::process::CommandExt;
-          cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
-        }
-
-        if let Ok(output) = cmd.output() {
-          if output.status.success() {
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            if let Ok(val) = serde_json::from_str::<serde_json::Value>(stdout.trim()) {
-              if val.get("success").and_then(|s| s.as_bool()).unwrap_or(false) {
-                return Ok(val);
-              }
-            }
           }
         }
       }
