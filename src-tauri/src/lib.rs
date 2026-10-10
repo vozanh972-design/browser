@@ -1217,7 +1217,7 @@ fn start_golike_bridge() -> Result<bool, String> {
 
 #[tauri::command]
 fn clear_golike_session() -> Result<bool, String> {
-  // 1. Delete session files on disk
+  // Chỉ xóa các file session GoLike trên đĩa, tuyệt đối KHÔNG đụng đến LevelDB của app
   let session_paths = [
     r"D:\AutoLunex\golike_session.json",
     r"D:\browser\golike_session.json",
@@ -1225,31 +1225,6 @@ fn clear_golike_session() -> Result<bool, String> {
   for p in session_paths {
     if std::path::Path::new(p).exists() {
       let _ = std::fs::remove_file(p);
-    }
-  }
-
-  // 2. Wipe LevelDB files for WebView so it starts completely clean on login page
-  let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
-  let db_dirs = [
-    format!(r"{}\com.autolunex.app\EBWebView\Default\Local Storage\leveldb", local_app_data),
-    r"D:\AutoLunex\webview_data\Default\Local Storage\leveldb".to_string(),
-  ];
-
-  for db_dir in db_dirs {
-    let p = std::path::Path::new(&db_dir);
-    if p.exists() {
-      if let Ok(entries) = std::fs::read_dir(p) {
-        for entry in entries.flatten() {
-          let path = entry.path();
-          if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
-            if ext == "ldb" || ext == "log" {
-              if std::fs::remove_file(&path).is_err() {
-                let _ = std::fs::write(&path, b"");
-              }
-            }
-          }
-        }
-      }
     }
   }
 

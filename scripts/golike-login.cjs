@@ -31,9 +31,7 @@ function safeWipeFile(filePath) {
   try {
     fs.unlinkSync(filePath);
   } catch (e) {
-    try {
-      fs.writeFileSync(filePath, Buffer.alloc(0));
-    } catch (e2) {}
+    // Không ghi đè 0 byte vì làm hỏng cấu trúc binary của LevelDB
   }
 }
 
@@ -235,15 +233,6 @@ if (process.argv.includes('--clear')) {
       if (fs.existsSync(p)) fs.unlinkSync(p);
     } catch (e) {}
   }
-  for (const dbDir of candidateDirs) {
-    if (!fs.existsSync(dbDir)) continue;
-    try {
-      const files = fs.readdirSync(dbDir).filter(f => f.endsWith('.ldb') || f.endsWith('.log'));
-      for (const f of files) {
-        safeWipeFile(path.join(dbDir, f));
-      }
-    } catch(e) {}
-  }
   console.log(JSON.stringify({ success: true }));
   process.exit(0);
 }
@@ -374,18 +363,8 @@ const server = http.createServer(async (req, res) => {
       } catch (e) {}
     }
 
-    for (const dbDir of candidateDirs) {
-      if (!fs.existsSync(dbDir)) continue;
-      try {
-        const files = fs.readdirSync(dbDir).filter(f => f.endsWith('.ldb') || f.endsWith('.log'));
-        for (const f of files) {
-          safeWipeFile(path.join(dbDir, f));
-        }
-      } catch(e) {}
-    }
-
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true, message: 'Wiped GoLike session and leveldb files' }));
+    res.end(JSON.stringify({ success: true, message: 'Cleared GoLike session' }));
     return;
   }
 
