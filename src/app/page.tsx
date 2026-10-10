@@ -267,19 +267,54 @@ export default function HomePage() {
     }
   }, [accounts]);
 
-  // Tự động đồng bộ tài khoản GoLike từ bridge/LevelDB khi mở app
+  // Tự động đồng bộ và làm mới số dư GoLike trực tiếp từ máy chủ GoLike khi mở app
   useEffect(() => {
     let isMounted = true;
-    syncGolikeSessionFromBridge().then((res) => {
-      if (isMounted && res?.success && res.user) {
+
+    const refreshDirectly = async () => {
+      const session = loadGolikeSession();
+      const token =
+        session?.golike_token ||
+        (typeof window !== "undefined"
+          ? localStorage.getItem("golike_token")
+          : "") ||
+        "";
+
+      if (token) {
+        try {
+          const { getGolikeUser } = await import("@/lib/golike-api");
+          const res = await getGolikeUser(session || token);
+          if (isMounted && res.success && res.user) {
+            const freshBalance = `${res.user.coin.toLocaleString("vi-VN")} coin`;
+            localStorage.setItem("golike_username", res.user.username);
+            localStorage.setItem("golike_balance", freshBalance);
+            setGolikeAccount({
+              username: res.user.username,
+              balance: freshBalance,
+              token,
+              isLoggedIn: true,
+            });
+            return;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // Quét session trực tiếp từ native LevelDB nếu chưa có trong state
+      const bridgeRes = await syncGolikeSessionFromBridge();
+      if (isMounted && bridgeRes?.success && bridgeRes.user) {
         setGolikeAccount({
-          username: res.user.username,
-          balance: res.user.balance,
-          token: res.user.token,
+          username: bridgeRes.user.username,
+          balance: bridgeRes.user.balance,
+          token: bridgeRes.user.token,
           isLoggedIn: true,
         });
       }
-    });
+    };
+
+    void refreshDirectly();
+
     return () => {
       isMounted = false;
     };

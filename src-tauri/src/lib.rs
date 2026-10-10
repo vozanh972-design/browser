@@ -1177,42 +1177,10 @@ fn start_golike_bridge() -> Result<bool, String> {
     const DETACHED_PROCESS: u32 = 0x0000_0008;
 
     let candidates = [
-      r"C:\Users\Admin\AppData\Local\Programs\Python\Python313\Lib\site-packages\playwright\driver\node.exe",
-      r"node.exe",
-      r"node",
-    ];
-
-    let script_candidates = [
-      r"D:\browser\scripts\golike-login.cjs",
-      r"D:\AutoLunex\scripts\golike-login.cjs",
-      r"scripts\golike-login.cjs",
-    ];
-
-    let script_path = script_candidates
-      .iter()
-      .find(|s| std::path::Path::new(s).exists())
-      .copied()
-      .unwrap_or(r"D:\browser\scripts\golike-login.cjs");
-
-    for exe in candidates {
-      if std::path::Path::new(exe).exists() || exe == "node" || exe == "node.exe" {
-        let mut cmd = std::process::Command::new(exe);
-        cmd.arg(script_path);
-        if let Some(parent) = std::path::Path::new(script_path).parent() {
-          cmd.current_dir(parent);
-        }
-        cmd.creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS);
-        if cmd.spawn().is_ok() {
-          std::thread::sleep(std::time::Duration::from_millis(600));
-          if std::net::TcpStream::connect("127.0.0.1:18899").is_ok() {
-            return Ok(true);
-          }
-        }
-      }
-    }
-  }
-
-  Ok(std::net::TcpStream::connect("127.0.0.1:18899").is_ok())
+#[tauri::command]
+fn start_golike_bridge() -> Result<bool, String> {
+  // Không cần chạy server trung gian cổng 18899 - kết nối trực tiếp
+  Ok(true)
 }
 
 #[tauri::command]
@@ -1233,46 +1201,69 @@ fn clear_golike_session() -> Result<bool, String> {
 
 #[tauri::command]
 fn extract_golike_session() -> Result<serde_json::Value, String> {
-  let candidates = [
-    r"C:\Users\Admin\AppData\Local\Programs\Python\Python313\Lib\site-packages\playwright\driver\node.exe",
-    r"node.exe",
-    r"node",
-  ];
+  // 1. Quét trực tiếp LevelDB của WebView2 trong 1ms không cần qua server trung gian
+  let local_app_data = std::env::var("LOCALAPPDATA").unwrap_or_default();
+  let db_dir = format!(r"{}\com.autolunex.app\EBWebView\Default\Local Storage\leveldb", local_app_data);
+  let p = std::path::Path::new(&db_dir);
+  if p.exists() {
+    if let Ok(entries) = std::fs::read_dir(p) {
+      let mut files: Vec<_> = entries.flatten().map(|e| e.path()).collect();
+      // Ưu tiên các file WAL .log mới nhất
+      files.sort_by(|a, b| {
+        let a_log = a.extension().and_then(|s| s.to_str()) == Some("log");
+        let b_log = b.extension().and_then(|s| s.to_str()) == Some("log");
+        b_log.cmp(&a_log)
+      });
 
-  let script_candidates = [
-    r"D:\browser\scripts\golike-login.cjs",
-    r"D:\AutoLunex\scripts\golike-login.cjs",
-    r"scripts\golike-login.cjs",
-  ];
+      for file in files {
+        let ext = file.extension().and_then(|s| s.to_str()).unwrap_or("");
+        if ext == "log" || ext == "ldb" {
+          if let Ok(bytes) = std::fs::read(&file) {
+            let content = String::from_utf8_lossy(&bytes);
+            if let Some(tok_idx) = content.find("Bearer eyJ") {
+              let slice = &content[tok_idx..];
+              let end = slice.find(|c: char| c.is_whitespace() || c == '\0' || c == '"' || c == '\'')
+                .unwrap_or(slice.len().min(500));
+              let token = slice[..end].trim().to_string();
 
-  let script_path = script_candidates
-    .iter()
-    .find(|s| std::path::Path::new(s).exists())
-    .copied()
-    .unwrap_or(r"D:\browser\scripts\golike-login.cjs");
+              // Trích xuất username nếu có trong cùng bản ghi
+              let mut username = "GoLike User".to_string();
+              if let Some(u_idx) = content.find("golike_username") {
+                let u_slice = &content[u_idx + 15..];
+                let mut u = String::new();
+                for ch in u_slice.chars() {
+                  if ch.is_alphanumeric() || ch == '_' || ch == '-' {
+                    u.push(ch);
+                  } else if !u.is_empty() {
+                    break;
+                  }
+                }
+                if !u.is_empty() {
+                  username = u;
+                }
+              }
 
-  for exe in candidates {
-    if std::path::Path::new(exe).exists() || exe == "node" || exe == "node.exe" {
-      let mut cmd = std::process::Command::new(exe);
-      cmd.arg(script_path);
-      cmd.arg("--extract");
-      #[cfg(windows)]
-      {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
-      }
-      if let Ok(output) = cmd.output() {
-        if output.status.success() {
-          let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-          if let Ok(val) = serde_json::from_str::<serde_json::Value>(&text) {
-            return Ok(val);
+              return Ok(serde_json::json!({
+                "success": true,
+                "hasSession": true,
+                "user": {
+                  "username": username,
+                  "balance": "0 coin",
+                  "token": token
+                },
+                "session": {
+                  "golike_token": token,
+                  "golike_username": username
+                }
+              }));
+            }
           }
         }
       }
     }
   }
 
-  // Fallback nếu không có node: đọc trực tiếp từ session json file
+  // 2. Đọc trực tiếp từ file session json trên đĩa nếu có
   let session_paths = [
     r"D:\AutoLunex\golike_session.json",
     r"D:\browser\golike_session.json",
@@ -1320,8 +1311,6 @@ pub fn run() {
 
   #[cfg(windows)]
   {
-    let _ = start_golike_bridge();
-
     // Kiểm tra cấu hình chuyển ổ đĩa lưu trữ (ưu tiên ổ D đến Z nếu tồn tại file .portable)
     for letter in b'D'..=b'Z' {
       let candidate = format!("{}:\\AutoLunex\\.portable", letter as char);

@@ -23,7 +23,6 @@ interface GolikeLoginDialogProps {
 }
 
 const GOLIKE_LOGIN_URL = "https://app.golike.net/login";
-const BRIDGE_API = "http://127.0.0.1:18899";
 
 export function GolikeLoginDialog({
   isOpen,
@@ -38,40 +37,33 @@ export function GolikeLoginDialog({
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const isCompletedRef = useRef(false);
 
-  // Trích xuất session: ưu tiên HTTP Bridge 18899 (phản hồi siêu tốc 2ms), fallback sang Tauri invoke
+  // Trích xuất session trực tiếp qua native Tauri và Gateway GoLike (không qua bất kỳ cổng mạng trung gian nào)
   const checkSession = async () => {
-    // 1. Thử gọi qua HTTP Bridge 18899 (nhanh nhất 2ms vì server resident sẵn trong RAM)
-    try {
-      const res = await fetch(`${BRIDGE_API}/extract-session`, {
-        method: "GET",
-        headers: { Accept: "application/json" },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if ((data?.success || data?.hasSession) && data?.user?.token) {
-          return {
-            username: data.user.username || "GoLike User",
-            balance: data.user.balance || "0 coin",
-            token: data.user.token,
-            coin: data.user.coin,
-            session: data.session || {},
-          };
-        }
-      }
-    } catch {
-      // Bridge server có thể đang khởi động
-    }
-
-    // 2. Fallback sang Rust Tauri invoke
     try {
       const { invoke } = await import("@tauri-apps/api/core");
       const data: any = await invoke("extract_golike_session");
       if ((data?.success || data?.hasSession) && data?.user?.token) {
+        let username = data.user.username || "GoLike User";
+        let balance = data.user.balance || "0 coin";
+        let coin = data.user.coin;
+
+        // Trích xuất số dư thực tế trực tiếp từ GoLike Gateway
+        try {
+          const freshUser = await getGolikeUser(data.user.token);
+          if (freshUser.success && freshUser.user) {
+            username = freshUser.user.username;
+            coin = freshUser.user.coin;
+            balance = `${coin.toLocaleString("vi-VN")} coin`;
+          }
+        } catch {
+          // ignore
+        }
+
         return {
-          username: data.user.username || "GoLike User",
-          balance: data.user.balance || "0 coin",
+          username,
+          balance,
           token: data.user.token,
-          coin: data.user.coin,
+          coin,
           session: data.session || {},
         };
       }
@@ -189,16 +181,8 @@ export function GolikeLoginDialog({
     setIframeLoading(true);
     setIframeKey((prev) => prev + 1);
 
-    // Kích hoạt lại Bridge nếu chưa bật
+    // Kiểm tra ngay lập tức khi vừa mở dialog (nếu đã đăng nhập trên GoLike thì nhận diện và đóng luôn)
     (async () => {
-      try {
-        const { invoke } = await import("@tauri-apps/api/core");
-        await invoke("start_golike_bridge");
-      } catch {
-        // ignore
-      }
-
-      // Kiểm tra ngay lập tức khi vừa mở dialog (nếu đã đăng nhập trên GoLike thì nhận diện và đóng luôn)
       const detected = await checkSession();
       if (detected && detected.token) {
         await handleAutoLoginSuccess(detected, detected.session);

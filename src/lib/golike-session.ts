@@ -343,21 +343,10 @@ export async function clearGolikeSession(token?: string): Promise<void> {
     // ignore
   }
 
-  // Xóa trực tiếp LevelDB & file session thông qua Rust Tauri invoke
+  // Xóa trực tiếp file session thông qua Rust Tauri invoke
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("clear_golike_session");
-  } catch {
-    // ignore
-  }
-
-  // Xóa trên bridge server nếu đang chạy
-  try {
-    await fetch("http://127.0.0.1:18899/clear-session", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: currentTok }),
-    });
   } catch {
     // ignore
   }
@@ -462,33 +451,56 @@ export async function syncGolikeProtocol(
 }
 
 /**
- * Đồng bộ Session GoLike từ Local Bridge (LevelDB / Port 18899)
+ * Đồng bộ Session GoLike trực tiếp từ LevelDB / GoLike Gateway (Không dùng server trung gian)
  */
 export async function syncGolikeSessionFromBridge(): Promise<{
   success: boolean;
   user?: { username: string; balance: string; token: string; coin: number };
   session?: GolikeSessionData;
 } | null> {
-  // 1. Thử gọi trực tiếp từ Tauri native command (nhanh và không phụ thuộc cổng mạng)
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     const data: any = await invoke("extract_golike_session");
     if (data?.success && data?.user?.token) {
+      let username = data.user.username || "GoLike User";
+      let balance = data.user.balance || "0 coin";
+      let coin = 0;
+
+      // Kết nối trực tiếp máy chủ GoLike Gateway lấy số dư thực tế
+      try {
+        const { getGolikeUser } = await import("./golike-api");
+        const freshUser = await getGolikeUser(data.user.token);
+        if (freshUser.success && freshUser.user) {
+          username = freshUser.user.username;
+          coin = freshUser.user.coin;
+          balance = `${coin.toLocaleString("vi-VN")} coin`;
+        }
+      } catch {
+        // ignore
+      }
+
       const saved = saveGolikeSession({
         ...(data.session || {}),
         golike_token: data.user.token,
-        golike_username: data.user.username,
+        golike_username: username,
       });
+
       try {
-        localStorage.setItem("golike_username", data.user.username);
-        localStorage.setItem("golike_balance", data.user.balance);
+        localStorage.setItem("golike_username", username);
+        localStorage.setItem("golike_balance", balance);
         localStorage.setItem("golike_token", data.user.token);
       } catch {
         // ignore
       }
+
       return {
         success: true,
-        user: data.user,
+        user: {
+          username,
+          balance,
+          token: data.user.token,
+          coin,
+        },
         session: saved,
       };
     }
@@ -496,42 +508,5 @@ export async function syncGolikeSessionFromBridge(): Promise<{
     // Bỏ qua nếu môi trường web thuần
   }
 
-  // 2. Thử gọi qua HTTP Bridge
-  try {
-    try {
-      const { invoke } = await import("@tauri-apps/api/core");
-      await invoke("start_golike_bridge");
-    } catch {
-      // ignore
-    }
-
-    const res = await fetch("http://127.0.0.1:18899/extract-session", {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data?.success && data?.user?.token) {
-      const saved = saveGolikeSession({
-        ...(data.session || {}),
-        golike_token: data.user.token,
-        golike_username: data.user.username,
-      });
-      try {
-        localStorage.setItem("golike_username", data.user.username);
-        localStorage.setItem("golike_balance", data.user.balance);
-        localStorage.setItem("golike_token", data.user.token);
-      } catch {
-        // ignore
-      }
-      return {
-        success: true,
-        user: data.user,
-        session: saved,
-      };
-    }
-  } catch {
-    // Bridge offline
-  }
   return null;
 }
