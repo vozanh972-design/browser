@@ -1166,19 +1166,6 @@ async fn start_app_update(
 
 #[tauri::command]
 fn start_golike_bridge() -> Result<bool, String> {
-  if std::net::TcpStream::connect("127.0.0.1:18899").is_ok() {
-    return Ok(true);
-  }
-
-  #[cfg(windows)]
-  {
-    use std::os::windows::process::CommandExt;
-    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-    const DETACHED_PROCESS: u32 = 0x0000_0008;
-
-    let candidates = [
-#[tauri::command]
-fn start_golike_bridge() -> Result<bool, String> {
   // Không cần chạy server trung gian cổng 18899 - kết nối trực tiếp
   Ok(true)
 }
