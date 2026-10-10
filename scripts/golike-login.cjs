@@ -20,7 +20,22 @@ const SESSION_PATHS = [
 
 let currentSession = null;
 let isBrowserOpen = false;
-const clearedTokens = new Set();
+
+const candidateDirs = [
+  'C:/Users/Admin/AppData/Local/com.autolunex.app/EBWebView/Default/Local Storage/leveldb',
+  'D:/AutoLunex/webview_data/Default/Local Storage/leveldb',
+  path.join(process.env.LOCALAPPDATA || '', 'com.autolunex.app/EBWebView/Default/Local Storage/leveldb')
+];
+
+function safeWipeFile(filePath) {
+  try {
+    fs.unlinkSync(filePath);
+  } catch (e) {
+    try {
+      fs.writeFileSync(filePath, Buffer.alloc(0));
+    } catch (e2) {}
+  }
+}
 
 // Tải session đã lưu nếu có
 for (const p of SESSION_PATHS) {
@@ -61,12 +76,6 @@ function decryptAES(ciphertextBase64, passphrase) {
 }
 
 function extractFromLevelDb() {
-  const candidateDirs = [
-    'C:/Users/Admin/AppData/Local/com.autolunex.app/EBWebView/Default/Local Storage/leveldb',
-    'D:/AutoLunex/webview_data/Default/Local Storage/leveldb',
-    path.join(process.env.LOCALAPPDATA || '', 'com.autolunex.app/EBWebView/Default/Local Storage/leveldb')
-  ];
-
   const BLOCK_SIZE = 32768;
   const key = '426dbb3397e15b7628b5cc8b150107e5';
 
@@ -78,7 +87,11 @@ function extractFromLevelDb() {
 
       for (const f of files) {
         try {
-          const buf = fs.readFileSync(path.join(dbDir, f));
+          const filePath = path.join(dbDir, f);
+          const stat = fs.statSync(filePath);
+          if (stat.size === 0) continue;
+          const buf = fs.readFileSync(filePath);
+          if (!buf || buf.length === 0) continue;
           let records = [];
           if (f.endsWith('.log')) {
             let offset = 0;
@@ -119,10 +132,7 @@ function extractFromLevelDb() {
                   const dec = decryptAES(b64, key);
                   const parsed = JSON.parse(dec);
                   if (parsed && (parsed.token || parsed.user)) {
-                    const cleanTok = String(parsed.token || '').replace(/^Bearer\s+/i, '').trim();
-                    if (!cleanTok || !clearedTokens.has(cleanTok)) {
-                      latestInFile = parsed;
-                    }
+                    latestInFile = parsed;
                   }
                 } catch(e) {}
               }
@@ -254,7 +264,7 @@ if (process.argv.includes('--clear')) {
     try {
       const files = fs.readdirSync(dbDir).filter(f => f.endsWith('.ldb') || f.endsWith('.log'));
       for (const f of files) {
-        try { fs.unlinkSync(path.join(dbDir, f)); } catch(e) {}
+        safeWipeFile(path.join(dbDir, f));
       }
     } catch(e) {}
   }
@@ -340,73 +350,66 @@ const server = http.createServer(async (req, res) => {
           const content = fs.readFileSync(p, 'utf8');
           const parsed = JSON.parse(content);
           const cleanTok = String(parsed?.golike_token || '').replace(/^Bearer\s+/i, '').trim();
-          if (!clearedTokens.has(cleanTok)) {
-            currentSession = parsed;
-            break;
-          }
+          currentSession = parsed;
+          break;
         }
       } catch (e) {}
     }
 
+    if (currentSession && currentSession.golike_token) {
+      let coin = 0;
+      if (currentSession.golike_web_data) {
+        try {
+          const w = typeof currentSession.golike_web_data === 'string' ? JSON.parse(currentSession.golike_web_data) : currentSession.golike_web_data;
+          coin = Number(w?.coin || 0);
+        } catch(e) {}
+      }
+      const balance = coin ? `${coin.toLocaleString('vi-VN')} coin` : (currentSession.golike_balance || '0 coin');
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        hasSession: true,
+        user: {
+          username: currentSession.golike_username || 'GoLike User',
+          balance,
+          token: currentSession.golike_token,
+          coin
+        },
+        session: currentSession
+      }));
+      return;
+    }
+
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({
-      hasSession: Boolean(currentSession && currentSession.golike_token),
-      session: currentSession,
+      success: false,
+      hasSession: false,
+      session: null,
       isBrowserOpen
     }));
     return;
   }
 
   if (url.pathname === '/clear-session') {
-    let bodyStr = '';
-    req.on('data', chunk => { bodyStr += chunk; });
-    req.on('end', () => {
+    currentSession = null;
+    for (const p of SESSION_PATHS) {
       try {
-        if (bodyStr) {
-          const b = JSON.parse(bodyStr);
-          if (b && b.token) {
-            clearedTokens.add(String(b.token).replace(/^Bearer\s+/i, '').trim());
-          }
-        }
+        if (fs.existsSync(p)) fs.unlinkSync(p);
       } catch (e) {}
+    }
 
-      const qToken = url.searchParams.get('token');
-      if (qToken) {
-        clearedTokens.add(String(qToken).replace(/^Bearer\s+/i, '').trim());
-      }
+    for (const dbDir of candidateDirs) {
+      if (!fs.existsSync(dbDir)) continue;
+      try {
+        const files = fs.readdirSync(dbDir).filter(f => f.endsWith('.ldb') || f.endsWith('.log'));
+        for (const f of files) {
+          safeWipeFile(path.join(dbDir, f));
+        }
+      } catch(e) {}
+    }
 
-      if (currentSession?.golike_token) {
-        clearedTokens.add(currentSession.golike_token.replace(/^Bearer\s+/i, '').trim());
-      }
-      currentSession = null;
-      for (const p of SESSION_PATHS) {
-        try {
-          if (fs.existsSync(p)) fs.unlinkSync(p);
-        } catch (e) {}
-      }
-
-      for (const dbDir of candidateDirs) {
-        if (!fs.existsSync(dbDir)) continue;
-        try {
-          const files = fs.readdirSync(dbDir).filter(f => f.endsWith('.ldb') || f.endsWith('.log'));
-          for (const f of files) {
-            try {
-              fs.unlinkSync(path.join(dbDir, f));
-            } catch(e) {}
-          }
-        } catch(e) {}
-      }
-
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ success: true, message: 'Wiped GoLike session and leveldb files' }));
-    });
-    return;
-  }
-
-  if (url.pathname === '/reset-clear') {
-    clearedTokens.clear();
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ success: true }));
+    res.end(JSON.stringify({ success: true, message: 'Wiped GoLike session and leveldb files' }));
     return;
   }
 

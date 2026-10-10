@@ -1243,7 +1243,9 @@ fn clear_golike_session() -> Result<bool, String> {
           let path = entry.path();
           if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
             if ext == "ldb" || ext == "log" {
-              let _ = std::fs::remove_file(path);
+              if std::fs::remove_file(&path).is_err() {
+                let _ = std::fs::write(&path, b"");
+              }
             }
           }
         }

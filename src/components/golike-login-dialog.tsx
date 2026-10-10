@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Lock, RefreshCw } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { getGolikeUser } from "@/lib/golike-api";
@@ -80,8 +80,8 @@ export function GolikeLoginDialog({
     return null;
   };
 
-  // Tự động hoàn tất đăng nhập, lưu đủ 17 trường và tự động đóng webview
-  const handleAutoLoginSuccess = async (
+  // Tự động hoàn tất đăng nhập, lưu đủ 17 trường và tự động đóng webview ngay lập tức
+  const handleAutoLoginSuccess = (
     user: { username: string; balance: string; token: string; coin?: number },
     sessionData?: Partial<GolikeSessionData>,
   ) => {
@@ -96,47 +96,27 @@ export function GolikeLoginDialog({
     setIsProcessingLogin(true);
 
     try {
-      let tokenToUse = user.token.trim();
-      if (!tokenToUse.startsWith("Bearer ")) {
+      let tokenToUse = (user.token || "").trim();
+      if (tokenToUse && !tokenToUse.toLowerCase().startsWith("bearer ")) {
         tokenToUse = `Bearer ${tokenToUse}`;
       }
+
+      const username =
+        user.username && user.username !== "GoLike User"
+          ? user.username
+          : sessionData?.golike_username || "GoLike User";
+
+      const balance =
+        user.balance && user.balance !== "0 coin"
+          ? user.balance
+          : user.coin !== undefined
+            ? `${user.coin.toLocaleString("vi-VN")} coin`
+            : "0 coin";
 
       // Lưu đầy đủ 17 trường chuẩn GoMax
       const fullSession: GolikeSessionData = saveGolikeSession({
         ...(sessionData || {}),
         golike_token: tokenToUse,
-        golike_username: user.username,
-      });
-
-      // Đồng bộ protocol trong nền
-      try {
-        await syncGolikeProtocol(fullSession);
-      } catch {
-        // ignore
-      }
-
-      let username = user.username;
-      let balance = user.balance;
-
-      // Nếu username hoặc balance chưa chuẩn, truy vấn API để lấy số coin chính xác
-      if (!username || username === "GoLike User" || !balance || balance === "0 coin") {
-        try {
-          const userRes = await getGolikeUser(fullSession);
-          if (userRes.success && userRes.user) {
-            username = userRes.user.username;
-            balance = `${userRes.user.coin.toLocaleString("vi-VN")} coin`;
-          }
-        } catch {
-          // ignore
-        }
-      }
-
-      if (!username) username = "GoLike User";
-      if (!balance) balance = "0 coin";
-
-      // Lưu vào localStorage
-      saveGolikeSession({
-        ...fullSession,
         golike_username: username,
       });
 
@@ -151,29 +131,46 @@ export function GolikeLoginDialog({
       // Thông báo thành công
       showSuccessToast(`Đăng nhập GoLike thành công: ${username} (${balance})`);
 
-      // Cập nhật state app
+      // Cập nhật state app ngay lập tức
       onLoginSuccess({
         username,
         balance,
         token: fullSession.golike_token,
       });
 
-      // Tự động đóng webview ngay lập tức
+      // Tự động đóng webview ngay lập tức - Không đơ, không chờ đợi
       onClose();
+
+      // Đồng bộ protocol và làm mới số dư nếu cần (chạy ngầm sau khi đã đóng webview)
+      void (async () => {
+        try {
+          await syncGolikeProtocol(fullSession);
+        } catch {
+          // ignore
+        }
+
+        if (!balance || balance === "0 coin" || username === "GoLike User") {
+          try {
+            const userRes = await getGolikeUser(fullSession);
+            if (userRes.success && userRes.user) {
+              const freshBalance = `${userRes.user.coin.toLocaleString("vi-VN")} coin`;
+              localStorage.setItem("golike_username", userRes.user.username);
+              localStorage.setItem("golike_balance", freshBalance);
+              onLoginSuccess({
+                username: userRes.user.username,
+                balance: freshBalance,
+                token: fullSession.golike_token,
+              });
+            }
+          } catch {
+            // ignore
+          }
+        }
+      })();
     } catch {
       setIsProcessingLogin(false);
       isCompletedRef.current = false;
     }
-  };
-
-  // Đổi tài khoản / Xóa phiên cũ để đăng nhập tài khoản khác
-  const handleResetToLogin = async () => {
-    setIsProcessingLogin(true);
-    await clearGolikeSession();
-    isCompletedRef.current = false;
-    setIsProcessingLogin(false);
-    setIframeLoading(true);
-    setIframeKey((prev) => prev + 1);
   };
 
   // Reset và kích hoạt polling khi mở dialog
@@ -306,33 +303,12 @@ export function GolikeLoginDialog({
 
           {/* 3. THANH TRUY CẬP DƯỚI (SAFARI LIQUID GLASS NHƯ IPHONE) */}
           <div className="relative z-30 bg-zinc-950/90 backdrop-blur-2xl px-4 pt-2.5 pb-3 flex flex-col items-center justify-center shrink-0 border-t border-white/10">
-            {/* Thanh địa chỉ Safari Floating Capsule với nút Đổi tài khoản */}
-            <div className="h-9 w-full max-w-[310px] rounded-full bg-zinc-900/90 border border-white/15 px-3.5 flex items-center justify-between text-xs text-zinc-300 shadow-inner">
-              <div className="flex items-center gap-2 min-w-0">
-                <Lock className="size-3 text-emerald-400 shrink-0" />
-                <span className="font-medium tracking-tight text-[12px] text-zinc-200">
-                  app.golike.net
-                </span>
-              </div>
-
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleResetToLogin}
-                  className="text-[10px] text-cyan-400 hover:text-cyan-300 font-medium px-2 py-0.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer"
-                  title="Xóa phiên cũ để đăng nhập tài khoản khác"
-                >
-                  Đổi tài khoản
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIframeKey((prev) => prev + 1)}
-                  className="text-zinc-400 hover:text-white p-1 rounded-full transition-colors cursor-pointer"
-                  title="Tải lại trang"
-                >
-                  <RefreshCw className="size-2.5" />
-                </button>
-              </div>
+            {/* Thanh địa chỉ Safari Floating Capsule */}
+            <div className="h-9 w-full max-w-[280px] rounded-full bg-zinc-900/90 border border-white/15 px-3.5 flex items-center justify-center gap-2 text-xs text-zinc-300 shadow-inner">
+              <Lock className="size-3 text-emerald-400 shrink-0" />
+              <span className="font-medium tracking-tight text-[12px] text-zinc-200">
+                app.golike.net
+              </span>
             </div>
 
             {/* Thanh Home Indicator iPhone (chạm để đóng nếu muốn thoát) */}
