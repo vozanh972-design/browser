@@ -1,7 +1,13 @@
 "use client";
 
 import { Boxes, User } from "lucide-react";
-import { motion } from "motion/react";
+import {
+  type MotionValue,
+  motion,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
@@ -165,6 +171,285 @@ const TOP_ITEMS: RailItem[] = [
   { page: "dolike", textLabel: "DL", labelKey: "DoLike" },
 ];
 
+interface DockNavItemProps {
+  mouseX: MotionValue<number>;
+  page: AppPage;
+  active: boolean;
+  targetWidth: number;
+  labelKey: string;
+  textLabel?: string;
+  isProfiles: boolean;
+  isTtc: boolean;
+  isNvc: boolean;
+  isDolike: boolean;
+  onNavigate: (page: AppPage) => void;
+  t: (key: string, defaultValue?: string) => string;
+}
+
+function DockNavItem({
+  mouseX,
+  page,
+  active,
+  targetWidth,
+  labelKey,
+  textLabel,
+  isProfiles,
+  isTtc,
+  isNvc,
+  isDolike,
+  onNavigate,
+  t,
+}: DockNavItemProps) {
+  const ref = useRef<HTMLButtonElement>(null);
+
+  // Hiệu ứng Dock Magnification (Fisheye) tính toán theo khoảng cách tới con trỏ chuột
+  const dist = useTransform(mouseX, (x: number) => {
+    const rect = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
+    return x - rect.x - rect.width / 2;
+  });
+
+  const scaleSpring = useSpring(
+    useTransform(dist, [-140, 0, 140], [1, 1.18, 1]),
+    { stiffness: 280, damping: 22, mass: 0.5 },
+  );
+
+  const ySpring = useSpring(
+    useTransform(dist, [-140, 0, 140], [0, -3.5, 0]),
+    { stiffness: 280, damping: 22, mass: 0.5 },
+  );
+
+  const springConfig = {
+    type: "spring" as const,
+    stiffness: 360,
+    damping: 28,
+    mass: 0.65,
+  };
+
+  return (
+    <Tooltip delayDuration={400}>
+      <TooltipTrigger asChild>
+        <motion.button
+          ref={ref}
+          type="button"
+          onClick={() => onNavigate(page)}
+          aria-label={t(labelKey, labelKey)}
+          aria-current={active ? "page" : undefined}
+          initial={false}
+          animate={{ width: targetWidth }}
+          style={{ scale: scaleSpring, y: ySpring }}
+          whileTap={{ scale: 0.94 }}
+          transition={springConfig}
+          className={cn(
+            "relative flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-xl overflow-hidden select-none origin-bottom",
+            active
+              ? "text-foreground font-semibold"
+              : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
+          )}
+        >
+          {/* Background pill trượt mượt mà (Expanding Morphing Pill) */}
+          {active && (
+            <motion.div
+              layoutId="dockActivePill"
+              className="absolute inset-0 rounded-xl bg-foreground/[0.08] dark:bg-white/[0.12] ring-1 ring-foreground/10 dark:ring-white/10 shadow-xs"
+              transition={springConfig}
+            />
+          )}
+
+          {/* Lớp hiển thị khi không active (thu nhỏ lại) */}
+          <motion.div
+            initial={false}
+            animate={{
+              opacity: active ? 0 : 1,
+              scale: active ? 0.7 : 1,
+            }}
+            transition={{
+              duration: 0.28,
+              ease: [0.25, 0.1, 0.25, 1],
+            }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            {isProfiles ? (
+              <User className="size-[17px]" />
+            ) : (
+              <span className="text-[11px] font-bold tracking-tight">
+                {textLabel}
+              </span>
+            )}
+          </motion.div>
+
+          {/* Lớp hiển thị khi active (nở chữ đầy đủ và crossfade) */}
+          <motion.div
+            initial={false}
+            animate={{
+              opacity: active ? 1 : 0,
+              scale: active ? 1 : 0.75,
+            }}
+            transition={{
+              duration: 0.35,
+              delay: active ? 0.08 : 0,
+              ease: [0.25, 0.1, 0.25, 1],
+            }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+          >
+            <span
+              className={cn(
+                "text-[11px] font-bold tracking-tight whitespace-nowrap",
+                isProfiles && "text-amber-400",
+                isTtc && "text-emerald-400 lowercase",
+                isNvc && "text-blue-400 lowercase",
+                isDolike && "text-fuchsia-400 lowercase",
+              )}
+            >
+              {isProfiles
+                ? "XSMM"
+                : isTtc
+                  ? "tuongtaccheo"
+                  : isNvc
+                    ? "nhiemvucheo"
+                    : isDolike
+                      ? "dolike"
+                      : textLabel}
+            </span>
+          </motion.div>
+        </motion.button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={8}>
+        {isDolike && active
+          ? "dolike"
+          : isNvc && active
+            ? "nhiemvucheo"
+            : isTtc && active
+              ? "tuongtaccheo"
+              : isProfiles && active
+                ? "XSMM"
+                : t(labelKey, labelKey)}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function DockSettingsButton({
+  mouseX,
+  active,
+  onNavigate,
+  t,
+}: {
+  mouseX: MotionValue<number>;
+  active: boolean;
+  onNavigate: (page: AppPage) => void;
+  t: (key: string, defaultValue?: string) => string;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const dist = useTransform(mouseX, (x: number) => {
+    const rect = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
+    return x - rect.x - rect.width / 2;
+  });
+
+  const scaleSpring = useSpring(
+    useTransform(dist, [-140, 0, 140], [1, 1.18, 1]),
+    { stiffness: 280, damping: 22, mass: 0.5 },
+  );
+
+  const ySpring = useSpring(
+    useTransform(dist, [-140, 0, 140], [0, -3.5, 0]),
+    { stiffness: 280, damping: 22, mass: 0.5 },
+  );
+
+  return (
+    <Tooltip delayDuration={400}>
+      <TooltipTrigger asChild>
+        <motion.button
+          ref={ref}
+          type="button"
+          onClick={() => onNavigate("settings")}
+          aria-label={t("rail.settings")}
+          aria-current={active ? "page" : undefined}
+          style={{ scale: scaleSpring, y: ySpring }}
+          whileTap={{ scale: 0.94 }}
+          className={cn(
+            "relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-colors duration-150 origin-bottom",
+            active
+              ? "text-foreground"
+              : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
+          )}
+        >
+          {active && (
+            <motion.div
+              layoutId="dockActivePill"
+              className="absolute inset-0 rounded-xl bg-foreground/[0.08] dark:bg-white/[0.12] ring-1 ring-foreground/10 dark:ring-white/10 shadow-xs"
+              transition={{
+                type: "spring",
+                stiffness: 360,
+                damping: 28,
+                mass: 0.65,
+              }}
+            />
+          )}
+          <GoGear className="relative z-10 size-[18px]" />
+        </motion.button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={8}>
+        {t("rail.settings")}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+function DockMoreButton({
+  mouseX,
+  moreOpen,
+  setMoreOpen,
+  t,
+}: {
+  mouseX: MotionValue<number>;
+  moreOpen: boolean;
+  setMoreOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  t: (key: string, defaultValue?: string) => string;
+}) {
+  const ref = useRef<HTMLButtonElement>(null);
+  const dist = useTransform(mouseX, (x: number) => {
+    const rect = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
+    return x - rect.x - rect.width / 2;
+  });
+
+  const scaleSpring = useSpring(
+    useTransform(dist, [-140, 0, 140], [1, 1.18, 1]),
+    { stiffness: 280, damping: 22, mass: 0.5 },
+  );
+
+  const ySpring = useSpring(
+    useTransform(dist, [-140, 0, 140], [0, -3.5, 0]),
+    { stiffness: 280, damping: 22, mass: 0.5 },
+  );
+
+  return (
+    <Tooltip delayDuration={400}>
+      <TooltipTrigger asChild>
+        <motion.button
+          ref={ref}
+          type="button"
+          onClick={() => setMoreOpen((v) => !v)}
+          aria-label={t("rail.more.label", "More")}
+          aria-expanded={moreOpen}
+          style={{ scale: scaleSpring, y: ySpring }}
+          whileTap={{ scale: 0.94 }}
+          className={cn(
+            "grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-all duration-150 origin-bottom",
+            moreOpen
+              ? "bg-foreground/10 text-foreground"
+              : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
+          )}
+        >
+          <GoKebabHorizontal className="size-[18px]" />
+        </motion.button>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={8}>
+        {t("rail.more.label", "More")}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 export function RailNav({
   currentPage,
   onNavigate,
@@ -174,6 +459,7 @@ export function RailNav({
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
   const [moreOpen, setMoreOpen] = useState(false);
   const visibleTopItems = TOP_ITEMS;
+  const mouseX = useMotionValue(Infinity);
 
   const {
     logoRef,
@@ -202,9 +488,11 @@ export function RailNav({
         "bg-transparent px-4 pb-3.5 pt-1 select-none",
       )}
     >
-      {/* Pill container — Apple dock style */}
+      {/* Pill container — Apple dock style with Magnification & Glassmorphism */}
       <motion.div
         layout
+        onMouseMove={(e) => mouseX.set(e.clientX)}
+        onMouseLeave={() => mouseX.set(Infinity)}
         transition={{
           type: "spring",
           stiffness: 350,
@@ -260,8 +548,8 @@ export function RailNav({
         {/* Divider */}
         <div className="mx-1 h-5 w-px shrink-0 rounded-full bg-border" />
 
-        {/* Main nav items */}
-        {visibleTopItems.map(({ page, Icon, textLabel, labelKey }) => {
+        {/* Main nav items with Fisheye Magnification & Expanding Morphing Pill */}
+        {visibleTopItems.map(({ page, textLabel, labelKey }) => {
           const active = currentPage === page;
           const isProfiles = page === "profiles";
           const isTtc = page === "ttc";
@@ -281,111 +569,22 @@ export function RailNav({
                     : 36
             : 36;
 
-          const springConfig = {
-            type: "spring" as const,
-            stiffness: 360,
-            damping: 28,
-            mass: 0.65,
-          };
-
           return (
-            <Tooltip key={page} delayDuration={400}>
-              <TooltipTrigger asChild>
-                <motion.button
-                  type="button"
-                  onClick={() => onNavigate(page)}
-                  aria-label={t(labelKey, labelKey)}
-                  aria-current={active ? "page" : undefined}
-                  initial={false}
-                  animate={{ width: targetWidth }}
-                  whileTap={{ scale: 0.95 }}
-                  transition={springConfig}
-                  className={cn(
-                    "relative flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-xl overflow-hidden select-none",
-                    active
-                      ? "text-foreground font-semibold"
-                      : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
-                  )}
-                >
-                  {/* Background pill trượt mượt mà */}
-                  {active && (
-                    <motion.div
-                      layoutId="dockActivePill"
-                      className="absolute inset-0 rounded-xl bg-foreground/[0.08] dark:bg-white/[0.12] ring-1 ring-foreground/10 dark:ring-white/10 shadow-xs"
-                      transition={springConfig}
-                    />
-                  )}
-
-                  {/* Lớp hiển thị khi không active (thu nhỏ lại) */}
-                  <motion.div
-                    initial={false}
-                    animate={{
-                      opacity: active ? 0 : 1,
-                      scale: active ? 0.7 : 1,
-                    }}
-                    transition={{
-                      duration: 0.28,
-                      ease: [0.25, 0.1, 0.25, 1],
-                    }}
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  >
-                    {isProfiles ? (
-                      <User className="size-[17px]" />
-                    ) : (
-                      <span className="text-[11px] font-bold tracking-tight">
-                        {textLabel}
-                      </span>
-                    )}
-                  </motion.div>
-
-                  {/* Lớp hiển thị khi active (co giãn mở rộng đầy đủ chữ) */}
-                  <motion.div
-                    initial={false}
-                    animate={{
-                      opacity: active ? 1 : 0,
-                      scale: active ? 1 : 0.75,
-                    }}
-                    transition={{
-                      duration: 0.35,
-                      delay: active ? 0.08 : 0,
-                      ease: [0.25, 0.1, 0.25, 1],
-                    }}
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                  >
-                    <span
-                      className={cn(
-                        "text-[11px] font-bold tracking-tight whitespace-nowrap",
-                        isProfiles && "text-amber-400",
-                        isTtc && "text-emerald-400 lowercase",
-                        isNvc && "text-blue-400 lowercase",
-                        isDolike && "text-fuchsia-400 lowercase",
-                      )}
-                    >
-                      {isProfiles
-                        ? "XSMM"
-                        : isTtc
-                          ? "tuongtaccheo"
-                          : isNvc
-                            ? "nhiemvucheo"
-                            : isDolike
-                              ? "dolike"
-                              : textLabel}
-                    </span>
-                  </motion.div>
-                </motion.button>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={8}>
-                {isDolike && active
-                  ? "dolike"
-                  : isNvc && active
-                    ? "nhiemvucheo"
-                    : isTtc && active
-                      ? "tuongtaccheo"
-                      : isProfiles && active
-                        ? "XSMM"
-                        : t(labelKey, labelKey)}
-              </TooltipContent>
-            </Tooltip>
+            <DockNavItem
+              key={page}
+              mouseX={mouseX}
+              page={page}
+              active={active}
+              targetWidth={targetWidth}
+              labelKey={labelKey}
+              textLabel={textLabel}
+              isProfiles={isProfiles}
+              isTtc={isTtc}
+              isNvc={isNvc}
+              isDolike={isDolike}
+              onNavigate={onNavigate}
+              t={t}
+            />
           );
         })}
 
@@ -393,62 +592,20 @@ export function RailNav({
         <div className="mx-1 h-5 w-px shrink-0 rounded-full bg-border" />
 
         {/* Settings */}
-        <Tooltip delayDuration={400}>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => onNavigate("settings")}
-              aria-label={t("rail.settings")}
-              aria-current={currentPage === "settings" ? "page" : undefined}
-              className={cn(
-                "relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-colors duration-150",
-                currentPage === "settings"
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
-              )}
-            >
-              {currentPage === "settings" && (
-                <motion.div
-                  layoutId="dockActivePill"
-                  className="absolute inset-0 rounded-xl bg-foreground/[0.08] dark:bg-white/[0.12] ring-1 ring-foreground/10 dark:ring-white/10 shadow-xs"
-                  transition={{
-                    type: "spring",
-                    stiffness: 360,
-                    damping: 28,
-                    mass: 0.65,
-                  }}
-                />
-              )}
-              <GoGear className="relative z-10 size-[18px]" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={8}>
-            {t("rail.settings")}
-          </TooltipContent>
-        </Tooltip>
+        <DockSettingsButton
+          mouseX={mouseX}
+          active={currentPage === "settings"}
+          onNavigate={onNavigate}
+          t={t}
+        />
 
         {/* More 3-dots button */}
-        <Tooltip delayDuration={400}>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => setMoreOpen((v) => !v)}
-              aria-label={t("rail.more.label", "More")}
-              aria-expanded={moreOpen}
-              className={cn(
-                "grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-all duration-150",
-                moreOpen
-                  ? "bg-foreground/10 text-foreground"
-                  : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
-              )}
-            >
-              <GoKebabHorizontal className="size-[18px]" />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="top" sideOffset={8}>
-            {t("rail.more.label", "More")}
-          </TooltipContent>
-        </Tooltip>
+        <DockMoreButton
+          mouseX={mouseX}
+          moreOpen={moreOpen}
+          setMoreOpen={setMoreOpen}
+          t={t}
+        />
       </motion.div>
 
       {/* More popup — ONLY Tiện ích (About AutoLunex is removed!) */}
