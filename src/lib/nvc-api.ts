@@ -185,3 +185,141 @@ export async function getNvcMe(sessionCookie?: string): Promise<{
     return { success: false, error: msg };
   }
 }
+
+export interface NvcFacebookAccountItem {
+  id: number;
+  externalUid?: string;
+  userId?: string;
+  fbid?: string;
+  displayName?: string;
+  profileUrl?: string;
+  status?: string;
+  healthStatus?: string;
+  candidates?: Array<{ id: string | number; kind: string }>;
+  isVerified?: boolean;
+}
+
+/**
+ * Lấy danh sách tài khoản Facebook đã liên kết trên Nhiệm Vụ Chéo
+ * GET https://nhiemvucheo.com/api/v1/account/facebook-accounts
+ */
+export async function getNvcFacebookAccounts(
+  sessionCookie?: string,
+  page = 1,
+  limit = 100,
+): Promise<{
+  success: boolean;
+  accounts: NvcFacebookAccountItem[];
+  error?: string;
+}> {
+  try {
+    const rawOutput = await runNvcCurl({
+      url: `https://nhiemvucheo.com/api/v1/account/facebook-accounts?page=${page}&limit=${limit}`,
+      method: "GET",
+      cookie: sessionCookie ? `nvc_session=${sessionCookie}` : undefined,
+      headers: [
+        "accept: */*",
+        "referer: https://nhiemvucheo.com/task/accounts",
+        `user-agent: ${NVC_USER_AGENT}`,
+      ],
+    });
+
+    const parts = rawOutput.split(/\r?\n\r?\n/);
+    const bodyText = parts[parts.length - 1].trim();
+    const data = JSON.parse(bodyText);
+
+    if (!data?.success || !Array.isArray(data.data)) {
+      return {
+        success: false,
+        accounts: [],
+        error: data?.error?.message || "Không thể lấy danh sách tài khoản NVC",
+      };
+    }
+
+    return {
+      success: true,
+      accounts: data.data,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Lỗi kết nối NVC";
+    return { success: false, accounts: [], error: msg };
+  }
+}
+
+/**
+ * Thêm tài khoản Facebook vào Nhiệm Vụ Chéo (Bulk add theo UID / profileUrls)
+ * POST https://nhiemvucheo.com/api/v1/account/facebook-accounts/bulk
+ */
+export async function addNvcFacebookAccounts(
+  sessionCookie: string,
+  uids: string[],
+): Promise<{
+  success: boolean;
+  linkedUids: string[];
+  error?: string;
+}> {
+  try {
+    const cleanUids = uids.map((u) => u.trim()).filter(Boolean);
+    if (cleanUids.length === 0) {
+      return { success: false, linkedUids: [], error: "Danh sách UID trống" };
+    }
+
+    const rawOutput = await runNvcCurl({
+      url: "https://nhiemvucheo.com/api/v1/account/facebook-accounts/bulk",
+      method: "POST",
+      cookie: `nvc_session=${sessionCookie}`,
+      headers: [
+        "accept: */*",
+        "content-type: application/json",
+        "origin: https://nhiemvucheo.com",
+        "referer: https://nhiemvucheo.com/task/accounts",
+        `user-agent: ${NVC_USER_AGENT}`,
+      ],
+      body: JSON.stringify({ profileUrls: cleanUids }),
+    });
+
+    const parts = rawOutput.split(/\r?\n\r?\n/);
+    const bodyText = parts[parts.length - 1].trim();
+    const data = JSON.parse(bodyText);
+
+    if (!data?.success) {
+      const errMsg =
+        data?.error?.message ||
+        data?.message ||
+        "Lỗi không thể liên kết tài khoản NVC";
+      return { success: false, linkedUids: [], error: errMsg };
+    }
+
+    // Phân tích kết quả từ NVC
+    const results = data.data?.results;
+    const successfullyLinked: string[] = [];
+
+    if (Array.isArray(results)) {
+      for (const item of results) {
+        const uid =
+          item.account?.externalUid ||
+          item.account?.userId ||
+          item.account?.fbid;
+        if (uid) {
+          successfullyLinked.push(String(uid));
+        } else {
+          const match = item.profileUrl?.match(/(\d+)/);
+          if (match) successfullyLinked.push(match[1]);
+        }
+      }
+    }
+
+    // Nếu không bóc tách được từ results nhưng api báo success, giả định các UID gửi lên đã thành công
+    if (successfullyLinked.length === 0 && cleanUids.length > 0) {
+      successfullyLinked.push(...cleanUids);
+    }
+
+    return {
+      success: true,
+      linkedUids: successfullyLinked,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Lỗi kết nối NVC";
+    return { success: false, linkedUids: [], error: msg };
+  }
+}

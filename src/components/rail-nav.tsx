@@ -14,6 +14,7 @@ export type AppPage =
   | "profiles"
   | "ttc"
   | "nvc"
+  | "dolike"
   | "proxies"
   | "groups"
   | "vpns"
@@ -161,6 +162,7 @@ const TOP_ITEMS: RailItem[] = [
   { page: "profiles", Icon: User, labelKey: "XSMM" },
   { page: "ttc", textLabel: "TTC", labelKey: "TTC" },
   { page: "nvc", textLabel: "NVC", labelKey: "NVC" },
+  { page: "dolike", textLabel: "DL", labelKey: "DoLike" },
 ];
 
 export function RailNav({
@@ -205,13 +207,14 @@ export function RailNav({
         layout
         transition={{
           type: "spring",
-          stiffness: 160,
-          damping: 22,
-          mass: 0.85,
+          stiffness: 350,
+          damping: 28,
+          mass: 0.7,
         }}
         className={cn(
           "flex items-center gap-1 rounded-2xl border border-border/50",
-          "bg-card/60 px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.25)] backdrop-blur-xl",
+          "bg-card/75 px-2 py-1.5 shadow-[0_12px_36px_-6px_rgba(0,0,0,0.3),0_4px_12px_-2px_rgba(0,0,0,0.15)] backdrop-blur-2xl",
+          "ring-1 ring-white/10 dark:ring-white/5",
         )}
       >
         {/* Logo */}
@@ -263,6 +266,7 @@ export function RailNav({
           const isProfiles = page === "profiles";
           const isTtc = page === "ttc";
           const isNvc = page === "nvc";
+          const isDolike = page === "dolike";
 
           // Chiều rộng đích chính xác tính bằng pixel cho từng trạng thái mở rộng
           const targetWidth = active
@@ -272,14 +276,16 @@ export function RailNav({
                 ? 110
                 : isNvc
                   ? 104
-                  : 36
+                  : isDolike
+                    ? 82
+                    : 36
             : 36;
 
           const springConfig = {
             type: "spring" as const,
-            stiffness: 160,
-            damping: 22,
-            mass: 0.85,
+            stiffness: 360,
+            damping: 28,
+            mass: 0.65,
           };
 
           return (
@@ -292,6 +298,7 @@ export function RailNav({
                   aria-current={active ? "page" : undefined}
                   initial={false}
                   animate={{ width: targetWidth }}
+                  whileTap={{ scale: 0.95 }}
                   transition={springConfig}
                   className={cn(
                     "relative flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-xl overflow-hidden select-none",
@@ -304,7 +311,7 @@ export function RailNav({
                   {active && (
                     <motion.div
                       layoutId="dockActivePill"
-                      className="absolute inset-0 rounded-xl bg-foreground/10"
+                      className="absolute inset-0 rounded-xl bg-foreground/[0.08] dark:bg-white/[0.12] ring-1 ring-foreground/10 dark:ring-white/10 shadow-xs"
                       transition={springConfig}
                     />
                   )}
@@ -351,6 +358,7 @@ export function RailNav({
                         isProfiles && "text-amber-400",
                         isTtc && "text-emerald-400 lowercase",
                         isNvc && "text-blue-400 lowercase",
+                        isDolike && "text-fuchsia-400 lowercase",
                       )}
                     >
                       {isProfiles
@@ -359,19 +367,23 @@ export function RailNav({
                           ? "tuongtaccheo"
                           : isNvc
                             ? "nhiemvucheo"
-                            : textLabel}
+                            : isDolike
+                              ? "dolike"
+                              : textLabel}
                     </span>
                   </motion.div>
                 </motion.button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={8}>
-                {isNvc && active
-                  ? "nhiemvucheo"
-                  : isTtc && active
-                    ? "tuongtaccheo"
-                    : isProfiles && active
-                      ? "XSMM"
-                      : t(labelKey, labelKey)}
+                {isDolike && active
+                  ? "dolike"
+                  : isNvc && active
+                    ? "nhiemvucheo"
+                    : isTtc && active
+                      ? "tuongtaccheo"
+                      : isProfiles && active
+                        ? "XSMM"
+                        : t(labelKey, labelKey)}
               </TooltipContent>
             </Tooltip>
           );
@@ -398,11 +410,12 @@ export function RailNav({
               {currentPage === "settings" && (
                 <motion.div
                   layoutId="dockActivePill"
-                  className="absolute inset-0 rounded-xl bg-foreground/10"
+                  className="absolute inset-0 rounded-xl bg-foreground/[0.08] dark:bg-white/[0.12] ring-1 ring-foreground/10 dark:ring-white/10 shadow-xs"
                   transition={{
                     type: "spring",
-                    stiffness: 350,
-                    damping: 30,
+                    stiffness: 360,
+                    damping: 28,
+                    mass: 0.65,
                   }}
                 />
               )}

@@ -4,6 +4,7 @@ import {
   CircleAlert,
   Flag,
   Key,
+  Link2,
   Play,
   Plus,
   RefreshCw,
@@ -32,7 +33,11 @@ import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import { NvcLoginDialog } from "@/components/nvc-login-dialog";
-import { getNvcMe } from "@/lib/nvc-api";
+import {
+  getNvcMe,
+  getNvcFacebookAccounts,
+  addNvcFacebookAccounts,
+} from "@/lib/nvc-api";
 import {
   checkFacebookAccountFull,
   checkLiveApi,
@@ -41,7 +46,7 @@ import {
 } from "@/lib/facebook-api";
 import { checkCookieIg, fetchIgUserInfo } from "@/lib/instagram-api";
 import { MOTION_EASE_OUT } from "@/lib/motion";
-import { showSuccessToast } from "@/lib/toast-utils";
+import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
 import {
   type AppVersionCheckResult,
@@ -177,6 +182,9 @@ export default function HomePage() {
       isLoggedIn: !!username,
     };
   });
+  const [nvcLinkedUids, setNvcLinkedUids] = useState<string[]>([]);
+  const [nvcLinkingIds, setNvcLinkingIds] = useState<string[]>([]);
+  const hasCheckedNvcAccountsRef = useRef(false);
   const [accounts, setAccounts] = useState<FacebookAccount[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -436,11 +444,45 @@ export default function HomePage() {
     };
   }, []);
 
+  // Tự động kiểm tra danh sách tài khoản đã liên kết trên Nhiệm Vụ Chéo (chỉ gọi 1 lần khi vào tab NVC / đăng nhập)
+  useEffect(() => {
+    if (currentPage !== "nvc" || !nvcAccount.isLoggedIn) return;
+    if (hasCheckedNvcAccountsRef.current) return;
+    hasCheckedNvcAccountsRef.current = true;
+
+    const cookie =
+      nvcAccount.sessionCookie ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("nvc_session_cookie")
+        : "") ||
+      "";
+
+    if (!cookie) return;
+
+    void getNvcFacebookAccounts(cookie).then((res) => {
+      if (res.success && Array.isArray(res.accounts)) {
+        const uids: string[] = [];
+        for (const a of res.accounts) {
+          if (a.externalUid) uids.push(String(a.externalUid));
+          if (a.userId) uids.push(String(a.userId));
+          if (a.fbid) uids.push(String(a.fbid));
+          if (Array.isArray(a.candidates)) {
+            for (const c of a.candidates) {
+              if (c?.id) uids.push(String(c.id));
+            }
+          }
+        }
+        setNvcLinkedUids(Array.from(new Set(uids)));
+      }
+    });
+  }, [currentPage, nvcAccount.isLoggedIn, nvcAccount.sessionCookie]);
+
   const handleNvcLoginSuccess = (user: {
     username: string;
     balance: string;
     sessionCookie?: string;
   }) => {
+    hasCheckedNvcAccountsRef.current = false;
     setNvcAccount({
       username: user.username,
       balance: user.balance,
@@ -450,6 +492,9 @@ export default function HomePage() {
   };
 
   const handleNvcLogout = () => {
+    hasCheckedNvcAccountsRef.current = false;
+    setNvcLinkedUids([]);
+    setNvcLinkingIds([]);
     try {
       localStorage.removeItem("nvc_username");
       localStorage.removeItem("nvc_balance");
@@ -464,6 +509,174 @@ export default function HomePage() {
       isLoggedIn: false,
     });
     showSuccessToast("Đã đăng xuất tài khoản Nhiệm Vụ Chéo");
+  };
+
+  const handleLinkNvcAccount = async (targetAccount: FacebookAccount) => {
+    if (!nvcAccount.isLoggedIn) {
+      showErrorToast(
+        tr(
+          "Vui lòng đăng nhập Nhiệm Vụ Chéo trước!",
+          "Please log in to NVC first!",
+        ),
+      );
+      setIsNvcLoginOpen(true);
+      return;
+    }
+    const cookie =
+      nvcAccount.sessionCookie ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("nvc_session_cookie")
+        : "") ||
+      "";
+    if (!cookie) {
+      showErrorToast(
+        tr("Phiên đăng nhập NVC đã hết hạn", "NVC session expired"),
+      );
+      return;
+    }
+
+    setNvcLinkingIds((prev) => [...prev, targetAccount.id]);
+    try {
+      const res = await addNvcFacebookAccounts(cookie, [targetAccount.uid]);
+      if (res.success) {
+        setNvcLinkedUids((prev) =>
+          Array.from(new Set([...prev, targetAccount.uid, ...res.linkedUids])),
+        );
+        showSuccessToast(
+          tr(
+            `Đã liên kết nick [${targetAccount.uid}] vào NVC thành công!`,
+            `Successfully linked account [${targetAccount.uid}] to NVC!`,
+          ),
+        );
+      } else {
+        showErrorToast(
+          res.error ||
+            tr("Chưa liên kết được tài khoản vào NVC", "Failed to link account to NVC"),
+        );
+      }
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : tr("Lỗi kết nối NVC", "NVC connection error");
+      showErrorToast(msg);
+    } finally {
+      setNvcLinkingIds((prev) => prev.filter((id) => id !== targetAccount.id));
+    }
+  };
+
+  const handleLinkNvcPage = async (pageKey: string, pageUid: string) => {
+    if (!nvcAccount.isLoggedIn) {
+      showErrorToast(
+        tr(
+          "Vui lòng đăng nhập Nhiệm Vụ Chéo trước!",
+          "Please log in to NVC first!",
+        ),
+      );
+      setIsNvcLoginOpen(true);
+      return;
+    }
+    const cookie =
+      nvcAccount.sessionCookie ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("nvc_session_cookie")
+        : "") ||
+      "";
+    if (!cookie) return;
+
+    setNvcLinkingIds((prev) => [...prev, pageKey]);
+    try {
+      const res = await addNvcFacebookAccounts(cookie, [pageUid]);
+      if (res.success) {
+        setNvcLinkedUids((prev) =>
+          Array.from(new Set([...prev, pageUid, ...res.linkedUids])),
+        );
+        showSuccessToast(
+          tr(
+            `Đã liên kết Page [${pageUid}] vào NVC thành công!`,
+            `Successfully linked Page [${pageUid}] to NVC!`,
+          ),
+        );
+      } else {
+        showErrorToast(
+          res.error || tr("Lỗi chưa liên kết được Page", "Failed to link Page"),
+        );
+      }
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : tr("Lỗi kết nối NVC", "NVC error");
+      showErrorToast(msg);
+    } finally {
+      setNvcLinkingIds((prev) => prev.filter((id) => id !== pageKey));
+    }
+  };
+
+  const handleBulkLinkNvc = async () => {
+    if (!nvcAccount.isLoggedIn) {
+      showErrorToast(
+        tr(
+          "Vui lòng đăng nhập Nhiệm Vụ Chéo trước!",
+          "Please log in to NVC first!",
+        ),
+      );
+      setIsNvcLoginOpen(true);
+      return;
+    }
+    const cookie =
+      nvcAccount.sessionCookie ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("nvc_session_cookie")
+        : "") ||
+      "";
+    if (!cookie) return;
+
+    const selectedAccounts = filteredAccounts.filter((a) =>
+      selectedIds.includes(a.id),
+    );
+    const uidsToLink = selectedAccounts.map((a) => a.uid).filter(Boolean);
+
+    for (const a of filteredAccounts) {
+      for (const p of a.pages || []) {
+        if (selectedIds.includes(`page_${a.id}_${p.pageId}`)) {
+          const pUid = p.additionalProfileId || p.pageId;
+          if (pUid) uidsToLink.push(pUid);
+        }
+      }
+    }
+
+    if (uidsToLink.length === 0) return;
+
+    setNvcLinkingIds((prev) => Array.from(new Set([...prev, ...selectedIds])));
+    try {
+      const res = await addNvcFacebookAccounts(cookie, uidsToLink);
+      if (res.success) {
+        setNvcLinkedUids((prev) =>
+          Array.from(new Set([...prev, ...uidsToLink, ...res.linkedUids])),
+        );
+        showSuccessToast(
+          tr(
+            `Đã liên kết ${uidsToLink.length} tài khoản vào NVC thành công!`,
+            `Successfully linked ${uidsToLink.length} accounts to NVC!`,
+          ),
+        );
+      } else {
+        showErrorToast(
+          res.error ||
+            tr(
+              "Lỗi chưa liên kết được tài khoản vào NVC",
+              "Failed to link accounts to NVC",
+            ),
+        );
+      }
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error ? err.message : tr("Lỗi kết nối NVC", "NVC error");
+      showErrorToast(msg);
+    } finally {
+      setNvcLinkingIds((prev) =>
+        prev.filter((id) => !selectedIds.includes(id)),
+      );
+    }
   };
 
   // Đăng xuất key bản quyền ứng dụng (giữ nguyên toàn bộ tài khoản và phiên XSMM)
@@ -491,7 +704,7 @@ export default function HomePage() {
       setCurrentPage("settings");
       return;
     }
-    if (page === "nvc") {
+    if (page === "nvc" || page === "dolike") {
       setCurrentPlatform("facebook");
     }
     setCurrentPage(page);
@@ -1230,6 +1443,7 @@ export default function HomePage() {
     switch (page) {
       case "profiles":
       case "nvc":
+      case "dolike":
         return "";
       case "ttc":
         return "TTC";
@@ -1396,6 +1610,23 @@ export default function HomePage() {
                         {tr("Kiểm tra lại", "Re-check")} ({selectedIds.length})
                       </span>
                     </Button>
+                    {currentPage === "nvc" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void handleBulkLinkNvc()}
+                        className="h-7 text-[11px] gap-1 cursor-pointer bg-blue-500/10 text-blue-500 border-blue-500/30 hover:bg-blue-500/20"
+                        title={tr(
+                          "Liên kết các tài khoản đã chọn vào Nhiệm Vụ Chéo",
+                          "Link selected accounts to NVC",
+                        )}
+                      >
+                        <Link2 className="size-3" />
+                        <span>
+                          {tr("Liên kết NVC", "Link NVC")} ({selectedIds.length})
+                        </span>
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="destructive"
@@ -1691,10 +1922,65 @@ export default function HomePage() {
 
                             {/* LIÊN KẾT */}
                             <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
-                              {acc.token ? (
+                              {currentPage === "nvc" ? (
+                                (() => {
+                                  const isLinked = nvcLinkedUids.includes(acc.uid);
+                                  const isLinking = nvcLinkingIds.includes(acc.id);
+
+                                  if (isLinked) {
+                                    return (
+                                      <span
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
+                                        title={tr(
+                                          "Đã liên kết trên Nhiệm Vụ Chéo",
+                                          "Linked on NVC",
+                                        )}
+                                      >
+                                        <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                        {tr("Đã liên kết", "Linked")}
+                                      </span>
+                                    );
+                                  }
+
+                                  return (
+                                    <button
+                                      type="button"
+                                      disabled={isLinking}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        void handleLinkNvcAccount(acc);
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 transition-colors cursor-pointer whitespace-nowrap"
+                                      title={tr(
+                                        "Nhấn để liên kết tài khoản vào Nhiệm Vụ Chéo",
+                                        "Click to link account to NVC",
+                                      )}
+                                    >
+                                      {isLinking ? (
+                                        <>
+                                          <RefreshCw className="size-2.5 animate-spin shrink-0" />
+                                          <span>
+                                            {tr("Đang liên kết...", "Linking...")}
+                                          </span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Link2 className="size-2.5 shrink-0" />
+                                          <span>
+                                            {tr("Chưa liên kết", "Unlinked")}
+                                          </span>
+                                        </>
+                                      )}
+                                    </button>
+                                  );
+                                })()
+                              ) : acc.token ? (
                                 <span
                                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
-                                  title={tr("Đã liên kết token vào hệ thống", "Linked with token")}
+                                  title={tr(
+                                    "Đã liên kết token vào hệ thống",
+                                    "Linked with token",
+                                  )}
                                 >
                                   <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
                                   {tr("Đã liên kết", "Linked")}
@@ -1989,10 +2275,76 @@ export default function HomePage() {
 
                                     {/* Cột 2 (1.2fr): Token của Page */}
                                     <div className="flex items-center pr-2">
-                                      {p.pageToken ? (
+                                      {currentPage === "nvc" ? (
+                                        (() => {
+                                          const isPageLinked =
+                                            nvcLinkedUids.includes(displayUid);
+                                          const isPageLinking =
+                                            nvcLinkingIds.includes(pageKey);
+
+                                          if (isPageLinked) {
+                                            return (
+                                              <span
+                                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
+                                                title={tr(
+                                                  "Page đã liên kết trên Nhiệm Vụ Chéo",
+                                                  "Page linked on NVC",
+                                                )}
+                                              >
+                                                <span className="size-1 rounded-full bg-emerald-500 shrink-0" />
+                                                {tr("Đã liên kết", "Linked")}
+                                              </span>
+                                            );
+                                          }
+
+                                          return (
+                                            <button
+                                              type="button"
+                                              disabled={isPageLinking}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                void handleLinkNvcPage(
+                                                  pageKey,
+                                                  displayUid,
+                                                );
+                                              }}
+                                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 transition-colors cursor-pointer whitespace-nowrap"
+                                              title={tr(
+                                                "Nhấn để liên kết Page vào Nhiệm Vụ Chéo",
+                                                "Click to link Page to NVC",
+                                              )}
+                                            >
+                                              {isPageLinking ? (
+                                                <>
+                                                  <RefreshCw className="size-2 animate-spin shrink-0" />
+                                                  <span>
+                                                    {tr(
+                                                      "Đang liên kết...",
+                                                      "Linking...",
+                                                    )}
+                                                  </span>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <Link2 className="size-2 shrink-0" />
+                                                  <span>
+                                                    {tr(
+                                                      "Chưa liên kết",
+                                                      "Unlinked",
+                                                    )}
+                                                  </span>
+                                                </>
+                                              )}
+                                            </button>
+                                          );
+                                        })()
+                                      ) : p.pageToken ? (
                                         <span
                                           className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
-                                          title={tr("Page đã có token liên kết", "Page linked with token")}
+                                          title={tr(
+                                            "Page đã có token liên kết",
+                                            "Page linked with token",
+                                          )}
                                         >
                                           <span className="size-1 rounded-full bg-emerald-500 shrink-0" />
                                           {tr("Đã liên kết", "Linked")}
@@ -2216,6 +2568,59 @@ export default function HomePage() {
                     {tr(
                       "Giao diện TTC đã sẵn sàng. Logic kết nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.",
                       "TTC interface is ready. Task connection logic will be configured in subsequent updates.",
+                    )}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {currentPage === "dolike" && (
+            <motion.div
+              key={currentPage}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
+              className="flex w-full flex-1 flex-col"
+            >
+              <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
+                {/* Table Header */}
+                <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
+                  <div className="flex items-center justify-center">
+                    <input
+                      type="checkbox"
+                      disabled
+                      className="size-3.5 rounded border-border opacity-40 cursor-not-allowed"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span>{tr("Tên", "Name")}</span>
+                    <span className="text-[10px]">▲</span>
+                  </div>
+                  <div>{tr("Thẻ", "Tags")}</div>
+                  <div>{tr("Ghi chú", "Note")}</div>
+                  <div>Proxy / VPN</div>
+                  <div>{tr("LIÊN KẾT", "LINKED")}</div>
+                  <div>{tr("TRẠNG THÁI TÀI KHOẢN", "ACCOUNT STATUS")}</div>
+                  <div>{tr("HÀNH ĐỘNG", "ACTION")}</div>
+                  <div className="text-right">#</div>
+                </div>
+
+                {/* Empty State */}
+                <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
+                  <div className="size-12 rounded-full bg-fuchsia-500/10 text-fuchsia-500 flex items-center justify-center font-bold text-sm mb-3">
+                    DL
+                  </div>
+                  <p className="text-sm font-medium text-foreground">
+                    {tr(
+                      "Chưa có tài khoản DoLike nào",
+                      "No DoLike accounts yet",
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                    {tr(
+                      "Giao diện DoLike đã được kết nối vào thanh dock bên dưới. Chưa cấu hình logic tương tác.",
+                      "DoLike interface is connected to the bottom dock. Interaction logic not yet configured.",
                     )}
                   </p>
                 </div>
