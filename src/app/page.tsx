@@ -1229,11 +1229,10 @@ export default function HomePage() {
   const getPageTitle = (page: AppPage) => {
     switch (page) {
       case "profiles":
+      case "nvc":
         return "";
       case "ttc":
         return "TTC";
-      case "nvc":
-        return "NVC";
       case "account":
         return tr("Tiện ích / Nuôi Acc", "Utilities / Account Farm");
       case "reg-page":
@@ -1294,7 +1293,9 @@ export default function HomePage() {
       {/* Main content area */}
       <div className="flex min-h-0 flex-1 flex-col">
         <main className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-5">
-          {(currentPage === "profiles" || currentPage === "account") && (
+          {(currentPage === "profiles" ||
+            currentPage === "account" ||
+            currentPage === "nvc") && (
             <div className="flex w-full flex-1 flex-col">
               {/* Sub-navigation switcher for Tiện ích */}
               {currentPage === "account" && (
@@ -1508,6 +1509,37 @@ export default function HomePage() {
                             {tr(
                               "Đăng nhập tài khoản XSMM",
                               "Sign in XSMM account",
+                            )}
+                          </span>
+                        </Button>
+                      </div>
+                    ) : currentPage === "nvc" && !nvcAccount.isLoggedIn ? (
+                      <div className="flex flex-col items-center gap-2.5">
+                        <div className="flex size-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                          <ShieldCheck className="size-6" />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground">
+                          {tr(
+                            "Chưa kết nối tài khoản Nhiệm Vụ Chéo",
+                            "NVC account not connected",
+                          )}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground max-w-xs leading-relaxed">
+                          {tr(
+                            "Vui lòng đăng nhập tài khoản NVC để quản lý và tự động hóa tài khoản.",
+                            "Please sign in to NVC account to manage and automate accounts.",
+                          )}
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsNvcLoginOpen(true)}
+                          className="mt-2 h-7.5 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold cursor-pointer gap-1.5"
+                        >
+                          <Key className="size-3.5" />
+                          <span>
+                            {tr(
+                              "Đăng nhập tài khoản NVC",
+                              "Sign in NVC account",
                             )}
                           </span>
                         </Button>
@@ -2148,8 +2180,7 @@ export default function HomePage() {
             </div>
           )}
 
-          {(currentPage === "ttc" ||
-            currentPage === "nvc") && (
+          {currentPage === "ttc" && (
             <motion.div
               key={currentPage}
               initial={{ opacity: 0, y: 8 }}
@@ -2183,60 +2214,21 @@ export default function HomePage() {
 
                 {/* Empty State */}
                 <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
-                  <div
-                    className={cn(
-                      "size-12 rounded-full flex items-center justify-center font-bold text-sm mb-3",
-                      currentPage === "nvc"
-                        ? "bg-blue-500/10 text-blue-500"
-                        : "bg-primary/10 text-primary",
-                    )}
-                  >
-                    {currentPage === "nvc" ? "NVC" : currentPage.toUpperCase()}
+                  <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm mb-3">
+                    TTC
                   </div>
-
-                  {currentPage === "nvc" ? (
-                    nvcAccount.isLoggedIn ? (
-                      <>
-                        <p className="text-sm font-semibold text-foreground">
-                          Đã kết nối tài khoản {nvcAccount.username}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                          Số dư: <span className="font-semibold text-blue-400">{nvcAccount.balance}</span>. Giao diện NVC hiện hỗ trợ riêng cho tài khoản Facebook.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-sm font-semibold text-foreground">
-                          Chưa đăng nhập tài khoản Nhiệm Vụ Chéo
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                          Vui lòng đăng nhập tài khoản NVC để quản lý và kiểm tra số dư.
-                        </p>
-                        <Button
-                          size="sm"
-                          onClick={() => setIsNvcLoginOpen(true)}
-                          className="mt-3.5 h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium cursor-pointer"
-                        >
-                          Đăng nhập NVC
-                        </Button>
-                      </>
-                    )
-                  ) : (
-                    <>
-                      <p className="text-sm font-medium text-foreground">
-                        {tr(
-                          `Chưa có tài khoản ${currentPage.toUpperCase()} nào`,
-                          `No ${currentPage.toUpperCase()} accounts yet`,
-                        )}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                        {tr(
-                          `Giao diện ${currentPage.toUpperCase()} đã sẵn sàng. Logic kết nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.`,
-                          `${currentPage.toUpperCase()} interface is ready. Task connection logic will be configured in subsequent updates.`,
-                        )}
-                      </p>
-                    </>
-                  )}
+                  <p className="text-sm font-medium text-foreground">
+                    {tr(
+                      "Chưa có tài khoản TTC nào",
+                      "No TTC accounts yet",
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                    {tr(
+                      "Giao diện TTC đã sẵn sàng. Logic kết nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.",
+                      "TTC interface is ready. Task connection logic will be configured in subsequent updates.",
+                    )}
+                  </p>
                 </div>
               </div>
             </motion.div>

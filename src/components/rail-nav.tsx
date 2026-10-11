@@ -201,7 +201,13 @@ export function RailNav({
       )}
     >
       {/* Pill container — Apple dock style */}
-      <div
+      <motion.div
+        layout
+        transition={{
+          type: "spring",
+          stiffness: 350,
+          damping: 30,
+        }}
         className={cn(
           "flex items-center gap-1 rounded-2xl border border-border/50",
           "bg-card/60 px-2 py-1.5 shadow-[0_8px_30px_rgb(0,0,0,0.25)] backdrop-blur-xl",
@@ -268,9 +274,8 @@ export function RailNav({
                   aria-current={active ? "page" : undefined}
                   transition={{
                     type: "spring",
-                    stiffness: 380,
-                    damping: 28,
-                    mass: 0.55,
+                    stiffness: 350,
+                    damping: 30,
                   }}
                   className={cn(
                     "relative flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-xl overflow-hidden select-none",
@@ -290,97 +295,42 @@ export function RailNav({
                       className="absolute inset-0 rounded-xl bg-foreground/10"
                       transition={{
                         type: "spring",
-                        stiffness: 380,
-                        damping: 28,
-                        mass: 0.55,
+                        stiffness: 350,
+                        damping: 30,
                       }}
                     />
                   )}
-                  <motion.span
-                    layout="position"
-                    className="relative z-10 flex items-center justify-center whitespace-nowrap text-[11px] font-bold tracking-tight"
-                  >
+                  <span className="relative z-10 flex items-center justify-center whitespace-nowrap text-[11px] font-bold tracking-tight">
                     {isProfiles ? (
                       active ? (
-                        <motion.span
-                          key="xsmm"
-                          initial={{ opacity: 0, scale: 0.85, filter: "blur(2px)" }}
-                          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                          transition={{ duration: 0.18, ease: "easeOut" }}
-                          className="text-amber-400 font-bold"
-                        >
+                        <span className="text-amber-400 font-bold transition-all duration-150">
                           XSMM
-                        </motion.span>
+                        </span>
                       ) : (
-                        <motion.span
-                          key="user-icon"
-                          initial={{ opacity: 0, scale: 0.85 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          <User className="size-[17px]" />
-                        </motion.span>
+                        <User className="size-[17px] transition-all duration-150" />
                       )
                     ) : isTtc ? (
                       active ? (
-                        <motion.span
-                          key="tuongtaccheo"
-                          initial={{ opacity: 0, scale: 0.85, filter: "blur(2px)" }}
-                          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                          transition={{ duration: 0.18, ease: "easeOut" }}
-                          className="text-emerald-400 font-bold lowercase"
-                        >
+                        <span className="text-emerald-400 font-bold lowercase transition-all duration-150">
                           tuongtaccheo
-                        </motion.span>
+                        </span>
                       ) : (
-                        <motion.span
-                          key="ttc-short"
-                          initial={{ opacity: 0, scale: 0.85 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          TTC
-                        </motion.span>
+                        <span className="transition-all duration-150">TTC</span>
                       )
                     ) : isNvc ? (
                       active ? (
-                        <motion.span
-                          key="nhiemvucheo"
-                          initial={{ opacity: 0, scale: 0.85, filter: "blur(2px)" }}
-                          animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                          transition={{ duration: 0.18, ease: "easeOut" }}
-                          className="text-blue-400 font-bold lowercase"
-                        >
+                        <span className="text-blue-400 font-bold lowercase transition-all duration-150">
                           nhiemvucheo
-                        </motion.span>
+                        </span>
                       ) : (
-                        <motion.span
-                          key="nvc-short"
-                          initial={{ opacity: 0, scale: 0.85 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.15 }}
-                        >
-                          NVC
-                        </motion.span>
+                        <span className="transition-all duration-150">NVC</span>
                       )
                     ) : Icon ? (
                       <Icon className="size-[18px]" />
                     ) : (
                       <span>{textLabel}</span>
                     )}
-                  </motion.span>
-                  {active && (
-                    <motion.span
-                      layoutId="dockActiveDot"
-                      className="absolute bottom-1 left-1/2 z-10 size-1 -translate-x-1/2 rounded-full bg-foreground"
-                      transition={{
-                        type: "spring",
-                        stiffness: 380,
-                        damping: 28,
-                        mass: 0.55,
-                      }}
-                    />
-                  )}
+                  </span>
                 </motion.button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={8}>
@@ -420,25 +370,12 @@ export function RailNav({
                   className="absolute inset-0 rounded-xl bg-foreground/10"
                   transition={{
                     type: "spring",
-                    stiffness: 450,
-                    damping: 32,
-                    mass: 0.6,
+                    stiffness: 350,
+                    damping: 30,
                   }}
                 />
               )}
               <GoGear className="relative z-10 size-[18px]" />
-              {currentPage === "settings" && (
-                <motion.span
-                  layoutId="dockActiveDot"
-                  className="absolute bottom-1 left-1/2 z-10 size-1 -translate-x-1/2 rounded-full bg-foreground"
-                  transition={{
-                    type: "spring",
-                    stiffness: 450,
-                    damping: 32,
-                    mass: 0.6,
-                  }}
-                />
-              )}
             </button>
           </TooltipTrigger>
           <TooltipContent side="top" sideOffset={8}>
@@ -468,7 +405,7 @@ export function RailNav({
             {t("rail.more.label", "More")}
           </TooltipContent>
         </Tooltip>
-      </div>
+      </motion.div>
 
       {/* More popup — ONLY Tiện ích (About AutoLunex is removed!) */}
       {moreOpen && (
