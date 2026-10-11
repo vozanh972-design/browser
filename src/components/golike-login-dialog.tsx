@@ -1,10 +1,8 @@
 "use client";
 
-import { Globe, Key, Loader2, Lock } from "lucide-react";
+import { Loader2, Lock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { getGolikeUser } from "@/lib/golike-api";
 import {
   type GolikeSessionData,
@@ -109,50 +107,10 @@ export function GolikeLoginDialog({
   const [iframeKey, setIframeKey] = useState(0);
   const [iframeLoading, setIframeLoading] = useState(true);
   const [isProcessingLogin, setIsProcessingLogin] = useState(false);
-  const [loginMode, setLoginMode] = useState<"webview" | "token">("webview");
-  const [manualToken, setManualToken] = useState("");
-  const [tokenError, setTokenError] = useState("");
-  const [tokenLoading, setTokenLoading] = useState(false);
 
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const isCompletedRef = useRef(false);
-
-  const handleManualTokenLogin = async () => {
-    const raw = manualToken.trim();
-    if (!raw) {
-      setTokenError("Vui lòng nhập Authorization Token GoLike.");
-      return;
-    }
-    setTokenLoading(true);
-    setTokenError("");
-    try {
-      const fullToken = raw.startsWith("Bearer ") ? raw : `Bearer ${raw}`;
-      const res = await getGolikeUser(fullToken);
-      if (!res.success || !res.user) {
-        setTokenError(res.error || "Mã Token không đúng hoặc đã hết hạn.");
-        setTokenLoading(false);
-        return;
-      }
-      handleAutoLoginSuccess(
-        {
-          username: res.user.username,
-          balance: `${res.user.coin.toLocaleString("vi-VN")} coin`,
-          token: fullToken,
-          coin: res.user.coin,
-        },
-        {
-          golike_token: fullToken,
-          golike_username: res.user.username,
-          golike_user_id: String(res.user.id || ""),
-        },
-      );
-    } catch (e: any) {
-      setTokenError(e?.message || "Lỗi kiểm tra token.");
-    } finally {
-      setTokenLoading(false);
-    }
-  };
 
   // Trích xuất session trực tiếp qua native Tauri và Gateway GoLike (không qua bất kỳ cổng mạng trung gian nào)
   const checkSession = async () => {
@@ -452,77 +410,6 @@ export function GolikeLoginDialog({
             </button>
           </div>
 
-          {/* Tab chuyển đổi: Dán Token vs Webview */}
-          <div className="relative z-20 flex items-center justify-center p-1.5 bg-zinc-900/90 border-b border-white/10 shrink-0 gap-1.5">
-            <button
-              type="button"
-              onClick={() => setLoginMode("webview")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-                loginMode === "webview"
-                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-xs font-semibold"
-                  : "text-zinc-400 hover:text-white"
-              }`}
-            >
-              <Globe className="size-3.5" />
-              <span>Webview GoLike</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setLoginMode("token")}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-lg transition-all cursor-pointer ${
-                loginMode === "token"
-                  ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 shadow-xs font-semibold"
-                  : "text-zinc-400 hover:text-white"
-              }`}
-            >
-              <Key className="size-3.5" />
-              <span>Dán Token nhanh</span>
-            </button>
-          </div>
-
-          {loginMode === "token" ? (
-            <div className="p-5 flex flex-col gap-4 bg-zinc-950 text-foreground min-h-[360px] justify-center">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-zinc-200">
-                  Authorization Token GoLike
-                </label>
-                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                  Dán Authorization Token của tài khoản GoLike mới. Hệ thống sẽ tự động xác thực và lưu đủ 17 trường chuẩn.
-                </p>
-              </div>
-              <Input
-                type="text"
-                placeholder="Bearer eyJhbGciOi..."
-                value={manualToken}
-                onChange={(e) => {
-                  setManualToken(e.target.value);
-                  setTokenError("");
-                }}
-                className="bg-zinc-900/80 border-white/15 text-xs text-white placeholder:text-zinc-500 h-9"
-              />
-              {tokenError && (
-                <p className="text-xs text-rose-400 font-medium">{tokenError}</p>
-              )}
-              <Button
-                onClick={handleManualTokenLogin}
-                disabled={tokenLoading}
-                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-xs h-9 cursor-pointer gap-2"
-              >
-                {tokenLoading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Key className="size-4" />
-                )}
-                <span>{tokenLoading ? "Đang xác thực..." : "Đăng nhập ngay"}</span>
-              </Button>
-            </div>
-          ) : (
-            <>
-              {/* Banner hướng dẫn trực quan */}
-              <div className="relative z-20 bg-cyan-950/70 border-b border-cyan-500/20 px-3 py-1.5 text-[11px] text-cyan-200/90 text-center shrink-0">
-                Đăng nhập tài khoản GoLike mới. Đăng nhập xong sẽ tự động nhận diện và đóng cửa sổ.
-              </div>
-
           {/* 2. MÀN HÌNH NỘI DUNG WEBVIEW GOLIKE */}
           <div className="relative w-full h-[600px] bg-white overflow-hidden">
             {(iframeLoading || isProcessingLogin) && (
@@ -553,8 +440,6 @@ export function GolikeLoginDialog({
               title="GoLike View"
             />
           </div>
-          </>
-          )}
 
           {/* 3. THANH TRUY CẬP DƯỚI (SAFARI LIQUID GLASS NHƯ IPHONE) */}
           <div className="relative z-30 bg-zinc-950/90 backdrop-blur-2xl px-4 pt-2.5 pb-3 flex flex-col items-center justify-center shrink-0 border-t border-white/10">
