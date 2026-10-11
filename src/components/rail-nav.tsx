@@ -205,8 +205,9 @@ export function RailNav({
         layout
         transition={{
           type: "spring",
-          stiffness: 350,
-          damping: 30,
+          stiffness: 160,
+          damping: 22,
+          mass: 0.85,
         }}
         className={cn(
           "flex items-center gap-1 rounded-2xl border border-border/50",
@@ -276,9 +277,9 @@ export function RailNav({
 
           const springConfig = {
             type: "spring" as const,
-            stiffness: 340,
-            damping: 28,
-            mass: 0.6,
+            stiffness: 160,
+            damping: 22,
+            mass: 0.85,
           };
 
           return (
@@ -313,9 +314,12 @@ export function RailNav({
                     initial={false}
                     animate={{
                       opacity: active ? 0 : 1,
-                      scale: active ? 0.65 : 1,
+                      scale: active ? 0.7 : 1,
                     }}
-                    transition={{ duration: 0.16, ease: "easeOut" }}
+                    transition={{
+                      duration: 0.28,
+                      ease: [0.25, 0.1, 0.25, 1],
+                    }}
                     className="absolute inset-0 flex items-center justify-center pointer-events-none"
                   >
                     {isProfiles ? (
@@ -335,9 +339,9 @@ export function RailNav({
                       scale: active ? 1 : 0.75,
                     }}
                     transition={{
-                      duration: 0.22,
-                      delay: active ? 0.05 : 0,
-                      ease: "easeOut",
+                      duration: 0.35,
+                      delay: active ? 0.08 : 0,
+                      ease: [0.25, 0.1, 0.25, 1],
                     }}
                     className="absolute inset-0 flex items-center justify-center pointer-events-none"
                   >

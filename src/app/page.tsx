@@ -1470,7 +1470,7 @@ export default function HomePage() {
                     <span>{tr("Tên & UID", "Name & UID")}</span>
                     <span className="text-[10px]">▲</span>
                   </div>
-                  <div>{tr("TIỆN ÍCH", "UTILITIES")}</div>
+                  <div>{tr("LIÊN KẾT", "LINKED")}</div>
                   <div>Proxy / VPN</div>
                   <div>{tr("TRẠNG THÁI", "STATUS")}</div>
                   <div>{tr("HÀNH ĐỘNG", "ACTION / STATE")}</div>
@@ -1689,32 +1689,30 @@ export default function HomePage() {
                               </div>
                             </div>
 
-                            {/* TIỆN ÍCH */}
+                            {/* LIÊN KẾT */}
                             <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
                               {acc.token ? (
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (acc.token) handleCopy(acc.token);
-                                  }}
-                                  className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500/20 cursor-pointer"
-                                  title={tr(
-                                    "Click để copy Token",
-                                    "Click to copy Token",
-                                  )}
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
+                                  title={tr("Đã liên kết token vào hệ thống", "Linked with token")}
                                 >
-                                  Token
-                                </button>
-                              ) : null}
+                                  <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                  {tr("Đã liên kết", "Linked")}
+                                </span>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground border border-border/40 whitespace-nowrap"
+                                  title={tr("Chưa liên kết", "Not linked")}
+                                >
+                                  <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
+                                  {tr("Chưa liên kết", "Unlinked")}
+                                </span>
+                              )}
                               {acc.twoFactor ? (
-                                <span className="text-[11px] font-mono">
+                                <span className="text-[10px] font-mono text-muted-foreground/80 px-1 py-0.5 rounded bg-muted/40 border border-border/30">
                                   2FA
                                 </span>
                               ) : null}
-                              {!acc.token && !acc.twoFactor && (
-                                <span>{tr("Mặc định", "Default")}</span>
-                              )}
                             </div>
 
                             {/* Proxy / VPN */}
@@ -1992,26 +1990,17 @@ export default function HomePage() {
                                     {/* Cột 2 (1.2fr): Token của Page */}
                                     <div className="flex items-center pr-2">
                                       {p.pageToken ? (
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (p.pageToken) {
-                                              handleCopy(p.pageToken);
-                                            }
-                                          }}
-                                          className="text-[9.5px] px-1.5 py-0.5 font-mono bg-blue-500/10 text-blue-500 rounded border border-blue-500/20 hover:bg-blue-500/20 shrink-0 cursor-pointer inline-flex items-center gap-1"
-                                          title={tr(
-                                            "Copy Page Token",
-                                            "Copy Page Token",
-                                          )}
+                                        <span
+                                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
+                                          title={tr("Page đã có token liên kết", "Page linked with token")}
                                         >
-                                          <Key className="size-2.5" />
-                                          <span>Token</span>
-                                        </button>
+                                          <span className="size-1 rounded-full bg-emerald-500 shrink-0" />
+                                          {tr("Đã liên kết", "Linked")}
+                                        </span>
                                       ) : (
-                                        <span className="text-muted-foreground/40 text-[10px]">
-                                          —
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9.5px] font-medium bg-muted text-muted-foreground border border-border/40 whitespace-nowrap">
+                                          <span className="size-1 rounded-full bg-muted-foreground/60 shrink-0" />
+                                          {tr("Chưa liên kết", "Unlinked")}
                                         </span>
                                       )}
                                     </div>
@@ -2206,7 +2195,7 @@ export default function HomePage() {
                   <div>{tr("Thẻ", "Tags")}</div>
                   <div>{tr("Ghi chú", "Note")}</div>
                   <div>Proxy / VPN</div>
-                  <div>{tr("TIỆN ÍCH", "UTILITIES")}</div>
+                  <div>{tr("LIÊN KẾT", "LINKED")}</div>
                   <div>{tr("TRẠNG THÁI TÀI KHOẢN", "ACCOUNT STATUS")}</div>
                   <div>{tr("HÀNH ĐỘNG", "ACTION")}</div>
                   <div className="text-right">#</div>
