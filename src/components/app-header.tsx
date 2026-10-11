@@ -230,39 +230,41 @@ export function AppHeader({
             )
           ))}
 
-        {showDolike &&
-          (dolikeAccount?.isLoggedIn ? (
-            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
-              {/* User */}
-              <div className="flex items-center gap-1.5 font-medium text-foreground">
-                <User className="size-3.5 text-fuchsia-400" />
-                <span className="max-w-[120px] truncate">
-                  {dolikeAccount.username}
-                </span>
+        {showDolike && (
+          <div className="flex items-center gap-2">
+            {dolikeAccount?.isLoggedIn && (
+              <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
+                {/* User */}
+                <div className="flex items-center gap-1.5 font-medium text-foreground">
+                  <User className="size-3.5 text-fuchsia-400" />
+                  <span className="max-w-[120px] truncate">
+                    {dolikeAccount.username}
+                  </span>
+                </div>
+
+                <span className="h-3 w-px bg-border" />
+
+                {/* Balance */}
+                <div className="flex items-center gap-1 font-semibold text-fuchsia-400">
+                  <Coins className="size-3.5 text-amber-400" />
+                  <span>{dolikeAccount.balance}</span>
+                </div>
+
+                {/* Logout button */}
+                {onDolikeLogoutClick && (
+                  <button
+                    type="button"
+                    onClick={onDolikeLogoutClick}
+                    title={isVi ? "Đăng xuất DoLike" : "Sign out DoLike"}
+                    className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
+                  >
+                    <LogOut className="size-3.5" />
+                  </button>
+                )}
               </div>
+            )}
 
-              <span className="h-3 w-px bg-border" />
-
-              {/* Balance */}
-              <div className="flex items-center gap-1 font-semibold text-fuchsia-400">
-                <Coins className="size-3.5 text-amber-400" />
-                <span>{dolikeAccount.balance}</span>
-              </div>
-
-              {/* Logout button */}
-              {onDolikeLogoutClick && (
-                <button
-                  type="button"
-                  onClick={onDolikeLogoutClick}
-                  title={isVi ? "Đăng xuất DoLike" : "Sign out DoLike"}
-                  className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
-                >
-                  <LogOut className="size-3.5" />
-                </button>
-              )}
-            </div>
-          ) : (
-            onDolikeLoginClick && (
+            {onDolikeLoginClick && (
               <button
                 type="button"
                 onClick={onDolikeLoginClick}
@@ -271,8 +273,9 @@ export function AppHeader({
                 <Key className="size-3" />
                 <span>{isVi ? "Đăng nhập DoLike" : "Sign in DoLike"}</span>
               </button>
-            )
-          ))}
+            )}
+          </div>
+        )}
 
         {onNewClick && (
           <Button

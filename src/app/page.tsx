@@ -76,6 +76,7 @@ export interface FacebookAccount {
   isLive?: boolean;
   rawText: string;
   pages?: FacebookPageItem[];
+  dolikeEmail?: string;
 }
 
 function AccountAvatar({
@@ -575,12 +576,55 @@ export default function HomePage() {
     balance: string;
     sessionCookie?: string;
   }) => {
+    try {
+      localStorage.setItem("dolike_email", user.email);
+      localStorage.setItem("dolike_balance", user.balance);
+      if (user.sessionCookie) {
+        localStorage.setItem("dolike_session_cookie", user.sessionCookie);
+      }
+    } catch {
+      // ignore
+    }
+
     setDolikeAccount({
       email: user.email,
       balance: user.balance,
       sessionCookie: user.sessionCookie || "",
       isLoggedIn: true,
     });
+
+    if (selectedIds.length > 0) {
+      setAccounts((prev) => {
+        const updated = prev.map((a) => {
+          if (selectedIds.includes(a.id)) {
+            return { ...a, dolikeEmail: user.email };
+          }
+          return a;
+        });
+        try {
+          localStorage.setItem(
+            "autolunex_facebook_accounts_v1",
+            JSON.stringify(updated),
+          );
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+      showSuccessToast(
+        tr(
+          `Đã đăng nhập DoLike & gán cho ${selectedIds.length} tài khoản đã chọn!`,
+          `Logged in DoLike & assigned to ${selectedIds.length} selected accounts!`,
+        ),
+      );
+    } else {
+      showSuccessToast(
+        tr(
+          `Đăng nhập DoLike thành công (${user.email})!`,
+          `Logged in DoLike successfully (${user.email})!`,
+        ),
+      );
+    }
   };
 
   const handleDolikeLogout = () => {
@@ -2796,7 +2840,7 @@ export default function HomePage() {
                     <span>{tr("Tên & UID", "Name & UID")}</span>
                     <span className="text-[10px]">▲</span>
                   </div>
-                  <div>{tr("LIÊN KẾT", "LINKED")}</div>
+                  <div>{tr("TK DoLike", "DoLike Account")}</div>
                   <div>Proxy / VPN</div>
                   <div>{tr("TRẠNG THÁI", "STATUS")}</div>
                   <div>{tr("HÀNH ĐỘNG", "ACTION / STATE")}</div>
@@ -2937,26 +2981,23 @@ export default function HomePage() {
                               </div>
                             </div>
 
-                            {/* LIÊN KẾT */}
+                            {/* TK DoLike */}
                             <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
-                              {acc.token ? (
+                              {acc.dolikeEmail || (dolikeAccount.isLoggedIn && dolikeAccount.email) ? (
                                 <span
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
-                                  title={tr(
-                                    "Đã liên kết token vào hệ thống",
-                                    "Linked with token",
-                                  )}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-fuchsia-500/10 text-fuchsia-500 border border-fuchsia-500/20 whitespace-nowrap max-w-[130px] truncate"
+                                  title={acc.dolikeEmail || dolikeAccount.email}
                                 >
-                                  <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                  {tr("Đã liên kết", "Linked")}
+                                  <span className="size-1.5 rounded-full bg-fuchsia-500 shrink-0" />
+                                  <span className="truncate">{acc.dolikeEmail || dolikeAccount.email}</span>
                                 </span>
                               ) : (
                                 <span
                                   className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground border border-border/40 whitespace-nowrap"
-                                  title={tr("Chưa liên kết", "Not linked")}
+                                  title={tr("Chưa đăng nhập DoLike", "DoLike not logged in")}
                                 >
                                   <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
-                                  {tr("Chưa liên kết", "Unlinked")}
+                                  {tr("Chưa đăng nhập", "Not logged in")}
                                 </span>
                               )}
                               {acc.twoFactor ? (
@@ -3188,6 +3229,7 @@ export default function HomePage() {
         onClose={() => setIsAddFacebookOpen(false)}
         onAddAccounts={handleAddAccounts}
         isXsmmLoggedIn={xsmmAccount.isLoggedIn}
+        hideXsmmAuth={currentPage === "dolike" || currentPlatform === "instagram"}
         platform={currentPlatform}
         onXsmmLoginSuccess={handleXsmmLoginSuccess}
       />
