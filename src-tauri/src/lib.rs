@@ -1210,7 +1210,7 @@ fn clear_golike_session(token: Option<String>) -> Result<bool, String> {
     add_logged_out_golike_token(&tok);
   }
 
-  // Xóa các file session GoLike trên đĩa nếu có
+  // 1. Xóa các file session GoLike trên đĩa nếu có
   let session_paths = [
     r"D:\AutoLunex\golike_session.json",
     r"D:\browser\golike_session.json",
@@ -1220,6 +1220,9 @@ fn clear_golike_session(token: Option<String>) -> Result<bool, String> {
       let _ = std::fs::remove_file(p);
     }
   }
+
+  // 2. XÓA SẠCH TẬN GỐC: Quét và ghi đè tiêu hủy toàn bộ token/session GoLike trong LevelDB trên đĩa
+  purge_golike_leveldb_records();
 
   Ok(true)
 }
@@ -1265,6 +1268,79 @@ fn decrypt_cryptojs_aes(b64: &str, passphrase: &str) -> Option<String> {
   let decryptor = Aes256CbcDec::new_from_slices(&key, &iv).ok()?;
   let pt = decryptor.decrypt_padded_mut::<Pkcs7>(&mut buf).ok()?;
   String::from_utf8(pt.to_vec()).ok()
+}
+
+fn purge_golike_leveldb_records() {
+  let key_str = "426dbb3397e15b7628b5cc8b150107e5";
+  let mut candidate_dirs = Vec::new();
+
+  if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
+    candidate_dirs.push(format!(r"{}\com.autolunex.app\EBWebView\Default\Local Storage\leveldb", local_app));
+  }
+  for letter in b'D'..=b'Z' {
+    candidate_dirs.push(format!(r"{}:\AutoLunex\webview_data\Default\Local Storage\leveldb", letter as char));
+  }
+
+  for dir_str in candidate_dirs {
+    let dir = std::path::Path::new(&dir_str);
+    if !dir.is_dir() {
+      continue;
+    }
+    let Ok(entries) = std::fs::read_dir(dir) else { continue };
+    let files: Vec<_> = entries
+      .flatten()
+      .map(|e| e.path())
+      .filter(|p| {
+        let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("");
+        ext == "ldb" || ext == "log"
+      })
+      .collect();
+
+    for file_path in files {
+      let Ok(mut bytes) = std::fs::read(&file_path) else { continue };
+      if bytes.is_empty() {
+        continue;
+      }
+
+      let pattern = b"U2FsdGVkX1";
+      let mut modified = false;
+      let mut search_start = 0;
+
+      while let Some(rel_pos) = bytes[search_start..].windows(pattern.len()).position(|w| w == pattern) {
+        let idx = search_start + rel_pos;
+        search_start = idx + pattern.len();
+
+        let mut end_idx = idx;
+        while end_idx < bytes.len() {
+          let b = bytes[end_idx];
+          if b.is_ascii_alphanumeric() || b == b'+' || b == b'/' || b == b'=' {
+            end_idx += 1;
+          } else {
+            break;
+          }
+        }
+
+        let len = end_idx - idx;
+        if len > 50 {
+          if let Ok(b64_str) = std::str::from_utf8(&bytes[idx..end_idx]) {
+            if let Some(decrypted) = decrypt_cryptojs_aes(b64_str, key_str) {
+              if decrypted.contains("\"token\"") || decrypted.contains("username") {
+                // XÓA SẠCH TẬN GỐC: Ghi đè toàn bộ chuỗi token/session này thành khoảng trắng trên đĩa
+                for i in idx..end_idx {
+                  bytes[i] = b' ';
+                }
+                modified = true;
+              }
+            }
+          }
+        }
+      }
+
+      if modified {
+        let _ = std::fs::write(&file_path, &bytes);
+      }
+    }
+  }
 }
 
 fn scan_leveldb_for_golike() -> Option<serde_json::Value> {

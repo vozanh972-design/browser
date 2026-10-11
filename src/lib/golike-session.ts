@@ -427,17 +427,18 @@ export async function clearGolikeSession(token?: string): Promise<void> {
     }
   }
 
-  // 2. Xóa sạch 17 trường trong localStorage và các cờ tạm
+  // 2. Xóa sạch tận gốc toàn bộ dữ liệu GoLike trong localStorage
   try {
-    for (const key of GOLIKE_STORAGE_KEYS) {
-      localStorage.removeItem(key);
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("golike_") && k !== "golike_logged_out_tokens") {
+        keysToRemove.push(k);
+      }
     }
-    localStorage.removeItem("golike_session_v1");
-    localStorage.removeItem("golike_balance");
-    localStorage.removeItem("golike_token");
-    localStorage.removeItem("golike_username");
-    localStorage.removeItem("golike_blacklist_token");
-    localStorage.removeItem("golike_logged_out_time");
+    for (const k of keysToRemove) {
+      localStorage.removeItem(k);
+    }
   } catch {
     // ignore
   }

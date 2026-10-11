@@ -247,11 +247,17 @@ export function GolikeLoginDialog({
     }
   };
 
-  const handleClearWebviewSession = () => {
+  const handleClearWebviewSession = async () => {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      await invoke("clear_golike_session", { token: null });
+    } catch {
+      // ignore
+    }
     tryClearIframeSession();
     setIframeKey((k) => k + 1);
     setIframeLoading(true);
-    showSuccessToast("Đã làm mới, sẵn sàng đăng nhập tài khoản khác!");
+    showSuccessToast("Đã tiêu hủy dữ liệu cũ trên đĩa và làm mới trang!");
   };
 
   const tryInjectAndInspect = () => {
