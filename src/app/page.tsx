@@ -5,6 +5,7 @@ import {
   Flag,
   Key,
   Link2,
+  LogOut,
   Play,
   Plus,
   RefreshCw,
