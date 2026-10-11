@@ -1636,14 +1636,6 @@ export default function HomePage() {
         nvcAccount={nvcAccount}
         onNvcLoginClick={() => setIsNvcLoginOpen(true)}
         onNvcLogoutClick={handleNvcLogout}
-        showDolike={currentPage === "dolike"}
-        dolikeAccount={{
-          username: dolikeAccount.email || "",
-          balance: dolikeAccount.balance || "0 đ",
-          isLoggedIn: dolikeAccount.isLoggedIn,
-        }}
-        onDolikeLoginClick={() => setIsDolikeLoginOpen(true)}
-        onDolikeLogoutClick={handleDolikeLogout}
         hideInstagram={currentPage === "nvc"}
         hideFacebook={currentPage === "dolike"}
         onNewClick={() => setIsAddFacebookOpen(true)}
@@ -2728,6 +2720,56 @@ export default function HomePage() {
               transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
               className="flex w-full flex-1 flex-col"
             >
+              {/* Thanh thông tin tài khoản DoLike & nút Đăng nhập đặt bên dưới Header */}
+              <div className="mb-3 flex items-center justify-between px-3.5 py-2 rounded-lg border border-border/60 bg-muted/20">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
+                    <span className="flex size-5 items-center justify-center rounded bg-fuchsia-500/15 text-fuchsia-500 text-[10px] font-bold">
+                      DL
+                    </span>
+                    <span>DoLike</span>
+                  </div>
+
+                  {dolikeAccount.isLoggedIn ? (
+                    <div className="flex items-center gap-2 rounded-md border border-fuchsia-500/30 bg-fuchsia-500/10 px-2.5 py-1 text-xs">
+                      <span className="size-1.5 rounded-full bg-fuchsia-500 animate-pulse" />
+                      <span className="font-medium text-foreground">
+                        {dolikeAccount.email}
+                      </span>
+                      <span className="h-3 w-px bg-fuchsia-500/30" />
+                      <span className="font-semibold text-fuchsia-400">
+                        💰 {dolikeAccount.balance || "0 đ"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleDolikeLogout}
+                        title={tr("Đăng xuất DoLike", "Sign out DoLike")}
+                        className="ml-1 text-muted-foreground/60 hover:text-destructive cursor-pointer transition-colors"
+                      >
+                        <LogOut className="size-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      {tr(
+                        "Chưa đăng nhập tài khoản DoLike",
+                        "Not logged into DoLike",
+                      )}
+                    </span>
+                  )}
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setIsDolikeLoginOpen(true)}
+                  className="h-7 text-xs bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-medium cursor-pointer gap-1.5 shadow-2xs"
+                >
+                  <Key className="size-3" />
+                  <span>{tr("Đăng nhập DoLike", "Login DoLike")}</span>
+                </Button>
+              </div>
+
               {/* Toolbar thao tác hàng loạt khi có tài khoản được chọn */}
               {selectedIds.length > 0 && (
                 <div className="mb-2.5 flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs">
@@ -2825,8 +2867,8 @@ export default function HomePage() {
 
               {/* Table View matching XSMM */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
-                {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
+                {/* Table Header với tỷ lệ grid ưu tiên TK DoLike hiển thị rộng rãi */}
+                <div className="grid grid-cols-[40px_1.6fr_2.2fr_1.4fr_1.1fr_1.4fr_125px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
                   <div className="flex items-center justify-center">
                     <Checkbox
                       checked={
@@ -2954,7 +2996,7 @@ export default function HomePage() {
                               toggleSelectOne(acc.id);
                             }}
                             className={cn(
-                              "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-2 text-xs text-foreground cursor-pointer hover:bg-muted/40 transition-colors select-none outline-none focus-visible:bg-muted/50",
+                              "grid grid-cols-[40px_1.6fr_2.2fr_1.4fr_1.1fr_1.4fr_125px] items-center px-3 py-2 text-xs text-foreground cursor-pointer hover:bg-muted/40 transition-colors select-none outline-none focus-visible:bg-muted/50",
                               isRunning && "bg-emerald-500/5",
                               isSelected &&
                                 "bg-primary/10 border-l-2 border-primary",
@@ -2985,7 +3027,7 @@ export default function HomePage() {
                             <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
                               {acc.dolikeEmail || (dolikeAccount.isLoggedIn && dolikeAccount.email) ? (
                                 <span
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-fuchsia-500/10 text-fuchsia-500 border border-fuchsia-500/20 whitespace-nowrap max-w-[130px] truncate"
+                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-medium bg-fuchsia-500/10 text-fuchsia-500 border border-fuchsia-500/20 whitespace-nowrap max-w-[240px] truncate"
                                   title={acc.dolikeEmail || dolikeAccount.email}
                                 >
                                   <span className="size-1.5 rounded-full bg-fuchsia-500 shrink-0" />
