@@ -1,7 +1,7 @@
 "use client";
 
 import { Boxes, User } from "lucide-react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { GoGear, GoKebabHorizontal } from "react-icons/go";
@@ -253,16 +253,31 @@ export function RailNav({
         {/* Main nav items */}
         {visibleTopItems.map(({ page, Icon, textLabel, labelKey }) => {
           const active = currentPage === page;
+          const isProfiles = page === "profiles";
+          const isNvc = page === "nvc";
+
           return (
             <Tooltip key={page} delayDuration={400}>
               <TooltipTrigger asChild>
-                <button
+                <motion.button
+                  layout
                   type="button"
                   onClick={() => onNavigate(page)}
                   aria-label={t(labelKey, labelKey)}
                   aria-current={active ? "page" : undefined}
+                  transition={{
+                    type: "spring",
+                    stiffness: 450,
+                    damping: 32,
+                    mass: 0.6,
+                  }}
                   className={cn(
-                    "relative grid size-9 shrink-0 cursor-pointer place-items-center rounded-xl transition-colors duration-150",
+                    "relative flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-colors duration-200 overflow-hidden",
+                    active && isNvc
+                      ? "px-3.5"
+                      : active && isProfiles
+                        ? "px-2.5"
+                        : "w-9",
                     active
                       ? "text-foreground font-semibold"
                       : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
@@ -280,15 +295,69 @@ export function RailNav({
                       }}
                     />
                   )}
-                  <span className="relative z-10 flex items-center justify-center">
-                    {Icon ? (
+                  <motion.span
+                    layout="position"
+                    className="relative z-10 flex items-center justify-center whitespace-nowrap"
+                  >
+                    {isProfiles ? (
+                      <AnimatePresence mode="wait" initial={false}>
+                        {active ? (
+                          <motion.span
+                            key="xsmm"
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.18 }}
+                            className="text-[11px] font-bold tracking-tight text-amber-400"
+                          >
+                            XSMM
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="user-icon"
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.18 }}
+                          >
+                            <User className="size-[18px]" />
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    ) : isNvc ? (
+                      <AnimatePresence mode="wait" initial={false}>
+                        {active ? (
+                          <motion.span
+                            key="nhiemvucheo"
+                            initial={{ opacity: 0, scale: 0.85 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.85 }}
+                            transition={{ duration: 0.18 }}
+                            className="text-[11px] font-bold tracking-tight text-blue-400 lowercase"
+                          >
+                            nhiemvucheo
+                          </motion.span>
+                        ) : (
+                          <motion.span
+                            key="nvc-short"
+                            initial={{ opacity: 0, scale: 0.85 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.85 }}
+                            transition={{ duration: 0.18 }}
+                            className="text-[11px] font-bold tracking-tight"
+                          >
+                            NVC
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    ) : Icon ? (
                       <Icon className="size-[18px]" />
                     ) : (
                       <span className="text-[11px] font-bold tracking-tight">
                         {textLabel}
                       </span>
                     )}
-                  </span>
+                  </motion.span>
                   {active && (
                     <motion.span
                       layoutId="dockActiveDot"
@@ -301,10 +370,10 @@ export function RailNav({
                       }}
                     />
                   )}
-                </button>
+                </motion.button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={8}>
-                {t(labelKey, labelKey)}
+                {isNvc && active ? "nhiemvucheo" : t(labelKey, labelKey)}
               </TooltipContent>
             </Tooltip>
           );

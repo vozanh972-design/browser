@@ -31,6 +31,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
+import { NvcLoginDialog } from "@/components/nvc-login-dialog";
+import { getNvcMe } from "@/lib/nvc-api";
 import {
   checkFacebookAccountFull,
   checkLiveApi,
@@ -153,6 +155,26 @@ export default function HomePage() {
       balance,
       token,
       isLoggedIn: !!token,
+    };
+  });
+  const [isNvcLoginOpen, setIsNvcLoginOpen] = useState(false);
+  const [nvcAccount, setNvcAccount] = useState<{
+    username: string;
+    balance: string;
+    sessionCookie: string;
+    isLoggedIn: boolean;
+  }>(() => {
+    if (typeof window === "undefined") {
+      return { username: "", balance: "", sessionCookie: "", isLoggedIn: false };
+    }
+    const username = localStorage.getItem("nvc_username") || "";
+    const balance = localStorage.getItem("nvc_balance") || "";
+    const sessionCookie = localStorage.getItem("nvc_session_cookie") || "";
+    return {
+      username,
+      balance,
+      sessionCookie,
+      isLoggedIn: !!username,
     };
   });
   const [accounts, setAccounts] = useState<FacebookAccount[]>(() => {
@@ -372,6 +394,76 @@ export default function HomePage() {
     showSuccessToast("Đã đăng xuất tài khoản XSMM");
   };
 
+  // Đồng bộ số dư NVC ngầm khi mở ứng dụng nếu có session
+  useEffect(() => {
+    let isMounted = true;
+    const cookie =
+      nvcAccount.sessionCookie ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("nvc_session_cookie")
+        : "") ||
+      "";
+
+    if (!cookie) return;
+
+    void (async () => {
+      try {
+        const res = await getNvcMe(cookie);
+        if (res.success && res.user && isMounted) {
+          const formatted = `${Number(res.user.coinBalance || 0).toLocaleString("vi-VN")} xu`;
+          try {
+            localStorage.setItem("nvc_username", res.user.username);
+            localStorage.setItem("nvc_balance", formatted);
+          } catch {
+            // ignore
+          }
+          setNvcAccount((prev) => ({
+            ...prev,
+            username: res.user.username,
+            balance: formatted,
+            isLoggedIn: true,
+          }));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleNvcLoginSuccess = (user: {
+    username: string;
+    balance: string;
+    sessionCookie?: string;
+  }) => {
+    setNvcAccount({
+      username: user.username,
+      balance: user.balance,
+      sessionCookie: user.sessionCookie || "",
+      isLoggedIn: true,
+    });
+  };
+
+  const handleNvcLogout = () => {
+    try {
+      localStorage.removeItem("nvc_username");
+      localStorage.removeItem("nvc_balance");
+      localStorage.removeItem("nvc_session_cookie");
+    } catch {
+      // ignore
+    }
+    setNvcAccount({
+      username: "",
+      balance: "",
+      sessionCookie: "",
+      isLoggedIn: false,
+    });
+    showSuccessToast("Đã đăng xuất tài khoản Nhiệm Vụ Chéo");
+  };
+
   // Đăng xuất key bản quyền ứng dụng (giữ nguyên toàn bộ tài khoản và phiên XSMM)
   const handleKeyLogout = () => {
     try {
@@ -396,6 +488,9 @@ export default function HomePage() {
       setSettingsDialogOpen(true);
       setCurrentPage("settings");
       return;
+    }
+    if (page === "nvc") {
+      setCurrentPlatform("facebook");
     }
     setCurrentPage(page);
   }, []);
@@ -1177,7 +1272,7 @@ export default function HomePage() {
           }}
         />
       )}
-      {/* Top titlebar với drag region & thông tin XSMM */}
+      {/* Top titlebar với drag region & thông tin XSMM / NVC */}
       <AppHeader
         activePlatform={currentPlatform}
         onPlatformChange={setCurrentPlatform}
@@ -1186,6 +1281,11 @@ export default function HomePage() {
         xsmmAccount={xsmmAccount}
         onXsmmLoginClick={() => setIsXsmmLoginOpen(true)}
         onXsmmLogoutClick={handleXsmmLogout}
+        showNvc={currentPage === "nvc"}
+        nvcAccount={nvcAccount}
+        onNvcLoginClick={() => setIsNvcLoginOpen(true)}
+        onNvcLogoutClick={handleNvcLogout}
+        hideInstagram={currentPage === "nvc"}
         onNewClick={() => setIsAddFacebookOpen(true)}
       />
 
@@ -2081,21 +2181,60 @@ export default function HomePage() {
 
                 {/* Empty State */}
                 <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
-                  <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm mb-3">
-                    {currentPage.toUpperCase()}
+                  <div
+                    className={cn(
+                      "size-12 rounded-full flex items-center justify-center font-bold text-sm mb-3",
+                      currentPage === "nvc"
+                        ? "bg-blue-500/10 text-blue-500"
+                        : "bg-primary/10 text-primary",
+                    )}
+                  >
+                    {currentPage === "nvc" ? "NVC" : currentPage.toUpperCase()}
                   </div>
-                  <p className="text-sm font-medium text-foreground">
-                    {tr(
-                      `Chưa có tài khoản ${currentPage.toUpperCase()} nào`,
-                      `No ${currentPage.toUpperCase()} accounts yet`,
-                    )}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                    {tr(
-                      `Giao diện ${currentPage.toUpperCase()} đã sẵn sàng. Logic kết nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.`,
-                      `${currentPage.toUpperCase()} interface is ready. Task connection logic will be configured in subsequent updates.`,
-                    )}
-                  </p>
+
+                  {currentPage === "nvc" ? (
+                    nvcAccount.isLoggedIn ? (
+                      <>
+                        <p className="text-sm font-semibold text-foreground">
+                          Đã kết nối tài khoản {nvcAccount.username}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                          Số dư: <span className="font-semibold text-blue-400">{nvcAccount.balance}</span>. Giao diện NVC hiện hỗ trợ riêng cho tài khoản Facebook.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm font-semibold text-foreground">
+                          Chưa đăng nhập tài khoản Nhiệm Vụ Chéo
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                          Vui lòng đăng nhập tài khoản NVC để quản lý và kiểm tra số dư.
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsNvcLoginOpen(true)}
+                          className="mt-3.5 h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white font-medium cursor-pointer"
+                        >
+                          Đăng nhập NVC
+                        </Button>
+                      </>
+                    )
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-foreground">
+                        {tr(
+                          `Chưa có tài khoản ${currentPage.toUpperCase()} nào`,
+                          `No ${currentPage.toUpperCase()} accounts yet`,
+                        )}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                        {tr(
+                          `Giao diện ${currentPage.toUpperCase()} đã sẵn sàng. Logic kết nối và làm nhiệm vụ sẽ được cấu hình trong bước tiếp theo.`,
+                          `${currentPage.toUpperCase()} interface is ready. Task connection logic will be configured in subsequent updates.`,
+                        )}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -2153,6 +2292,13 @@ export default function HomePage() {
         isOpen={isXsmmLoginOpen}
         onClose={() => setIsXsmmLoginOpen(false)}
         onLoginSuccess={handleXsmmLoginSuccess}
+      />
+
+      {/* Dialog Đăng nhập NVC */}
+      <NvcLoginDialog
+        isOpen={isNvcLoginOpen}
+        onClose={() => setIsNvcLoginOpen(false)}
+        onLoginSuccess={handleNvcLoginSuccess}
       />
 
       {/* Settings Dialog */}

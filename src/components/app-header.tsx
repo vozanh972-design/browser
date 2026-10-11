@@ -15,6 +15,12 @@ export interface XsmmAccountInfo {
   isLoggedIn: boolean;
 }
 
+export interface NvcAccountInfo {
+  username: string;
+  balance: string;
+  isLoggedIn: boolean;
+}
+
 interface AppHeaderProps {
   pageTitle?: string;
   activePlatform?: "facebook" | "instagram";
@@ -22,8 +28,13 @@ interface AppHeaderProps {
   xsmmAccount?: XsmmAccountInfo;
   onXsmmLoginClick?: () => void;
   onXsmmLogoutClick?: () => void;
+  nvcAccount?: NvcAccountInfo;
+  onNvcLoginClick?: () => void;
+  onNvcLogoutClick?: () => void;
   onNewClick?: () => void;
   showXsmm?: boolean;
+  showNvc?: boolean;
+  hideInstagram?: boolean;
 }
 
 export function AppHeader({
@@ -33,8 +44,13 @@ export function AppHeader({
   xsmmAccount,
   onXsmmLoginClick,
   onXsmmLogoutClick,
+  nvcAccount,
+  onNvcLoginClick,
+  onNvcLogoutClick,
   onNewClick,
   showXsmm = true,
+  showNvc = false,
+  hideInstagram = false,
 }: AppHeaderProps) {
   const { i18n } = useTranslation();
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
@@ -82,19 +98,21 @@ export function AppHeader({
           <span>Facebook</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onPlatformChange?.("instagram")}
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all cursor-pointer",
-            activePlatform === "instagram"
-              ? "border-[#E1306C]/40 bg-[#E1306C]/15 text-[#E1306C] font-semibold shadow-xs"
-              : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-          )}
-        >
-          <FaInstagram className="size-3.5 text-[#E1306C]" />
-          <span>Instagram</span>
-        </button>
+        {!hideInstagram && (
+          <button
+            type="button"
+            onClick={() => onPlatformChange?.("instagram")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all cursor-pointer",
+              activePlatform === "instagram"
+                ? "border-[#E1306C]/40 bg-[#E1306C]/15 text-[#E1306C] font-semibold shadow-xs"
+                : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            )}
+          >
+            <FaInstagram className="size-3.5 text-[#E1306C]" />
+            <span>Instagram</span>
+          </button>
+        )}
 
         {pageTitle && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground ml-1">
@@ -104,7 +122,7 @@ export function AppHeader({
         )}
       </div>
 
-      {/* Right: XSMM User + Balance & Action */}
+      {/* Right: XSMM & NVC User + Balance & Action */}
       <div className="flex items-center gap-2.5 pointer-events-auto">
         {showXsmm &&
           (xsmmAccount?.isLoggedIn ? (
@@ -146,6 +164,50 @@ export function AppHeader({
               >
                 <Key className="size-3" />
                 <span>{isVi ? "Đăng nhập XSMM" : "Sign in XSMM"}</span>
+              </button>
+            )
+          ))}
+
+        {showNvc &&
+          (nvcAccount?.isLoggedIn ? (
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
+              {/* User */}
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <User className="size-3.5 text-blue-400" />
+                <span className="max-w-[120px] truncate">
+                  {nvcAccount.username}
+                </span>
+              </div>
+
+              <span className="h-3 w-px bg-border" />
+
+              {/* Balance */}
+              <div className="flex items-center gap-1 font-semibold text-blue-400">
+                <Coins className="size-3.5 text-amber-400" />
+                <span>{nvcAccount.balance}</span>
+              </div>
+
+              {/* Logout button */}
+              {onNvcLogoutClick && (
+                <button
+                  type="button"
+                  onClick={onNvcLogoutClick}
+                  title={isVi ? "Đăng xuất NVC" : "Sign out NVC"}
+                  className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
+                >
+                  <LogOut className="size-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            onNvcLoginClick && (
+              <button
+                type="button"
+                onClick={onNvcLoginClick}
+                className="flex h-7 items-center gap-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 px-2.5 text-xs font-medium text-blue-400 hover:bg-blue-500/20 transition-colors cursor-pointer"
+              >
+                <Key className="size-3" />
+                <span>{isVi ? "Đăng nhập NVC" : "Sign in NVC"}</span>
               </button>
             )
           ))}
