@@ -5,6 +5,7 @@ import {
 } from "./golike-session";
 
 export interface GolikeUser {
+  id?: number | string;
   username: string;
   coin: number;
 }
@@ -13,6 +14,7 @@ export interface GolikeUserResponse {
   status?: number;
   success?: boolean;
   data?: {
+    id?: number | string;
     username?: string;
     name?: string;
     coin?: number;
@@ -71,6 +73,7 @@ export async function getGolikeUser(tokenOrSession?: string | GolikeSessionData)
       return {
         success: true,
         user: {
+          id: data.data.id,
           username: data.data.username || data.data.name || "GoLike User",
           coin: Number(data.data.coin || data.data.coins || 0),
         },
