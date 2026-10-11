@@ -254,7 +254,7 @@ export function GolikeLoginDialog({
             localStorage.setItem("golike_balance", freshBalance);
             saveGolikeSession({
               golike_username: freshUname,
-              golike_user_id: fresh.user.id ? String(fresh.user.id) : fullSession.golike_user_id,
+              golike_user_id: (fresh.user as { id?: number | string }).id ? String((fresh.user as { id?: number | string }).id) : fullSession.golike_user_id,
             });
             onLoginSuccess({
               username: freshUname,

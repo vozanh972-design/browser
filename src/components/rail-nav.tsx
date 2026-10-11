@@ -14,7 +14,6 @@ export type AppPage =
   | "profiles"
   | "ttc"
   | "nvc"
-  | "gl"
   | "proxies"
   | "groups"
   | "vpns"
@@ -162,7 +161,6 @@ const TOP_ITEMS: RailItem[] = [
   { page: "profiles", Icon: User, labelKey: "XSMM" },
   { page: "ttc", textLabel: "TTC", labelKey: "TTC" },
   { page: "nvc", textLabel: "NVC", labelKey: "NVC" },
-  { page: "gl", textLabel: "GL", labelKey: "GL" },
 ];
 
 export function RailNav({
