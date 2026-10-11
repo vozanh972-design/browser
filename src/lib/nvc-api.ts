@@ -1,3 +1,5 @@
+import { invoke } from "@tauri-apps/api/core";
+
 export interface NvcUser {
   id: number;
   username: string;
@@ -17,8 +19,55 @@ export interface NvcLoginResponse {
 const NVC_USER_AGENT =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1";
 
+async function runNvcCurl(options: {
+  url: string;
+  method?: string;
+  headers?: string[];
+  body?: string;
+  cookie?: string;
+  includeHeaders?: boolean;
+}): Promise<string> {
+  const isTauri =
+    typeof window !== "undefined" &&
+    ("__TAURI_INTERNALS__" in window || "__TAURI__" in window);
+
+  if (isTauri) {
+    return await invoke<string>("curl_request", {
+      url: options.url,
+      method: options.method ?? "GET",
+      headers: options.headers ?? null,
+      body: options.body ?? null,
+      cookie: options.cookie ?? null,
+      proxy: null,
+      includeHeaders: options.includeHeaders ?? false,
+      timeoutSecs: 20,
+      formFields: null,
+    });
+  }
+
+  // Fallback nếu chạy ở trình duyệt thông thường
+  const headersObj: Record<string, string> = {};
+  if (options.headers) {
+    for (const h of options.headers) {
+      const idx = h.indexOf(":");
+      if (idx !== -1) {
+        headersObj[h.slice(0, idx).trim()] = h.slice(idx + 1).trim();
+      }
+    }
+  }
+  if (options.cookie) {
+    headersObj["cookie"] = options.cookie;
+  }
+  const res = await fetch(options.url, {
+    method: options.method ?? "GET",
+    headers: headersObj,
+    body: options.body,
+  });
+  return await res.text();
+}
+
 /**
- * Đăng nhập Nhiệm Vụ Chéo qua API chính thức
+ * Đăng nhập Nhiệm Vụ Chéo qua API chính thức (sử dụng curl_request native để tránh CORS)
  * POST https://nhiemvucheo.com/api/v1/auth/login
  */
 export async function loginNvc(
@@ -26,39 +75,47 @@ export async function loginNvc(
   password: string,
 ): Promise<NvcLoginResponse> {
   try {
-    const res = await fetch("https://nhiemvucheo.com/api/v1/auth/login", {
+    const rawOutput = await runNvcCurl({
+      url: "https://nhiemvucheo.com/api/v1/auth/login",
       method: "POST",
-      headers: {
-        "content-type": "application/json",
-        accept: "*/*",
-        origin: "https://nhiemvucheo.com",
-        referer: "https://nhiemvucheo.com/auth/login?returnUrl=%2Fhome",
-        "user-agent": NVC_USER_AGENT,
-      },
+      includeHeaders: true,
+      headers: [
+        "accept: */*",
+        "content-type: application/json",
+        "origin: https://nhiemvucheo.com",
+        "referer: https://nhiemvucheo.com/auth/login?returnUrl=%2Fhome",
+        `user-agent: ${NVC_USER_AGENT}`,
+      ],
       body: JSON.stringify({
         username: username.trim(),
         password,
       }),
     });
 
-    const data = await res.json().catch(() => null);
+    // Tách headers và body nếu có includeHeaders (-i)
+    let headerText = "";
+    let bodyText = rawOutput;
 
-    if (!res.ok || !data?.success) {
+    const parts = rawOutput.split(/\r?\n\r?\n/);
+    if (parts.length > 1) {
+      bodyText = parts[parts.length - 1].trim();
+      headerText = parts.slice(0, parts.length - 1).join("\n");
+    }
+
+    let sessionCookie = "";
+    const cookieMatch = headerText.match(/nvc_session=([^;\r\n]+)/);
+    if (cookieMatch) {
+      sessionCookie = cookieMatch[1].trim();
+    }
+
+    const data = JSON.parse(bodyText);
+
+    if (!data?.success) {
       const errMsg =
         data?.error?.message ||
         data?.message ||
-        `Đăng nhập thất bại (HTTP ${res.status})`;
+        "Tên tài khoản hoặc mật khẩu không chính xác";
       return { success: false, error: errMsg };
-    }
-
-    // Lấy cookie session nếu có trong response headers
-    let sessionCookie = "";
-    const rawSetCookie = res.headers.get("set-cookie");
-    if (rawSetCookie) {
-      const match = rawSetCookie.match(/nvc_session=([^;]+)/);
-      if (match) {
-        sessionCookie = match[1];
-      }
     }
 
     const user: NvcUser = {
@@ -91,26 +148,25 @@ export async function getNvcMe(sessionCookie?: string): Promise<{
   error?: string;
 }> {
   try {
-    const headers: Record<string, string> = {
-      accept: "*/*",
-      referer: "https://nhiemvucheo.com/home",
-      "user-agent": NVC_USER_AGENT,
-    };
-
-    if (sessionCookie) {
-      headers["cookie"] = `nvc_session=${sessionCookie}`;
-    }
-
-    const res = await fetch("https://nhiemvucheo.com/api/v1/auth/me", {
-      headers,
+    const rawOutput = await runNvcCurl({
+      url: "https://nhiemvucheo.com/api/v1/auth/me",
+      method: "GET",
+      cookie: sessionCookie ? `nvc_session=${sessionCookie}` : undefined,
+      headers: [
+        "accept: */*",
+        "referer: https://nhiemvucheo.com/home",
+        `user-agent: ${NVC_USER_AGENT}`,
+      ],
     });
 
-    const data = await res.json().catch(() => null);
+    const parts = rawOutput.split(/\r?\n\r?\n/);
+    const bodyText = parts[parts.length - 1].trim();
+    const data = JSON.parse(bodyText);
 
-    if (!res.ok || !data?.success) {
+    if (!data?.success) {
       return {
         success: false,
-        error: data?.error?.message || `HTTP ${res.status}`,
+        error: data?.error?.message || "Không thể lấy thông tin tài khoản NVC",
       };
     }
 
