@@ -183,7 +183,6 @@ interface DockNavItemProps {
   isNvc: boolean;
   isDolike: boolean;
   onNavigate: (page: AppPage) => void;
-  t: (key: string, defaultValue?: string) => string;
 }
 
 function DockNavItem({
@@ -198,8 +197,8 @@ function DockNavItem({
   isNvc,
   isDolike,
   onNavigate,
-  t,
 }: DockNavItemProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLButtonElement>(null);
 
   // Hiệu ứng Dock Magnification (Fisheye) tính toán theo khoảng cách tới con trỏ chuột
@@ -332,13 +331,12 @@ function DockSettingsButton({
   mouseX,
   active,
   onNavigate,
-  t,
 }: {
   mouseX: MotionValue<number>;
   active: boolean;
   onNavigate: (page: AppPage) => void;
-  t: (key: string, defaultValue?: string) => string;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLButtonElement>(null);
   const dist = useTransform(mouseX, (x: number) => {
     const rect = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
@@ -399,13 +397,12 @@ function DockMoreButton({
   mouseX,
   moreOpen,
   setMoreOpen,
-  t,
 }: {
   mouseX: MotionValue<number>;
   moreOpen: boolean;
   setMoreOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  t: (key: string, defaultValue?: string) => string;
 }) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLButtonElement>(null);
   const dist = useTransform(mouseX, (x: number) => {
     const rect = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 };
@@ -583,7 +580,6 @@ export function RailNav({
               isNvc={isNvc}
               isDolike={isDolike}
               onNavigate={onNavigate}
-              t={t}
             />
           );
         })}
@@ -596,7 +592,6 @@ export function RailNav({
           mouseX={mouseX}
           active={currentPage === "settings"}
           onNavigate={onNavigate}
-          t={t}
         />
 
         {/* More 3-dots button */}
@@ -604,7 +599,6 @@ export function RailNav({
           mouseX={mouseX}
           moreOpen={moreOpen}
           setMoreOpen={setMoreOpen}
-          t={t}
         />
       </motion.div>
 
