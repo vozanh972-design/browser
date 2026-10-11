@@ -78,6 +78,7 @@ export interface FacebookAccount {
   rawText: string;
   pages?: FacebookPageItem[];
   dolikeEmail?: string;
+  dolikeBalance?: string;
 }
 
 function AccountAvatar({
@@ -594,38 +595,36 @@ export default function HomePage() {
       isLoggedIn: true,
     });
 
-    if (selectedIds.length > 0) {
-      setAccounts((prev) => {
-        const updated = prev.map((a) => {
-          if (selectedIds.includes(a.id)) {
-            return { ...a, dolikeEmail: user.email };
-          }
-          return a;
-        });
-        try {
-          localStorage.setItem(
-            "autolunex_facebook_accounts_v1",
-            JSON.stringify(updated),
-          );
-        } catch {
-          // ignore
+    setAccounts((prev) => {
+      const hasSelected = selectedIds.length > 0;
+      const updated = prev.map((a) => {
+        if ((a.platform || "facebook") !== "instagram") return a;
+        if (hasSelected ? selectedIds.includes(a.id) : !a.dolikeEmail) {
+          return {
+            ...a,
+            dolikeEmail: user.email,
+            dolikeBalance: user.balance,
+          };
         }
-        return updated;
+        return a;
       });
-      showSuccessToast(
-        tr(
-          `Đã đăng nhập DoLike & gán cho ${selectedIds.length} tài khoản đã chọn!`,
-          `Logged in DoLike & assigned to ${selectedIds.length} selected accounts!`,
-        ),
-      );
-    } else {
-      showSuccessToast(
-        tr(
-          `Đăng nhập DoLike thành công (${user.email})!`,
-          `Logged in DoLike successfully (${user.email})!`,
-        ),
-      );
-    }
+      try {
+        localStorage.setItem(
+          "autolunex_facebook_accounts_v1",
+          JSON.stringify(updated),
+        );
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+
+    showSuccessToast(
+      tr(
+        `Đã lưu tài khoản DoLike [${user.email}] vào cột TK DoLike!`,
+        `Saved DoLike account [${user.email}] into TK DoLike column!`,
+      ),
+    );
   };
 
   const handleDolikeLogout = () => {
@@ -1637,6 +1636,8 @@ export default function HomePage() {
         nvcAccount={nvcAccount}
         onNvcLoginClick={() => setIsNvcLoginOpen(true)}
         onNvcLogoutClick={handleNvcLogout}
+        showDolike={currentPage === "dolike"}
+        onDolikeLoginClick={() => setIsDolikeLoginOpen(true)}
         hideInstagram={currentPage === "nvc"}
         hideFacebook={currentPage === "dolike"}
         onNewClick={() => setIsAddFacebookOpen(true)}
@@ -2721,56 +2722,6 @@ export default function HomePage() {
               transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
               className="flex w-full flex-1 flex-col"
             >
-              {/* Thanh thông tin tài khoản DoLike & nút Đăng nhập đặt bên dưới Header */}
-              <div className="mb-3 flex items-center justify-between px-3.5 py-2 rounded-lg border border-border/60 bg-muted/20">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex items-center gap-1.5 font-semibold text-xs text-foreground">
-                    <span className="flex size-5 items-center justify-center rounded bg-fuchsia-500/15 text-fuchsia-500 text-[10px] font-bold">
-                      DL
-                    </span>
-                    <span>DoLike</span>
-                  </div>
-
-                  {dolikeAccount.isLoggedIn ? (
-                    <div className="flex items-center gap-2 rounded-md border border-fuchsia-500/30 bg-fuchsia-500/10 px-2.5 py-1 text-xs">
-                      <span className="size-1.5 rounded-full bg-fuchsia-500 animate-pulse" />
-                      <span className="font-medium text-foreground">
-                        {dolikeAccount.email}
-                      </span>
-                      <span className="h-3 w-px bg-fuchsia-500/30" />
-                      <span className="font-semibold text-fuchsia-400">
-                        💰 {dolikeAccount.balance || "0 đ"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleDolikeLogout}
-                        title={tr("Đăng xuất DoLike", "Sign out DoLike")}
-                        className="ml-1 text-muted-foreground/60 hover:text-destructive cursor-pointer transition-colors"
-                      >
-                        <LogOut className="size-3" />
-                      </button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">
-                      {tr(
-                        "Chưa đăng nhập tài khoản DoLike",
-                        "Not logged into DoLike",
-                      )}
-                    </span>
-                  )}
-                </div>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => setIsDolikeLoginOpen(true)}
-                  className="h-7 text-xs bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-medium cursor-pointer gap-1.5 shadow-2xs"
-                >
-                  <Key className="size-3" />
-                  <span>{tr("Đăng nhập DoLike", "Login DoLike")}</span>
-                </Button>
-              </div>
-
               {/* Toolbar thao tác hàng loạt khi có tài khoản được chọn */}
               {selectedIds.length > 0 && (
                 <div className="mb-2.5 flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs">
@@ -3028,20 +2979,32 @@ export default function HomePage() {
                             <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
                               {acc.dolikeEmail || (dolikeAccount.isLoggedIn && dolikeAccount.email) ? (
                                 <span
-                                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-medium bg-fuchsia-500/10 text-fuchsia-500 border border-fuchsia-500/20 whitespace-nowrap max-w-[240px] truncate"
-                                  title={acc.dolikeEmail || dolikeAccount.email}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-medium bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/25 whitespace-nowrap max-w-[240px] truncate"
+                                  title={`DoLike: ${acc.dolikeEmail || dolikeAccount.email} | Số dư: ${acc.dolikeBalance || dolikeAccount.balance || "0 đ"}`}
                                 >
                                   <span className="size-1.5 rounded-full bg-fuchsia-500 shrink-0" />
-                                  <span className="truncate">{acc.dolikeEmail || dolikeAccount.email}</span>
+                                  <span className="truncate font-semibold text-foreground">{acc.dolikeEmail || dolikeAccount.email}</span>
+                                  <span className="text-[10px] text-amber-400 font-bold shrink-0">
+                                    💰 {acc.dolikeBalance || dolikeAccount.balance || "0 đ"}
+                                  </span>
                                 </span>
                               ) : (
-                                <span
-                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground border border-border/40 whitespace-nowrap"
-                                  title={tr("Chưa đăng nhập DoLike", "DoLike not logged in")}
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedIds([acc.id]);
+                                    setIsDolikeLoginOpen(true);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10.5px] font-medium bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/30 hover:bg-fuchsia-500/20 transition-colors cursor-pointer whitespace-nowrap"
+                                  title={tr(
+                                    "Đăng nhập tài khoản DoLike cho nick này",
+                                    "Login DoLike for this account",
+                                  )}
                                 >
-                                  <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
-                                  {tr("Chưa đăng nhập", "Not logged in")}
-                                </span>
+                                  <Key className="size-2.5" />
+                                  <span>{tr("Đăng nhập DoLike", "Login DoLike")}</span>
+                                </button>
                               )}
                               {acc.twoFactor ? (
                                 <span className="text-[10px] font-mono text-muted-foreground/80 px-1 py-0.5 rounded bg-muted/40 border border-border/30">

@@ -230,6 +230,17 @@ export function AppHeader({
             )
           ))}
 
+        {showDolike && onDolikeLoginClick && (
+          <button
+            type="button"
+            onClick={onDolikeLoginClick}
+            className="flex h-7 items-center gap-1.5 rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 px-2.5 text-xs font-medium text-fuchsia-400 hover:bg-fuchsia-500/20 transition-colors cursor-pointer"
+          >
+            <Key className="size-3" />
+            <span>{isVi ? "Đăng nhập DoLike" : "Sign in DoLike"}</span>
+          </button>
+        )}
+
         {onNewClick && (
           <Button
             size="sm"
