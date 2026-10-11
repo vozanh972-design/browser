@@ -793,8 +793,11 @@ export default function HomePage() {
       setCurrentPage("settings");
       return;
     }
-    if (page === "nvc" || page === "dolike") {
+    if (page === "nvc") {
       setCurrentPlatform("facebook");
+    }
+    if (page === "dolike") {
+      setCurrentPlatform("instagram");
     }
     setCurrentPage(page);
   }, []);
@@ -1589,7 +1592,16 @@ export default function HomePage() {
         nvcAccount={nvcAccount}
         onNvcLoginClick={() => setIsNvcLoginOpen(true)}
         onNvcLogoutClick={handleNvcLogout}
+        showDolike={currentPage === "dolike"}
+        dolikeAccount={{
+          username: dolikeAccount.email || "",
+          balance: dolikeAccount.balance || "0 đ",
+          isLoggedIn: dolikeAccount.isLoggedIn,
+        }}
+        onDolikeLoginClick={() => setIsDolikeLoginOpen(true)}
+        onDolikeLogoutClick={handleDolikeLogout}
         hideInstagram={currentPage === "nvc"}
+        hideFacebook={currentPage === "dolike"}
         onNewClick={() => setIsAddFacebookOpen(true)}
       />
 
@@ -2672,112 +2684,463 @@ export default function HomePage() {
               transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
               className="flex w-full flex-1 flex-col"
             >
-              {/* DoLike Platform Toolbar */}
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-border/40">
-                <div className="flex items-center gap-2">
-                  <span className="flex size-7 items-center justify-center rounded-lg bg-fuchsia-500/10 text-fuchsia-500 font-bold text-xs">
-                    DL
-                  </span>
-                  <div>
-                    <h2 className="text-sm font-semibold text-foreground">DoLike</h2>
-                    <p className="text-[11px] text-muted-foreground">congtingudolike.servehttp.com</p>
+              {/* Toolbar thao tác hàng loạt khi có tài khoản được chọn */}
+              {selectedIds.length > 0 && (
+                <div className="mb-2.5 flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs">
+                  <div className="font-medium text-foreground">
+                    {tr("Đã chọn ", "Selected ")}
+                    <span className="font-bold text-primary">
+                      {selectedIds.length}
+                    </span>{" "}
+                    {tr("tài khoản", "accounts")}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* Nút Cài đặt / Setup Job */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsJobConfigOpen(true)}
+                      className="h-7 text-[11px] gap-1.5 cursor-pointer bg-background hover:bg-muted font-medium border-border/80 shadow-xs text-foreground"
+                      title={tr(
+                        "Cài đặt loại job, thời gian delay làm job, chờ nhận job...",
+                        "Setup job types, action delay, wait delay...",
+                      )}
+                    >
+                      <SlidersHorizontal className="size-3 text-primary" />
+                      <span>{tr("Cài đặt Job", "Job Settings")}</span>
+                    </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const toCheckAccounts = filteredAccounts.filter((a) =>
+                          selectedIds.includes(a.id),
+                        );
+                        void (async () => {
+                          for (const acc of toCheckAccounts) {
+                            await handleCheckAccount(acc);
+                            const safeDelay =
+                              1200 + Math.floor(Math.random() * 800);
+                            await new Promise((r) => setTimeout(r, safeDelay));
+                          }
+                        })();
+                      }}
+                      className="h-7 text-[11px] gap-1 cursor-pointer"
+                    >
+                      <RefreshCw className="size-3" />
+                      <span>
+                        {tr("Kiểm tra lại", "Re-check")} ({selectedIds.length})
+                      </span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => {
+                        const count = selectedIds.length;
+                        setAccounts((prev) => {
+                          const updated = prev.filter(
+                            (a) => !selectedIds.includes(a.id),
+                          );
+                          try {
+                            localStorage.setItem(
+                              "autolunex_facebook_accounts_v1",
+                              JSON.stringify(updated),
+                            );
+                          } catch {
+                            // ignore
+                          }
+                          return updated;
+                        });
+                        setSelectedIds([]);
+                        showSuccessToast(
+                          tr(
+                            `Đã xóa vĩnh viễn ${count} mục đã chọn!`,
+                            `Permanently deleted ${count} selected items!`,
+                          ),
+                        );
+                      }}
+                      className="h-7 text-[11px] gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="size-3" />
+                      <span>{tr("Xóa vĩnh viễn", "Delete permanently")}</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleRunSelected}
+                      className="h-7 text-[11px] gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
+                    >
+                      <Play className="size-3 fill-current" />
+                      <span>
+                        {tr("Chạy", "Run")} ({selectedIds.length})
+                      </span>
+                    </Button>
                   </div>
                 </div>
+              )}
 
-                <div className="flex items-center gap-2">
-                  {dolikeAccount.isLoggedIn ? (
-                    <div className="flex items-center gap-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1.5 shadow-2xs">
-                      <span className="size-2 rounded-full bg-fuchsia-500 animate-pulse" />
-                      <span className="text-xs font-semibold text-foreground">
-                        {dolikeAccount.email}
-                      </span>
-                      <span className="text-[11px] text-fuchsia-500 font-bold ml-1">
-                        💰 {dolikeAccount.balance || "0 đ"}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleDolikeLogout}
-                        className="ml-2 text-[11px] font-medium text-rose-500 hover:underline cursor-pointer"
-                      >
-                        {tr("Đăng xuất", "Logout")}
-                      </button>
-                    </div>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setIsDolikeLoginOpen(true)}
-                      className="h-8 bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs cursor-pointer"
-                    >
-                      <Key className="size-3.5" />
-                      <span>{tr("Đăng nhập DoLike", "Login DoLike")}</span>
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Table View matching app layout */}
+              {/* Table View matching XSMM */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
+                <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
                   <div className="flex items-center justify-center">
-                    <input
-                      type="checkbox"
-                      disabled
-                      className="size-3.5 rounded border-border opacity-40 cursor-not-allowed"
+                    <Checkbox
+                      checked={
+                        getAllSelectableIds().length > 0 &&
+                        selectedIds.length === getAllSelectableIds().length
+                      }
+                      onCheckedChange={toggleSelectAll}
                     />
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span>{tr("Tên", "Name")}</span>
+                  <div className="flex items-center gap-1 hover:text-foreground cursor-pointer">
+                    <span>{tr("Tên & UID", "Name & UID")}</span>
                     <span className="text-[10px]">▲</span>
                   </div>
-                  <div>{tr("Thẻ", "Tags")}</div>
-                  <div>{tr("Ghi chú", "Note")}</div>
-                  <div>Proxy / VPN</div>
                   <div>{tr("LIÊN KẾT", "LINKED")}</div>
-                  <div>{tr("TRẠNG THÁI TÀI KHOẢN", "ACCOUNT STATUS")}</div>
-                  <div>{tr("HÀNH ĐỘNG", "ACTION")}</div>
-                  <div className="text-right">#</div>
+                  <div>Proxy / VPN</div>
+                  <div>{tr("TRẠNG THÁI", "STATUS")}</div>
+                  <div>{tr("HÀNH ĐỘNG", "ACTION / STATE")}</div>
+                  <div className="text-right pr-2">
+                    {tr("Thao tác", "Actions")}
+                  </div>
                 </div>
 
-                {/* Content / Empty State */}
-                <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
-                  <div className="size-12 rounded-full bg-fuchsia-500/10 text-fuchsia-500 flex items-center justify-center font-bold text-sm mb-3">
-                    DL
+                {/* Table Rows or Empty State */}
+                {filteredAccounts.length === 0 ? (
+                  <div className="flex flex-1 flex-col items-center justify-center py-28 text-center select-none">
+                    {!dolikeAccount.isLoggedIn ? (
+                      <div className="flex flex-col items-center gap-2.5">
+                        <div className="flex size-12 items-center justify-center rounded-xl bg-fuchsia-500/10 text-fuchsia-500 border border-fuchsia-500/20">
+                          <ShieldCheck className="size-6" />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground">
+                          {tr(
+                            "Chưa kết nối tài khoản DoLike",
+                            "DoLike account not connected",
+                          )}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground max-w-xs leading-relaxed">
+                          {tr(
+                            "Vui lòng đăng nhập tài khoản DoLike để quản lý và tự động hóa kiếm tiền với Instagram.",
+                            "Please sign in to DoLike account to manage and automate Instagram tasks.",
+                          )}
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsDolikeLoginOpen(true)}
+                          className="mt-2 h-7.5 text-xs bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-semibold cursor-pointer gap-1.5"
+                        >
+                          <Key className="size-3.5" />
+                          <span>
+                            {tr(
+                              "Đăng nhập tài khoản DoLike",
+                              "Sign in DoLike account",
+                            )}
+                          </span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2">
+                        <div className="flex size-12 items-center justify-center rounded-xl bg-[#E1306C]/10 text-[#E1306C]">
+                          <FaInstagram className="size-6" />
+                        </div>
+                        <p className="text-xs font-semibold text-foreground">
+                          {tr(
+                            "Chưa có tài khoản Instagram nào",
+                            "No Instagram accounts yet",
+                          )}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {tr(
+                            'Bấm nút "+ Mới" ở góc trên bên phải để thêm tài khoản Instagram chạy DoLike.',
+                            'Click "+ New" button at top right to add Instagram account for DoLike.',
+                          )}
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => setIsAddFacebookOpen(true)}
+                          className="mt-2 h-7.5 text-xs cursor-pointer gap-1.5"
+                        >
+                          <Plus className="size-3.5" />
+                          <span>
+                            {tr(
+                              "Thêm tài khoản Instagram",
+                              "Add Instagram Account",
+                            )}
+                          </span>
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-sm font-medium text-foreground">
-                    {dolikeAccount.isLoggedIn
-                      ? tr(
-                          `Đã kết nối DoLike: ${dolikeAccount.email}`,
-                          `Connected to DoLike: ${dolikeAccount.email}`,
-                        )
-                      : tr(
-                          "Chưa đăng nhập tài khoản DoLike",
-                          "Not logged into DoLike yet",
-                        )}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                    {dolikeAccount.isLoggedIn
-                      ? tr(
-                          `Số dư ví hiện tại: ${dolikeAccount.balance || "0 đ"}. Phiên đăng nhập hoạt động tốt qua API account-auth.php và wallet.php.`,
-                          `Current wallet balance: ${dolikeAccount.balance || "0 đ"}. Active session via account-auth.php & wallet.php.`,
-                        )
-                      : tr(
-                          "Vui lòng bấm nút 'Đăng nhập DoLike' phía trên để xác thực tài khoản và đồng bộ ví.",
-                          "Please click 'Login DoLike' above to authenticate and sync your wallet.",
-                        )}
-                  </p>
-                  {!dolikeAccount.isLoggedIn && (
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={() => setIsDolikeLoginOpen(true)}
-                      className="mt-4 h-8 bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-medium cursor-pointer"
-                    >
-                      {tr("Đăng nhập ngay", "Login now")}
-                    </Button>
-                  )}
-                </div>
+                ) : (
+                  <div className="flex-1 min-h-0 divide-y divide-border/30 overflow-y-auto">
+                    {filteredAccounts.map((acc) => {
+                      const isChecking = checkingIds.includes(acc.id);
+                      const isSelected = selectedIds.includes(acc.id);
+                      const isCheckpointOrDie =
+                        acc.isLive === false ||
+                        acc.status === "checkpoint" ||
+                        acc.status === "die";
+                      const runState = runnerStates.get(acc.id);
+                      const isRunning = runState?.isRunning ?? false;
+                      const avatarSrc = isCheckpointOrDie
+                        ? undefined
+                        : acc.avatar;
+
+                      return (
+                        <div key={acc.id} className="flex flex-col">
+                          <div
+                            role="row"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                toggleSelectOne(acc.id);
+                              }
+                            }}
+                            onClick={(e) => {
+                              const target = e.target as HTMLElement;
+                              if (
+                                target.closest("button") ||
+                                target.closest("a") ||
+                                target.closest('[role="checkbox"]')
+                              ) {
+                                return;
+                              }
+                              toggleSelectOne(acc.id);
+                            }}
+                            className={cn(
+                              "grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-2 text-xs text-foreground cursor-pointer hover:bg-muted/40 transition-colors select-none outline-none focus-visible:bg-muted/50",
+                              isRunning && "bg-emerald-500/5",
+                              isSelected &&
+                                "bg-primary/10 border-l-2 border-primary",
+                            )}
+                          >
+                            {/* Checkbox */}
+                            <div className="flex items-center justify-center">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSelectOne(acc.id)}
+                              />
+                            </div>
+
+                            {/* Tên & UID */}
+                            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                              <AccountAvatar url={avatarSrc} />
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-medium truncate text-foreground leading-tight">
+                                  {acc.name || acc.uid}
+                                </span>
+                                <span className="text-[10px] font-mono text-muted-foreground truncate leading-tight">
+                                  UID: {acc.uid}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* LIÊN KẾT */}
+                            <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
+                              {acc.token ? (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
+                                  title={tr(
+                                    "Đã liên kết token vào hệ thống",
+                                    "Linked with token",
+                                  )}
+                                >
+                                  <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                  {tr("Đã liên kết", "Linked")}
+                                </span>
+                              ) : (
+                                <span
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground border border-border/40 whitespace-nowrap"
+                                  title={tr("Chưa liên kết", "Not linked")}
+                                >
+                                  <span className="size-1.5 rounded-full bg-muted-foreground/60 shrink-0" />
+                                  {tr("Chưa liên kết", "Unlinked")}
+                                </span>
+                              )}
+                              {acc.twoFactor ? (
+                                <span className="text-[10px] font-mono text-muted-foreground/80 px-1 py-0.5 rounded bg-muted/40 border border-border/30">
+                                  2FA
+                                </span>
+                              ) : null}
+                            </div>
+
+                            {/* Proxy / VPN */}
+                            <div className="text-muted-foreground truncate pr-2 font-mono text-[11px]">
+                              {acc.proxy || tr("Chưa chọn", "Not set")}
+                            </div>
+
+                            {/* TRẠNG THÁI */}
+                            <div className="flex items-center min-w-[95px]">
+                              {isChecking ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-muted text-muted-foreground whitespace-nowrap">
+                                  <RefreshCw className="size-2.5 animate-spin shrink-0" />
+                                  {tr("Đang kiểm tra", "Checking")}
+                                </span>
+                              ) : runState &&
+                                (runState.successCount > 0 ||
+                                  runState.earnedPoints > 0) ? (
+                                <span
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap"
+                                  title={`${runState.successCount} thành công, ${runState.errorCount} lỗi`}
+                                >
+                                  ✓ {runState.successCount}{" "}
+                                  {runState.earnedPoints > 0
+                                    ? `(+${runState.earnedPoints})`
+                                    : ""}
+                                </span>
+                              ) : acc.isLive === true ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
+                                  Live
+                                </span>
+                              ) : acc.isLive === false ||
+                                acc.status === "die" ||
+                                acc.status === "checkpoint" ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap">
+                                  Die
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20 whitespace-nowrap">
+                                  {tr("Chưa kiểm tra", "Unchecked")}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* HÀNH ĐỘNG */}
+                            <div className="text-muted-foreground truncate pr-2 font-medium">
+                              {isCheckpointOrDie ? (
+                                <span className="text-rose-500/80 font-medium">
+                                  {acc.status === "checkpoint"
+                                    ? tr("Bị Checkpoint", "Checkpoint")
+                                    : tr("Đã Die", "Died")}
+                                </span>
+                              ) : isRunning ? (
+                                <span
+                                  className="inline-flex items-center gap-1.5 text-emerald-500 font-semibold truncate"
+                                  title={runState?.status}
+                                >
+                                  <span className="relative flex size-2 shrink-0">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                    <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
+                                  </span>
+                                  <span className="truncate">
+                                    {runState?.status ||
+                                      tr("Đang chạy...", "Running...")}
+                                  </span>
+                                </span>
+                              ) : runState?.lastError ? (
+                                <span
+                                  className="text-amber-500 truncate"
+                                  title={runState.lastError}
+                                >
+                                  {runState.lastError}
+                                </span>
+                              ) : acc.note &&
+                                acc.note !== "Không có ghi chú" ? (
+                                acc.note
+                              ) : (
+                                tr("Sẵn sàng", "Ready")
+                              )}
+                            </div>
+
+                            {/* Thao tác */}
+                            <div className="flex items-center justify-end gap-1.5 pr-2">
+                              {/* Xem thông tin */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDetailAccount(acc);
+                                  setIsDetailOpen(true);
+                                }}
+                                title={tr(
+                                  "Xem toàn bộ thông tin tài khoản",
+                                  "View full account details",
+                                )}
+                                className="p-1 text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                              >
+                                <CircleAlert className="size-3.5" />
+                              </button>
+
+                              {/* Kiểm tra lại */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleCheckAccount(acc);
+                                }}
+                                title={tr(
+                                  "Kiểm tra lại tài khoản",
+                                  "Re-check account",
+                                )}
+                                className="p-1 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
+                              >
+                                <RefreshCw
+                                  className={cn(
+                                    "size-3.5",
+                                    isChecking && "animate-spin text-primary",
+                                  )}
+                                />
+                              </button>
+
+                              {/* Chạy / Dừng */}
+                              <button
+                                type="button"
+                                disabled={isCheckpointOrDie}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (isCheckpointOrDie) return;
+                                  handleRunAccount(acc);
+                                }}
+                                title={
+                                  isCheckpointOrDie
+                                    ? tr(
+                                        "Tài khoản bị Checkpoint/Die, không thể chạy",
+                                        "Account is Checkpoint/Die, cannot run",
+                                      )
+                                    : isRunning
+                                      ? tr(
+                                          "Dừng chạy tài khoản",
+                                          "Stop running account",
+                                        )
+                                      : tr("Chạy tài khoản", "Run account")
+                                }
+                                className={cn(
+                                  "p-1 rounded transition-colors",
+                                  isCheckpointOrDie
+                                    ? "text-muted-foreground/30 opacity-40 cursor-not-allowed"
+                                    : isRunning
+                                      ? "text-rose-500 bg-rose-500/15 hover:bg-rose-500/25 cursor-pointer"
+                                      : "text-muted-foreground hover:text-emerald-500 hover:bg-emerald-500/10 cursor-pointer",
+                                )}
+                              >
+                                {isRunning ? (
+                                  <Square className="size-3.5 fill-current" />
+                                ) : (
+                                  <Play className="size-3.5 fill-current" />
+                                )}
+                              </button>
+
+                              {/* Xóa */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteAccount(acc.id);
+                                }}
+                                title={tr("Xóa tài khoản", "Delete account")}
+                                className="p-1 text-muted-foreground hover:text-destructive rounded transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

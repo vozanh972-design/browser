@@ -21,6 +21,12 @@ export interface NvcAccountInfo {
   isLoggedIn: boolean;
 }
 
+export interface DolikeAccountInfo {
+  username: string;
+  balance: string;
+  isLoggedIn: boolean;
+}
+
 interface AppHeaderProps {
   pageTitle?: string;
   activePlatform?: "facebook" | "instagram";
@@ -31,10 +37,15 @@ interface AppHeaderProps {
   nvcAccount?: NvcAccountInfo;
   onNvcLoginClick?: () => void;
   onNvcLogoutClick?: () => void;
+  dolikeAccount?: DolikeAccountInfo;
+  onDolikeLoginClick?: () => void;
+  onDolikeLogoutClick?: () => void;
   onNewClick?: () => void;
   showXsmm?: boolean;
   showNvc?: boolean;
+  showDolike?: boolean;
   hideInstagram?: boolean;
+  hideFacebook?: boolean;
 }
 
 export function AppHeader({
@@ -47,10 +58,15 @@ export function AppHeader({
   nvcAccount,
   onNvcLoginClick,
   onNvcLogoutClick,
+  dolikeAccount,
+  onDolikeLoginClick,
+  onDolikeLogoutClick,
   onNewClick,
   showXsmm = true,
   showNvc = false,
+  showDolike = false,
   hideInstagram = false,
+  hideFacebook = false,
 }: AppHeaderProps) {
   const { i18n } = useTranslation();
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
@@ -84,19 +100,21 @@ export function AppHeader({
             <span>AutoLunex</span>
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => onPlatformChange?.("facebook")}
-          className={cn(
-            "flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all cursor-pointer",
-            activePlatform === "facebook"
-              ? "border-[#1877F2]/40 bg-[#1877F2]/15 text-[#1877F2] font-semibold shadow-xs"
-              : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-          )}
-        >
-          <FaFacebook className="size-3.5 text-[#1877F2]" />
-          <span>Facebook</span>
-        </button>
+        {!hideFacebook && (
+          <button
+            type="button"
+            onClick={() => onPlatformChange?.("facebook")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all cursor-pointer",
+              activePlatform === "facebook"
+                ? "border-[#1877F2]/40 bg-[#1877F2]/15 text-[#1877F2] font-semibold shadow-xs"
+                : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            )}
+          >
+            <FaFacebook className="size-3.5 text-[#1877F2]" />
+            <span>Facebook</span>
+          </button>
+        )}
 
         {!hideInstagram && (
           <button
@@ -122,7 +140,7 @@ export function AppHeader({
         )}
       </div>
 
-      {/* Right: XSMM & NVC User + Balance & Action */}
+      {/* Right: XSMM & NVC & DoLike User + Balance & Action */}
       <div className="flex items-center gap-2.5 pointer-events-auto">
         {showXsmm &&
           (xsmmAccount?.isLoggedIn ? (
@@ -208,6 +226,50 @@ export function AppHeader({
               >
                 <Key className="size-3" />
                 <span>{isVi ? "Đăng nhập NVC" : "Sign in NVC"}</span>
+              </button>
+            )
+          ))}
+
+        {showDolike &&
+          (dolikeAccount?.isLoggedIn ? (
+            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
+              {/* User */}
+              <div className="flex items-center gap-1.5 font-medium text-foreground">
+                <User className="size-3.5 text-fuchsia-400" />
+                <span className="max-w-[120px] truncate">
+                  {dolikeAccount.username}
+                </span>
+              </div>
+
+              <span className="h-3 w-px bg-border" />
+
+              {/* Balance */}
+              <div className="flex items-center gap-1 font-semibold text-fuchsia-400">
+                <Coins className="size-3.5 text-amber-400" />
+                <span>{dolikeAccount.balance}</span>
+              </div>
+
+              {/* Logout button */}
+              {onDolikeLogoutClick && (
+                <button
+                  type="button"
+                  onClick={onDolikeLogoutClick}
+                  title={isVi ? "Đăng xuất DoLike" : "Sign out DoLike"}
+                  className="ml-0.5 text-muted-foreground/60 hover:text-destructive transition-colors cursor-pointer"
+                >
+                  <LogOut className="size-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            onDolikeLoginClick && (
+              <button
+                type="button"
+                onClick={onDolikeLoginClick}
+                className="flex h-7 items-center gap-1.5 rounded-lg border border-fuchsia-500/30 bg-fuchsia-500/10 px-2.5 text-xs font-medium text-fuchsia-400 hover:bg-fuchsia-500/20 transition-colors cursor-pointer"
+              >
+                <Key className="size-3" />
+                <span>{isVi ? "Đăng nhập DoLike" : "Sign in DoLike"}</span>
               </button>
             )
           ))}
