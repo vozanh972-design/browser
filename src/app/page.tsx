@@ -471,10 +471,13 @@ export default function HomePage() {
   };
 
   const handleGolikeLogout = async () => {
-    const oldTok = golikeAccount.token;
-    await clearGolikeSession(oldTok);
-    if (typeof window !== "undefined" && oldTok) {
-      localStorage.setItem("golike_last_logged_out_token", oldTok);
+    await clearGolikeSession(golikeAccount.token);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("golike_need_clear_webview", "true");
+      localStorage.removeItem("golike_last_logged_out_token");
+      localStorage.removeItem("golike_username");
+      localStorage.removeItem("golike_balance");
+      localStorage.removeItem("golike_token");
     }
     setGolikeAccount({
       username: "",
@@ -483,7 +486,7 @@ export default function HomePage() {
       isLoggedIn: false,
     });
     showSuccessToast(
-      tr("Đã đăng xuất tài khoản GoLike thành công!", "Signed out of GoLike!"),
+      tr("Đã đăng xuất và xóa sạch tài khoản GoLike cũ!", "GoLike session cleared!"),
     );
   };
 

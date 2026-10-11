@@ -120,17 +120,6 @@ export function GolikeLoginDialog({
         const rawToken = (data.user.token || "").trim();
         const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
 
-        // Kiểm tra xem token này có phải là token của tài khoản vừa bấm đăng xuất không
-        const lastLoggedOut = typeof window !== "undefined" ? localStorage.getItem("golike_last_logged_out_token") : null;
-        if (lastLoggedOut) {
-          const cleanLoggedOut = lastLoggedOut.replace(/^Bearer\s+/i, "").trim();
-          const cleanFull = fullToken.replace(/^Bearer\s+/i, "").trim();
-          if (cleanLoggedOut === cleanFull || fullToken.includes(cleanLoggedOut) || lastLoggedOut.includes(cleanFull)) {
-            // Đây là token cũ trong LevelDB của nick vừa đăng xuất -> Không tự động nhận diện lại
-            return null;
-          }
-        }
-
         let coin = Number(data.user.coin ?? 0);
         let balance = data.user.balance || `${coin.toLocaleString("vi-VN")} coin`;
         let username = data.user.username || "GoLike User";
@@ -307,23 +296,14 @@ export function GolikeLoginDialog({
       setIframeLoading(false);
     }, 5000);
 
-    // Kiểm tra ngay lập tức khi vừa mở dialog (nếu đã đăng nhập trên GoLike thì nhận diện và đóng luôn)
-    let isChecking = false;
-    (async () => {
-      if (isChecking || isCompletedRef.current) return;
-      isChecking = true;
-      try {
-        tryInjectAndInspect();
-        const detected = await checkSession();
-        if (detected && detected.token) {
-          await handleAutoLoginSuccess(detected, detected.session);
-        }
-      } finally {
-        isChecking = false;
-      }
-    })();
+    // Nếu vừa đăng xuất tài khoản cũ, dọn sạch bộ nhớ webview
+    if (typeof window !== "undefined" && localStorage.getItem("golike_need_clear_webview")) {
+      localStorage.removeItem("golike_need_clear_webview");
+      tryClearIframeSession();
+    }
 
-    // Tự động lắng nghe và phát hiện đăng nhập thành công một cách mượt mà (có khóa isChecking chống nghẽn)
+    // Tự động lắng nghe và phát hiện đăng nhập thành công khi người dùng thao tác xong
+    let isChecking = false;
     pollingRef.current = setInterval(async () => {
       if (isCompletedRef.current || isChecking) return;
       isChecking = true;
@@ -357,12 +337,6 @@ export function GolikeLoginDialog({
         const rawToken = data.session?.golike_token || data.golike_token || data.auth;
         if (rawToken && typeof rawToken === "string" && rawToken.length >= 50) {
           const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
-
-          // Kiểm tra blacklist
-          const blacklisted = typeof window !== "undefined" ? localStorage.getItem("golike_blacklist_token") : null;
-          if (blacklisted && (fullToken === blacklisted || fullToken.includes(blacklisted))) {
-            return;
-          }
 
           const freshUser = await getGolikeUser(fullToken);
           if (freshUser.success && freshUser.user) {
@@ -436,8 +410,8 @@ export function GolikeLoginDialog({
               src={GOLIKE_LOGIN_URL}
               onLoad={() => {
                 setIframeLoading(false);
-                const lastLoggedOut = typeof window !== "undefined" ? localStorage.getItem("golike_last_logged_out_token") : null;
-                if (lastLoggedOut) {
+                if (typeof window !== "undefined" && localStorage.getItem("golike_need_clear_webview")) {
+                  localStorage.removeItem("golike_need_clear_webview");
                   tryClearIframeSession();
                 }
                 tryInjectAndInspect();
