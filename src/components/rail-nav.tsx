@@ -263,74 +263,101 @@ export function RailNav({
           const isTtc = page === "ttc";
           const isNvc = page === "nvc";
 
+          // Chiều rộng đích chính xác tính bằng pixel cho từng trạng thái mở rộng
+          const targetWidth = active
+            ? isProfiles
+              ? 66
+              : isTtc
+                ? 110
+                : isNvc
+                  ? 104
+                  : 36
+            : 36;
+
+          const springConfig = {
+            type: "spring" as const,
+            stiffness: 340,
+            damping: 28,
+            mass: 0.6,
+          };
+
           return (
             <Tooltip key={page} delayDuration={400}>
               <TooltipTrigger asChild>
                 <motion.button
-                  layout
                   type="button"
                   onClick={() => onNavigate(page)}
                   aria-label={t(labelKey, labelKey)}
                   aria-current={active ? "page" : undefined}
-                  transition={{
-                    type: "spring",
-                    stiffness: 350,
-                    damping: 30,
-                  }}
+                  initial={false}
+                  animate={{ width: targetWidth }}
+                  transition={springConfig}
                   className={cn(
                     "relative flex h-9 shrink-0 cursor-pointer items-center justify-center rounded-xl overflow-hidden select-none",
-                    active && (isNvc || isTtc)
-                      ? "px-3.5"
-                      : active && isProfiles
-                        ? "px-3"
-                        : "w-9",
                     active
                       ? "text-foreground font-semibold"
                       : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                   )}
                 >
+                  {/* Background pill trượt mượt mà */}
                   {active && (
                     <motion.div
                       layoutId="dockActivePill"
                       className="absolute inset-0 rounded-xl bg-foreground/10"
-                      transition={{
-                        type: "spring",
-                        stiffness: 350,
-                        damping: 30,
-                      }}
+                      transition={springConfig}
                     />
                   )}
-                  <span className="relative z-10 flex items-center justify-center whitespace-nowrap text-[11px] font-bold tracking-tight">
+
+                  {/* Lớp hiển thị khi không active (thu nhỏ lại) */}
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      opacity: active ? 0 : 1,
+                      scale: active ? 0.65 : 1,
+                    }}
+                    transition={{ duration: 0.16, ease: "easeOut" }}
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  >
                     {isProfiles ? (
-                      active ? (
-                        <span className="text-amber-400 font-bold transition-all duration-150">
-                          XSMM
-                        </span>
-                      ) : (
-                        <User className="size-[17px] transition-all duration-150" />
-                      )
-                    ) : isTtc ? (
-                      active ? (
-                        <span className="text-emerald-400 font-bold lowercase transition-all duration-150">
-                          tuongtaccheo
-                        </span>
-                      ) : (
-                        <span className="transition-all duration-150">TTC</span>
-                      )
-                    ) : isNvc ? (
-                      active ? (
-                        <span className="text-blue-400 font-bold lowercase transition-all duration-150">
-                          nhiemvucheo
-                        </span>
-                      ) : (
-                        <span className="transition-all duration-150">NVC</span>
-                      )
-                    ) : Icon ? (
-                      <Icon className="size-[18px]" />
+                      <User className="size-[17px]" />
                     ) : (
-                      <span>{textLabel}</span>
+                      <span className="text-[11px] font-bold tracking-tight">
+                        {textLabel}
+                      </span>
                     )}
-                  </span>
+                  </motion.div>
+
+                  {/* Lớp hiển thị khi active (co giãn mở rộng đầy đủ chữ) */}
+                  <motion.div
+                    initial={false}
+                    animate={{
+                      opacity: active ? 1 : 0,
+                      scale: active ? 1 : 0.75,
+                    }}
+                    transition={{
+                      duration: 0.22,
+                      delay: active ? 0.05 : 0,
+                      ease: "easeOut",
+                    }}
+                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  >
+                    <span
+                      className={cn(
+                        "text-[11px] font-bold tracking-tight whitespace-nowrap",
+                        isProfiles && "text-amber-400",
+                        isTtc && "text-emerald-400 lowercase",
+                        isNvc && "text-blue-400 lowercase",
+                      )}
+                    >
+                      {isProfiles
+                        ? "XSMM"
+                        : isTtc
+                          ? "tuongtaccheo"
+                          : isNvc
+                            ? "nhiemvucheo"
+                            : textLabel}
+                    </span>
+                  </motion.div>
                 </motion.button>
               </TooltipTrigger>
               <TooltipContent side="top" sideOffset={8}>
