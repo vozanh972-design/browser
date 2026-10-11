@@ -410,16 +410,18 @@ export default function HomePage() {
       try {
         const res = await getNvcMe(cookie);
         if (res.success && res.user && isMounted) {
-          const formatted = `${Number(res.user.coinBalance || 0).toLocaleString("vi-VN")} xu`;
+          const freshUser = res.user;
+          const freshUsername = freshUser.username;
+          const formatted = `${Number(freshUser.coinBalance || 0).toLocaleString("vi-VN")} xu`;
           try {
-            localStorage.setItem("nvc_username", res.user.username);
+            localStorage.setItem("nvc_username", freshUsername);
             localStorage.setItem("nvc_balance", formatted);
           } catch {
             // ignore
           }
           setNvcAccount((prev) => ({
             ...prev,
-            username: res.user.username,
+            username: freshUsername,
             balance: formatted,
             isLoggedIn: true,
           }));
