@@ -573,6 +573,64 @@ export default function HomePage() {
     };
   }, [dolikeAccount.sessionCookie]);
 
+  // Tự động đồng bộ tài khoản DoLike đã đăng nhập vào bảng DoLike nếu chưa có dòng nào hiển thị
+  useEffect(() => {
+    if (currentPage !== "dolike") return;
+    const email =
+      dolikeAccount.email ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("dolike_email")
+        : "") ||
+      "";
+    if (!email) return;
+
+    setAccounts((prev) => {
+      const igAccounts = prev.filter(
+        (a) => (a.platform || "facebook") === "instagram",
+      );
+      if (igAccounts.some((a) => a.dolikeEmail === email)) {
+        return prev;
+      }
+
+      const unassigned = igAccounts.find((a) => !a.dolikeEmail);
+      let updated: FacebookAccount[];
+      if (unassigned) {
+        updated = prev.map((a) =>
+          a.id === unassigned.id
+            ? {
+                ...a,
+                dolikeEmail: email,
+                dolikeBalance:
+                  dolikeAccount.balance || a.dolikeBalance || "0 đ",
+              }
+            : a,
+        );
+      } else {
+        const newRow: FacebookAccount = {
+          id: `acc_dl_${Date.now()}`,
+          uid: "",
+          name: "",
+          platform: "instagram",
+          status: "unverified",
+          rawText: "",
+          dolikeEmail: email,
+          dolikeBalance: dolikeAccount.balance || "0 đ",
+        };
+        updated = [newRow, ...prev];
+      }
+
+      try {
+        localStorage.setItem(
+          "autolunex_facebook_accounts_v1",
+          JSON.stringify(updated),
+        );
+      } catch {
+        // ignore
+      }
+      return updated;
+    });
+  }, [currentPage, dolikeAccount.email, dolikeAccount.balance]);
+
   const handleDolikeLoginSuccess = (user: {
     email: string;
     balance: string;
@@ -596,18 +654,79 @@ export default function HomePage() {
     });
 
     setAccounts((prev) => {
+      const igAccounts = prev.filter(
+        (a) => (a.platform || "facebook") === "instagram",
+      );
       const hasSelected = selectedIds.length > 0;
-      const updated = prev.map((a) => {
-        if ((a.platform || "facebook") !== "instagram") return a;
-        if (hasSelected ? selectedIds.includes(a.id) : !a.dolikeEmail) {
-          return {
-            ...a,
-            dolikeEmail: user.email,
-            dolikeBalance: user.balance,
-          };
+
+      if (hasSelected) {
+        const updated = prev.map((a) => {
+          if (selectedIds.includes(a.id)) {
+            return {
+              ...a,
+              dolikeEmail: user.email,
+              dolikeBalance: user.balance,
+            };
+          }
+          return a;
+        });
+        try {
+          localStorage.setItem(
+            "autolunex_facebook_accounts_v1",
+            JSON.stringify(updated),
+          );
+        } catch {
+          // ignore
         }
-        return a;
-      });
+        return updated;
+      }
+
+      const existingSameEmail = igAccounts.find(
+        (a) => a.dolikeEmail === user.email,
+      );
+      if (existingSameEmail) {
+        const updated = prev.map((a) =>
+          a.id === existingSameEmail.id
+            ? { ...a, dolikeBalance: user.balance }
+            : a,
+        );
+        try {
+          localStorage.setItem(
+            "autolunex_facebook_accounts_v1",
+            JSON.stringify(updated),
+          );
+        } catch {
+          // ignore
+        }
+        return updated;
+      }
+
+      const unassigned = igAccounts.find((a) => !a.dolikeEmail);
+      let updated: FacebookAccount[];
+      if (unassigned) {
+        updated = prev.map((a) =>
+          a.id === unassigned.id
+            ? {
+                ...a,
+                dolikeEmail: user.email,
+                dolikeBalance: user.balance,
+              }
+            : a,
+        );
+      } else {
+        const newRow: FacebookAccount = {
+          id: `acc_dl_${Date.now()}`,
+          uid: "",
+          name: "",
+          platform: "instagram",
+          status: "unverified",
+          rawText: "",
+          dolikeEmail: user.email,
+          dolikeBalance: user.balance,
+        };
+        updated = [newRow, ...prev];
+      }
+
       try {
         localStorage.setItem(
           "autolunex_facebook_accounts_v1",
@@ -640,6 +759,25 @@ export default function HomePage() {
       balance: "",
       sessionCookie: "",
       isLoggedIn: false,
+    });
+    setAccounts((prev) => {
+      const updated = prev
+        .filter((a) => a.uid || a.name)
+        .map((a) => {
+          if (a.dolikeEmail) {
+            return { ...a, dolikeEmail: undefined, dolikeBalance: undefined };
+          }
+          return a;
+        });
+      try {
+        localStorage.setItem(
+          "autolunex_facebook_accounts_v1",
+          JSON.stringify(updated),
+        );
+      } catch {
+        // ignore
+      }
+      return updated;
     });
     showSuccessToast("Đã đăng xuất tài khoản DoLike");
   };
@@ -1343,7 +1481,30 @@ export default function HomePage() {
     });
 
     setAccounts((prev) => {
-      const merged = [...newAccounts, ...prev];
+      const currentPrev = [...prev];
+      if (currentPlatform === "instagram") {
+        const placeholderIdx = currentPrev.findIndex(
+          (a) =>
+            (a.platform || "facebook") === "instagram" &&
+            !a.uid &&
+            !a.name &&
+            a.dolikeEmail,
+        );
+        if (placeholderIdx !== -1 && newAccounts.length > 0) {
+          const placeholder = currentPrev[placeholderIdx];
+          newAccounts[0].dolikeEmail = placeholder.dolikeEmail;
+          newAccounts[0].dolikeBalance = placeholder.dolikeBalance;
+          currentPrev.splice(placeholderIdx, 1);
+        } else if (dolikeAccount.email) {
+          for (const n of newAccounts) {
+            if (!n.dolikeEmail) {
+              n.dolikeEmail = dolikeAccount.email;
+              n.dolikeBalance = dolikeAccount.balance || "0 đ";
+            }
+          }
+        }
+      }
+      const merged = [...newAccounts, ...currentPrev];
       try {
         localStorage.setItem(
           "autolunex_facebook_accounts_v1",
@@ -2966,12 +3127,43 @@ export default function HomePage() {
                             <div className="flex items-center gap-2.5 min-w-0 pr-2">
                               <AccountAvatar url={avatarSrc} />
                               <div className="flex flex-col min-w-0">
-                                <span className="font-medium truncate text-foreground leading-tight">
-                                  {acc.name || acc.uid}
-                                </span>
-                                <span className="text-[10px] font-mono text-muted-foreground truncate leading-tight">
-                                  UID: {acc.uid}
-                                </span>
+                                {acc.name || acc.uid ? (
+                                  <>
+                                    <span className="font-medium truncate text-foreground leading-tight">
+                                      {acc.name || acc.uid}
+                                    </span>
+                                    <span className="text-[10px] font-mono text-muted-foreground truncate leading-tight">
+                                      UID: {acc.uid}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedIds([acc.id]);
+                                        setIsAddFacebookOpen(true);
+                                      }}
+                                      className="text-left font-semibold text-xs text-[#E1306C] hover:underline cursor-pointer flex items-center gap-1 leading-tight"
+                                      title={tr(
+                                        "Gán hoặc thêm nick Instagram cho tài khoản DoLike này",
+                                        "Attach or add Instagram account for this DoLike user",
+                                      )}
+                                    >
+                                      <Plus className="size-3" />
+                                      <span>
+                                        {tr(
+                                          "Thêm nick Instagram",
+                                          "Add Instagram",
+                                        )}
+                                      </span>
+                                    </button>
+                                    <span className="text-[10px] text-muted-foreground truncate leading-tight">
+                                      {tr("Chưa gán nick IG", "No IG linked yet")}
+                                    </span>
+                                  </>
+                                )}
                               </div>
                             </div>
 
@@ -2987,6 +3179,45 @@ export default function HomePage() {
                                   <span className="text-[10px] text-amber-400 font-bold shrink-0">
                                     💰 {acc.dolikeBalance || dolikeAccount.balance || "0 đ"}
                                   </span>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setAccounts((prev) => {
+                                        const updated = prev.map((a) =>
+                                          a.id === acc.id
+                                            ? {
+                                                ...a,
+                                                dolikeEmail: undefined,
+                                                dolikeBalance: undefined,
+                                              }
+                                            : a,
+                                        );
+                                        try {
+                                          localStorage.setItem(
+                                            "autolunex_facebook_accounts_v1",
+                                            JSON.stringify(updated),
+                                          );
+                                        } catch {
+                                          // ignore
+                                        }
+                                        return updated;
+                                      });
+                                      showSuccessToast(
+                                        tr(
+                                          "Đã gỡ tài khoản DoLike khỏi dòng này",
+                                          "Unlinked DoLike from this row",
+                                        ),
+                                      );
+                                    }}
+                                    className="ml-0.5 p-0.5 hover:text-destructive text-muted-foreground/60 transition-colors cursor-pointer"
+                                    title={tr(
+                                      "Gỡ tài khoản DoLike khỏi dòng này",
+                                      "Unlink DoLike from this row",
+                                    )}
+                                  >
+                                    <LogOut className="size-2.5" />
+                                  </button>
                                 </span>
                               ) : (
                                 <button
