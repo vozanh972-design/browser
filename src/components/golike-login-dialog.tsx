@@ -7,7 +7,6 @@ import { getGolikeUser } from "@/lib/golike-api";
 import {
   type GolikeSessionData,
   clearGolikeSession,
-  isGolikeTokenLoggedOut,
   saveGolikeSession,
   syncGolikeProtocol,
 } from "@/lib/golike-session";
@@ -27,7 +26,10 @@ const GOLIKE_LOGIN_URL = "https://app.golike.net/login";
 
 const GOMAX_INJECT_SNIPPET = `
 (function() {
-  if (window.__hasInjectedGolikeHook) return;
+  if (window.__hasInjectedGolikeHook) {
+    if (window.goMaxCaptureSessionStore) window.goMaxCaptureSessionStore();
+    return;
+  }
   window.__hasInjectedGolikeHook = true;
 
   function readHeader(headers, name) {
@@ -74,6 +76,39 @@ const GOMAX_INJECT_SNIPPET = `
     } catch(e) {}
   }
 
+  function captureSessionStore() {
+    try {
+      let signingKey = '';
+      let userId = '';
+      let webData = localStorage.getItem('__') || 'null';
+      let deviceId = localStorage.getItem('device_id') || localStorage.getItem('deviceId') || '';
+      let username = localStorage.getItem('username') || '';
+      let appRoot = document.querySelector('#app');
+      let state = appRoot && appRoot.__vue__ && appRoot.__vue__.$store ? appRoot.__vue__.$store.state : null;
+      if (!state && appRoot && appRoot.__vue_app__ && appRoot.__vue_app__.config && appRoot.__vue_app__.config.globalProperties && appRoot.__vue_app__.config.globalProperties.$store) {
+        state = appRoot.__vue_app__.config.globalProperties.$store.state;
+      }
+      if (state) {
+        signingKey = String(state.signing_key || '');
+        userId = String(state.user_id || '');
+        if (!deviceId) deviceId = String(state.device_id || state.deviceId || '');
+        if (!username) username = String(state.username || state.user_name || '');
+      }
+      for (let i = 0; i < localStorage.length; i++) {
+        let storageKey = localStorage.key(i);
+        let raw = localStorage.getItem(storageKey);
+        if (!raw) continue;
+        if (!signingKey && storageKey === 'signing_key') signingKey = raw;
+        if (!userId && storageKey === 'user_id') userId = raw;
+      }
+      let tok = localStorage.getItem('token') || localStorage.getItem('auth_token') || '';
+      if (tok && tok.length > 50) {
+        sendAuth(tok, {});
+      }
+    } catch(e) {}
+  }
+  window.goMaxCaptureSessionStore = captureSessionStore;
+
   let origFetch = window.fetch;
   window.fetch = function() {
     try {
@@ -96,6 +131,8 @@ const GOMAX_INJECT_SNIPPET = `
     } catch(e) {}
     return origSetRequestHeader.apply(this, arguments);
   };
+
+  captureSessionStore();
 })();
 `;
 
@@ -112,7 +149,7 @@ export function GolikeLoginDialog({
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const isCompletedRef = useRef(false);
 
-  // Trích xuất session trực tiếp qua native Tauri và Gateway GoLike (không qua bất kỳ cổng mạng trung gian nào)
+  // Trích xuất session trực tiếp từ bộ nhớ đĩa LevelDB của WebView (chuẩn native GoMax)
   const checkSession = async () => {
     try {
       const { invoke } = await import("@tauri-apps/api/core");
@@ -121,30 +158,17 @@ export function GolikeLoginDialog({
         const rawToken = (data.user.token || "").trim();
         const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
 
-        // Nếu token này đã bị người dùng đăng xuất, bỏ qua hoàn toàn
-        if (isGolikeTokenLoggedOut(fullToken) || isGolikeTokenLoggedOut(rawToken)) {
-          return null;
-        }
+        const coin = Number(data.user.coin ?? 0);
+        const username = data.user.username || data.session?.golike_username || "GoLike User";
+        const balance = data.user.balance || `${coin.toLocaleString("vi-VN")} coin`;
 
-        // BẮT BUỘC: Xác thực token với Gateway GoLike /api/users/me
-        try {
-          const freshUser = await getGolikeUser(fullToken);
-          if (freshUser.success && freshUser.user) {
-            const coin = freshUser.user.coin ?? Number(data.user.coin ?? 0);
-            const balance = `${coin.toLocaleString("vi-VN")} coin`;
-            const username = freshUser.user.username || data.user.username || "GoLike User";
-
-            return {
-              username,
-              balance,
-              token: fullToken,
-              coin,
-              session: data.session || {},
-            };
-          }
-        } catch {
-          // ignore
-        }
+        return {
+          username,
+          balance,
+          token: fullToken,
+          coin,
+          session: data.session || {},
+        };
       }
     } catch {
       // ignore
@@ -200,6 +224,7 @@ export function GolikeLoginDialog({
         localStorage.removeItem("golike_last_logged_out_token");
         localStorage.removeItem("golike_blacklist_token");
         localStorage.removeItem("golike_logged_out_time");
+        localStorage.removeItem("golike_logged_out_tokens");
       } catch {
         // ignore
       }
@@ -214,12 +239,29 @@ export function GolikeLoginDialog({
         token: fullSession.golike_token,
       });
 
-      // Tự động đóng webview ngay lập tức - Không đơ, không chờ đợi
+      // Tự động đóng webview ngay lập tức giống hệt GoMax (finish())
       onClose();
 
-      // Đồng bộ protocol ngầm sau khi đã đóng webview
+      // Đồng bộ protocol ngầm và cập nhật thông tin user ngầm sau khi đã đóng webview
       void (async () => {
         try {
+          const fresh = await getGolikeUser(fullSession.golike_token);
+          if (fresh.success && fresh.user) {
+            const freshCoin = fresh.user.coin ?? user.coin ?? 0;
+            const freshBalance = `${freshCoin.toLocaleString("vi-VN")} coin`;
+            const freshUname = fresh.user.username || username;
+            localStorage.setItem("golike_username", freshUname);
+            localStorage.setItem("golike_balance", freshBalance);
+            saveGolikeSession({
+              golike_username: freshUname,
+              golike_user_id: fresh.user.id ? String(fresh.user.id) : fullSession.golike_user_id,
+            });
+            onLoginSuccess({
+              username: freshUname,
+              balance: freshBalance,
+              token: fullSession.golike_token,
+            });
+          }
           await syncGolikeProtocol(fullSession);
         } catch {
           // ignore
@@ -266,19 +308,14 @@ export function GolikeLoginDialog({
       if (!iframe || !iframe.contentWindow) return;
       const cw = iframe.contentWindow as any;
 
-      // 1. Tiêm script hook vào document của iframe
+      // 1. Tiêm script hook vào document của iframe (chuẩn GoMax)
       if (!cw.__hasInjectedGolikeHook && cw.document && (cw.document.head || cw.document.documentElement)) {
         cw.__hasInjectedGolikeHook = true;
         const s = cw.document.createElement("script");
         s.textContent = GOMAX_INJECT_SNIPPET;
         (cw.document.head || cw.document.documentElement).appendChild(s);
-      }
-
-      // 2. Nếu đã vào trang chủ GoLike (như ảnh của user) -> Kích hoạt fetch để bắt header
-      if (cw.location && cw.location.pathname !== "/login") {
-        if (typeof cw.fetch === "function") {
-          cw.fetch("https://gateway.golike.net/api/users/me").catch(() => {});
-        }
+      } else if (cw.goMaxCaptureSessionStore) {
+        cw.goMaxCaptureSessionStore();
       }
     } catch {
       // Cross-origin fallback nếu browser chưa bật cờ
@@ -298,6 +335,18 @@ export function GolikeLoginDialog({
     setIsProcessingLogin(false);
     setIframeLoading(true);
     setIframeKey((prev) => prev + 1);
+
+    // Khi mở dialog, người dùng chủ động đăng nhập nên xóa bỏ blacklist token cũ
+    try {
+      localStorage.removeItem("golike_logged_out_tokens");
+      localStorage.removeItem("golike_last_logged_out_token");
+      localStorage.removeItem("golike_blacklist_token");
+      void import("@tauri-apps/api/core").then(({ invoke }) => {
+        invoke("reset_golike_logged_out_tokens").catch(() => {});
+      });
+    } catch {
+      // ignore
+    }
 
     // Timeout an toàn: Nếu iframe tải quá 5s vẫn chưa kích hoạt onLoad thì tự động tắt overlay loading
     const loadTimeout = setTimeout(() => {
@@ -319,7 +368,7 @@ export function GolikeLoginDialog({
         tryInjectAndInspect();
         const detected = await checkSession();
         if (detected && detected.token) {
-          await handleAutoLoginSuccess(detected, detected.session);
+          handleAutoLoginSuccess(detected, detected.session);
         }
       } finally {
         isChecking = false;
@@ -337,7 +386,7 @@ export function GolikeLoginDialog({
 
   // Lắng nghe postMessage từ iframe (chuẩn GoMax)
   useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
+    const handleMessage = (event: MessageEvent) => {
       try {
         const data = event.data;
         if (!data || isCompletedRef.current) return;
@@ -345,27 +394,16 @@ export function GolikeLoginDialog({
         const rawToken = data.session?.golike_token || data.golike_token || data.auth;
         if (rawToken && typeof rawToken === "string" && rawToken.length >= 50) {
           const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
+          const username = data.session?.golike_username || data.username || "GoLike User";
 
-          if (isGolikeTokenLoggedOut(fullToken) || isGolikeTokenLoggedOut(rawToken)) {
-            return;
-          }
-
-          const freshUser = await getGolikeUser(fullToken);
-          if (freshUser.success && freshUser.user) {
-            const coin = freshUser.user.coin ?? 0;
-            const balance = `${coin.toLocaleString("vi-VN")} coin`;
-            const username = freshUser.user.username || data.session?.golike_username || "GoLike User";
-
-            await handleAutoLoginSuccess(
-              {
-                username,
-                balance,
-                token: fullToken,
-                coin,
-              },
-              data.session || data,
-            );
-          }
+          handleAutoLoginSuccess(
+            {
+              username,
+              balance: "0 coin",
+              token: fullToken,
+            },
+            data.session || data,
+          );
         }
       } catch {
         // ignore

@@ -1205,6 +1205,13 @@ fn add_logged_out_golike_token(tok: &str) {
 }
 
 #[tauri::command]
+fn reset_golike_logged_out_tokens() {
+  if let Ok(mut guard) = LOGGED_OUT_GOLIKE_TOKENS.lock() {
+    guard.take();
+  }
+}
+
+#[tauri::command]
 fn clear_golike_session(token: Option<String>) -> Result<bool, String> {
   if let Some(tok) = token {
     add_logged_out_golike_token(&tok);
@@ -1559,6 +1566,7 @@ pub fn run() {
       start_app_update,
       fetch_remote_version_json,
       start_golike_bridge,
+      reset_golike_logged_out_tokens,
       clear_golike_session,
       extract_golike_session,
     ])
