@@ -471,7 +471,11 @@ export default function HomePage() {
   };
 
   const handleGolikeLogout = async () => {
-    await clearGolikeSession(golikeAccount.token);
+    const oldTok = golikeAccount.token;
+    await clearGolikeSession(oldTok);
+    if (typeof window !== "undefined" && oldTok) {
+      localStorage.setItem("golike_last_logged_out_token", oldTok);
+    }
     setGolikeAccount({
       username: "",
       balance: "",

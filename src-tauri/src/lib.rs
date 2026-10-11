@@ -1170,9 +1170,21 @@ fn start_golike_bridge() -> Result<bool, String> {
   Ok(true)
 }
 
+static GOLIKE_LOGGED_OUT_TOKEN: Mutex<Option<String>> = Mutex::new(None);
+
 #[tauri::command]
-fn clear_golike_session(_token: Option<String>) -> Result<bool, String> {
-  // Chỉ xóa các file session GoLike trên đĩa, tuyệt đối KHÔNG đụng đến LevelDB của app
+fn clear_golike_session(token: Option<String>) -> Result<bool, String> {
+  // Ghi nhận token vừa đăng xuất vào RAM để bộ quét LevelDB không tự động nhận diện lại dữ liệu rác cũ
+  if let Some(tok) = token {
+    let clean = tok.trim().to_string();
+    if !clean.is_empty() {
+      if let Ok(mut lock) = GOLIKE_LOGGED_OUT_TOKEN.lock() {
+        *lock = Some(clean);
+      }
+    }
+  }
+
+  // Xóa các file session GoLike trên đĩa nếu có
   let session_paths = [
     r"D:\AutoLunex\golike_session.json",
     r"D:\browser\golike_session.json",
@@ -1296,6 +1308,29 @@ fn scan_leveldb_for_golike() -> Option<serde_json::Value> {
                     } else {
                       format!("Bearer {}", raw_tok)
                     };
+
+                    // Kiểm tra xem token này có phải là token vừa đăng xuất không (tránh đọc dữ liệu cũ chưa bị LevelDB dọn)
+                    let is_logged_out = if let Ok(lock) = GOLIKE_LOGGED_OUT_TOKEN.lock() {
+                      if let Some(ref logged_out) = *lock {
+                        let clean_logged_out = logged_out.trim_start_matches("Bearer ").trim();
+                        let clean_tok = tok.trim_start_matches("Bearer ").trim();
+                        clean_tok == clean_logged_out
+                      } else {
+                        false
+                      }
+                    } else {
+                      false
+                    };
+
+                    if is_logged_out {
+                      continue;
+                    }
+
+                    // Phát hiện token mới khác với token vừa đăng xuất -> Xóa cờ logged_out
+                    if let Ok(mut lock) = GOLIKE_LOGGED_OUT_TOKEN.lock() {
+                      *lock = None;
+                    }
+
                     let uname = parsed
                       .pointer("/user/username")
                       .and_then(|u| u.as_str())

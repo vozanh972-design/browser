@@ -120,6 +120,17 @@ export function GolikeLoginDialog({
         const rawToken = (data.user.token || "").trim();
         const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
 
+        // Kiểm tra xem token này có phải là token của tài khoản vừa bấm đăng xuất không
+        const lastLoggedOut = typeof window !== "undefined" ? localStorage.getItem("golike_last_logged_out_token") : null;
+        if (lastLoggedOut) {
+          const cleanLoggedOut = lastLoggedOut.replace(/^Bearer\s+/i, "").trim();
+          const cleanFull = fullToken.replace(/^Bearer\s+/i, "").trim();
+          if (cleanLoggedOut === cleanFull || fullToken.includes(cleanLoggedOut) || lastLoggedOut.includes(cleanFull)) {
+            // Đây là token cũ trong LevelDB của nick vừa đăng xuất -> Không tự động nhận diện lại
+            return null;
+          }
+        }
+
         let coin = Number(data.user.coin ?? 0);
         let balance = data.user.balance || `${coin.toLocaleString("vi-VN")} coin`;
         let username = data.user.username || "GoLike User";
@@ -195,6 +206,7 @@ export function GolikeLoginDialog({
         localStorage.setItem("golike_username", username);
         localStorage.setItem("golike_balance", balance);
         localStorage.setItem("golike_token", fullSession.golike_token);
+        localStorage.removeItem("golike_last_logged_out_token");
         localStorage.removeItem("golike_blacklist_token");
         localStorage.removeItem("golike_logged_out_time");
       } catch {
@@ -226,6 +238,29 @@ export function GolikeLoginDialog({
       setIsProcessingLogin(false);
       isCompletedRef.current = false;
     }
+  };
+
+  const tryClearIframeSession = () => {
+    try {
+      const iframe = iframeRef.current;
+      if (!iframe || !iframe.contentWindow) return;
+      const cw = iframe.contentWindow as any;
+      if (cw.localStorage) {
+        cw.localStorage.clear();
+      }
+      if (cw.sessionStorage) {
+        cw.sessionStorage.clear();
+      }
+    } catch {
+      // Cross-origin catch
+    }
+  };
+
+  const handleClearWebviewSession = () => {
+    tryClearIframeSession();
+    setIframeKey((k) => k + 1);
+    setIframeLoading(true);
+    showSuccessToast("Đã làm mới, sẵn sàng đăng nhập tài khoản khác!");
   };
 
   const tryInjectAndInspect = () => {
@@ -364,7 +399,7 @@ export function GolikeLoginDialog({
       >
         {/* ================= macOS iPhone Mirroring / Liquid Glass Window ================= */}
         <div className="relative w-[380px] bg-zinc-950/80 backdrop-blur-3xl rounded-[34px] border border-white/20 shadow-[0_30px_90px_rgba(0,0,0,0.85)] ring-1 ring-white/10 overflow-hidden flex flex-col select-none">
-          {/* 1. THANH ĐỈNH DYNAMIC ISLAND: Không còn 3 dấu chấm, không còn dấu X */}
+          {/* 1. THANH ĐỈNH DYNAMIC ISLAND */}
           <div className="relative z-30 h-8 w-full bg-zinc-950/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-center shrink-0">
             <div className="h-4.5 w-24 bg-black/80 rounded-full border border-white/10 flex items-center justify-center gap-1.5 px-2">
               <div className="size-2 rounded-full bg-zinc-800" />
@@ -372,6 +407,14 @@ export function GolikeLoginDialog({
                 GoLike
               </span>
             </div>
+            <button
+              type="button"
+              onClick={handleClearWebviewSession}
+              title="Đổi tài khoản khác / Xóa phiên cũ"
+              className="absolute right-3.5 text-[10px] text-zinc-400 hover:text-amber-400 transition-colors flex items-center gap-1 cursor-pointer font-medium"
+            >
+              Đổi tài khoản
+            </button>
           </div>
 
           {/* 2. MÀN HÌNH NỘI DUNG WEBVIEW GOLIKE */}
@@ -393,6 +436,10 @@ export function GolikeLoginDialog({
               src={GOLIKE_LOGIN_URL}
               onLoad={() => {
                 setIframeLoading(false);
+                const lastLoggedOut = typeof window !== "undefined" ? localStorage.getItem("golike_last_logged_out_token") : null;
+                if (lastLoggedOut) {
+                  tryClearIframeSession();
+                }
                 tryInjectAndInspect();
               }}
               className="w-full h-full border-0"
