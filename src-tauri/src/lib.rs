@@ -1170,8 +1170,46 @@ fn start_golike_bridge() -> Result<bool, String> {
   Ok(true)
 }
 
+static LOGGED_OUT_GOLIKE_TOKENS: std::sync::Mutex<Option<std::collections::HashSet<String>>> = std::sync::Mutex::new(None);
+
+fn is_golike_token_logged_out(tok: &str) -> bool {
+  if let Ok(guard) = LOGGED_OUT_GOLIKE_TOKENS.lock() {
+    if let Some(set) = guard.as_ref() {
+      let trimmed = tok.trim();
+      let bare = if trimmed.starts_with("Bearer ") {
+        trimmed["Bearer ".len()..].trim()
+      } else {
+        trimmed
+      };
+      return set.contains(trimmed) || set.contains(bare);
+    }
+  }
+  false
+}
+
+fn add_logged_out_golike_token(tok: &str) {
+  if let Ok(mut guard) = LOGGED_OUT_GOLIKE_TOKENS.lock() {
+    let set = guard.get_or_insert_with(std::collections::HashSet::new);
+    let trimmed = tok.trim();
+    if !trimmed.is_empty() {
+      set.insert(trimmed.to_string());
+      let bare = if trimmed.starts_with("Bearer ") {
+        trimmed["Bearer ".len()..].trim().to_string()
+      } else {
+        trimmed.to_string()
+      };
+      set.insert(bare);
+      set.insert(format!("Bearer {}", trimmed));
+    }
+  }
+}
+
 #[tauri::command]
-fn clear_golike_session(_token: Option<String>) -> Result<bool, String> {
+fn clear_golike_session(token: Option<String>) -> Result<bool, String> {
+  if let Some(tok) = token {
+    add_logged_out_golike_token(&tok);
+  }
+
   // Xóa các file session GoLike trên đĩa nếu có
   let session_paths = [
     r"D:\AutoLunex\golike_session.json",
@@ -1297,7 +1335,10 @@ fn scan_leveldb_for_golike() -> Option<serde_json::Value> {
                       format!("Bearer {}", raw_tok)
                     };
 
-
+                    // Bỏ qua nếu token này đã bị đăng xuất
+                    if is_golike_token_logged_out(&tok) || is_golike_token_logged_out(raw_tok) {
+                      continue;
+                    }
 
                     let uname = parsed
                       .pointer("/user/username")
@@ -1368,7 +1409,7 @@ fn extract_golike_session() -> Result<serde_json::Value, String> {
       if let Ok(val) = serde_json::from_str::<serde_json::Value>(&content) {
         if let Some(tok) = val.get("golike_token").and_then(|t| t.as_str()) {
           let clean = tok.trim();
-          if clean.len() >= 50 {
+          if clean.len() >= 50 && !is_golike_token_logged_out(clean) {
             let u = val.get("golike_username").and_then(|u| u.as_str()).unwrap_or("GoLike User");
             return Ok(serde_json::json!({
               "success": true,

@@ -7,6 +7,7 @@ import { getGolikeUser } from "@/lib/golike-api";
 import {
   type GolikeSessionData,
   clearGolikeSession,
+  isGolikeTokenLoggedOut,
   saveGolikeSession,
   syncGolikeProtocol,
 } from "@/lib/golike-session";
@@ -120,29 +121,30 @@ export function GolikeLoginDialog({
         const rawToken = (data.user.token || "").trim();
         const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
 
-        let coin = Number(data.user.coin ?? 0);
-        let balance = data.user.balance || `${coin.toLocaleString("vi-VN")} coin`;
-        let username = data.user.username || "GoLike User";
+        // Nếu token này đã bị người dùng đăng xuất, bỏ qua hoàn toàn
+        if (isGolikeTokenLoggedOut(fullToken) || isGolikeTokenLoggedOut(rawToken)) {
+          return null;
+        }
 
-        // Thử làm mới số xu trực tiếp với Gateway GoLike /api/users/me
+        // BẮT BUỘC: Xác thực token với Gateway GoLike /api/users/me
         try {
           const freshUser = await getGolikeUser(fullToken);
           if (freshUser.success && freshUser.user) {
-            coin = freshUser.user.coin ?? coin;
-            balance = `${coin.toLocaleString("vi-VN")} coin`;
-            username = freshUser.user.username || username;
+            const coin = freshUser.user.coin ?? Number(data.user.coin ?? 0);
+            const balance = `${coin.toLocaleString("vi-VN")} coin`;
+            const username = freshUser.user.username || data.user.username || "GoLike User";
+
+            return {
+              username,
+              balance,
+              token: fullToken,
+              coin,
+              session: data.session || {},
+            };
           }
         } catch {
           // ignore
         }
-
-        return {
-          username,
-          balance,
-          token: fullToken,
-          coin,
-          session: data.session || {},
-        };
       }
     } catch {
       // ignore
@@ -338,6 +340,10 @@ export function GolikeLoginDialog({
         if (rawToken && typeof rawToken === "string" && rawToken.length >= 50) {
           const fullToken = rawToken.startsWith("Bearer ") ? rawToken : `Bearer ${rawToken}`;
 
+          if (isGolikeTokenLoggedOut(fullToken) || isGolikeTokenLoggedOut(rawToken)) {
+            return;
+          }
+
           const freshUser = await getGolikeUser(fullToken);
           if (freshUser.success && freshUser.user) {
             const coin = freshUser.user.coin ?? 0;
@@ -374,9 +380,16 @@ export function GolikeLoginDialog({
         {/* ================= macOS iPhone Mirroring / Liquid Glass Window ================= */}
         <div className="relative w-[380px] bg-zinc-950/80 backdrop-blur-3xl rounded-[34px] border border-white/20 shadow-[0_30px_90px_rgba(0,0,0,0.85)] ring-1 ring-white/10 overflow-hidden flex flex-col select-none">
           {/* 1. THANH ĐỈNH DYNAMIC ISLAND */}
-          <div className="relative z-30 h-8 w-full bg-zinc-950/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-center shrink-0">
-            <div className="h-4.5 w-24 bg-black/80 rounded-full border border-white/10 flex items-center justify-center gap-1.5 px-2">
-              <div className="size-2 rounded-full bg-zinc-800" />
+          <div className="relative z-30 h-9 w-full bg-zinc-950/90 backdrop-blur-xl border-b border-white/10 flex items-center justify-between px-3 shrink-0">
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-[11px] text-zinc-400 hover:text-white transition-colors cursor-pointer font-medium"
+            >
+              ✕ Đóng
+            </button>
+            <div className="h-5 w-24 bg-black/80 rounded-full border border-white/10 flex items-center justify-center gap-1.5 px-2">
+              <div className="size-2 rounded-full bg-cyan-400" />
               <span className="text-[11px] font-medium tracking-tight text-zinc-300">
                 GoLike
               </span>
@@ -384,11 +397,16 @@ export function GolikeLoginDialog({
             <button
               type="button"
               onClick={handleClearWebviewSession}
-              title="Đổi tài khoản khác / Xóa phiên cũ"
-              className="absolute right-3.5 text-[10px] text-zinc-400 hover:text-amber-400 transition-colors flex items-center gap-1 cursor-pointer font-medium"
+              title="Đổi tài khoản khác / Làm mới trang"
+              className="text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1 cursor-pointer font-medium"
             >
-              Đổi tài khoản
+              Làm mới
             </button>
+          </div>
+
+          {/* Banner hướng dẫn trực quan */}
+          <div className="relative z-20 bg-cyan-950/70 border-b border-cyan-500/20 px-3 py-1.5 text-[11px] text-cyan-200/90 text-center shrink-0">
+            Đăng nhập tài khoản GoLike mới. Đăng nhập xong sẽ tự động nhận diện và đóng cửa sổ.
           </div>
 
           {/* 2. MÀN HÌNH NỘI DUNG WEBVIEW GOLIKE */}

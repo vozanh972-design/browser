@@ -255,7 +255,9 @@ export function saveGolikeSession(
 
     // 2. Lưu trọn gói vào bundle cô lập golike_session_v1
     localStorage.setItem("golike_session_v1", JSON.stringify(merged));
-    // Xóa blacklist token nếu có đăng nhập mới thành công
+    if (merged.golike_token) {
+      unmarkGolikeTokenLoggedOut(merged.golike_token);
+    }
     localStorage.removeItem("golike_blacklist_token");
     localStorage.removeItem("golike_logged_out_time");
   } catch {
@@ -327,6 +329,70 @@ export function loadGolikeSession(): GolikeSessionData | null {
 }
 
 /**
+ * Kiểm tra xem token này có nằm trong danh sách vừa đăng xuất hay không
+ */
+export function isGolikeTokenLoggedOut(token: string): boolean {
+  if (typeof window === "undefined" || !token) return false;
+  try {
+    const raw = localStorage.getItem("golike_logged_out_tokens");
+    if (!raw) return false;
+    const list: string[] = JSON.parse(raw);
+    const clean = token.trim().toLowerCase();
+    const bare = clean.startsWith("bearer ") ? clean.slice(7).trim() : clean;
+    return list.some((item) => {
+      const it = item.trim().toLowerCase();
+      const itBare = it.startsWith("bearer ") ? it.slice(7).trim() : it;
+      return it === clean || itBare === bare;
+    });
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Đánh dấu một token vào danh sách đã đăng xuất
+ */
+export function markGolikeTokenLoggedOut(token: string): void {
+  if (typeof window === "undefined" || !token) return;
+  try {
+    const raw = localStorage.getItem("golike_logged_out_tokens");
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    const clean = token.trim();
+    if (clean && !list.includes(clean)) {
+      list.push(clean);
+      const bare = clean.startsWith("Bearer ") ? clean.slice(7).trim() : clean;
+      if (!list.includes(bare)) list.push(bare);
+      const sliced = list.slice(-50);
+      localStorage.setItem("golike_logged_out_tokens", JSON.stringify(sliced));
+    }
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Xóa một token khỏi danh sách đã đăng xuất khi người dùng chủ động đăng nhập lại
+ */
+export function unmarkGolikeTokenLoggedOut(token: string): void {
+  if (typeof window === "undefined" || !token) return;
+  try {
+    const raw = localStorage.getItem("golike_logged_out_tokens");
+    if (!raw) return;
+    const list: string[] = JSON.parse(raw);
+    const clean = token.trim().toLowerCase();
+    const bare = clean.startsWith("bearer ") ? clean.slice(7).trim() : clean;
+    const filtered = list.filter((item) => {
+      const it = item.trim().toLowerCase();
+      const itBare = it.startsWith("bearer ") ? it.slice(7).trim() : it;
+      return it !== clean && itBare !== bare;
+    });
+    localStorage.setItem("golike_logged_out_tokens", JSON.stringify(filtered));
+  } catch {
+    // ignore
+  }
+}
+
+/**
  * Xóa sạch toàn bộ 17 trường khi đăng xuất
  */
 export async function clearGolikeSession(token?: string): Promise<void> {
@@ -334,6 +400,11 @@ export async function clearGolikeSession(token?: string): Promise<void> {
 
   const rawTok = token || localStorage.getItem("golike_token") || "";
   const currentTok = rawTok.trim();
+
+  // Đánh dấu token này vào danh sách đã đăng xuất
+  if (currentTok) {
+    markGolikeTokenLoggedOut(currentTok);
+  }
 
   // 1. Gọi trực tiếp API logout tới GoLike Gateway để hủy token trên server GoLike
   if (currentTok) {
@@ -371,7 +442,7 @@ export async function clearGolikeSession(token?: string): Promise<void> {
     // ignore
   }
 
-  // 3. Báo cho Rust Tauri xóa file json session nếu có
+  // 3. Báo cho Rust Tauri chặn vĩnh viễn token này và xóa file session json nếu có
   try {
     const { invoke } = await import("@tauri-apps/api/core");
     await invoke("clear_golike_session", { token: currentTok || null });

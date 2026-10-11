@@ -471,10 +471,10 @@ export default function HomePage() {
   };
 
   const handleGolikeLogout = async () => {
+    const oldUser = golikeAccount.username || "GoLike";
     await clearGolikeSession(golikeAccount.token);
     if (typeof window !== "undefined") {
       localStorage.setItem("golike_need_clear_webview", "true");
-      localStorage.removeItem("golike_last_logged_out_token");
       localStorage.removeItem("golike_username");
       localStorage.removeItem("golike_balance");
       localStorage.removeItem("golike_token");
@@ -486,8 +486,13 @@ export default function HomePage() {
       isLoggedIn: false,
     });
     showSuccessToast(
-      tr("Đã đăng xuất và xóa sạch tài khoản GoLike cũ!", "GoLike session cleared!"),
+      tr(
+        `Đã đăng xuất ${oldUser}! Đang mở cửa sổ đăng nhập tài khoản GoLike mới...`,
+        `Logged out ${oldUser}! Opening login dialog...`,
+      ),
     );
+    // Tự động mở ngay hộp thoại đăng nhập để người dùng nhập tài khoản mới
+    setIsGolikeLoginOpen(true);
   };
 
   // Đăng xuất key bản quyền ứng dụng (giữ nguyên toàn bộ tài khoản và phiên XSMM)
