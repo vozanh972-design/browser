@@ -33,6 +33,8 @@ import { UtilitiesDialog } from "@/components/utilities-dialog";
 import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import { NvcLoginDialog } from "@/components/nvc-login-dialog";
+import { DolikeLoginDialog } from "@/components/dolike-login-dialog";
+import { getDolikeWallet } from "@/lib/dolike-api";
 import {
   getNvcMe,
   getNvcFacebookAccounts,
@@ -180,6 +182,26 @@ export default function HomePage() {
       balance,
       sessionCookie,
       isLoggedIn: !!username,
+    };
+  });
+  const [isDolikeLoginOpen, setIsDolikeLoginOpen] = useState(false);
+  const [dolikeAccount, setDolikeAccount] = useState<{
+    email: string;
+    balance: string;
+    sessionCookie: string;
+    isLoggedIn: boolean;
+  }>(() => {
+    if (typeof window === "undefined") {
+      return { email: "", balance: "", sessionCookie: "", isLoggedIn: false };
+    }
+    const email = localStorage.getItem("dolike_email") || "";
+    const balance = localStorage.getItem("dolike_balance") || "";
+    const sessionCookie = localStorage.getItem("dolike_session_cookie") || "";
+    return {
+      email,
+      balance,
+      sessionCookie,
+      isLoggedIn: !!email,
     };
   });
   const [nvcLinkedUids, setNvcLinkedUids] = useState<string[]>([]);
@@ -509,6 +531,73 @@ export default function HomePage() {
       isLoggedIn: false,
     });
     showSuccessToast("Đã đăng xuất tài khoản Nhiệm Vụ Chéo");
+  };
+
+  // Đồng bộ số dư DoLike ngầm nếu có session
+  useEffect(() => {
+    let isMounted = true;
+    const cookie =
+      dolikeAccount.sessionCookie ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("dolike_session_cookie")
+        : "") ||
+      "";
+
+    if (!cookie) return;
+
+    void (async () => {
+      try {
+        const res = await getDolikeWallet(cookie);
+        if (res.success && res.balance && isMounted) {
+          try {
+            localStorage.setItem("dolike_balance", res.balance);
+          } catch {
+            // ignore
+          }
+          setDolikeAccount((prev) => ({
+            ...prev,
+            balance: res.balance ?? prev.balance,
+            isLoggedIn: true,
+          }));
+        }
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [dolikeAccount.sessionCookie]);
+
+  const handleDolikeLoginSuccess = (user: {
+    email: string;
+    balance: string;
+    sessionCookie?: string;
+  }) => {
+    setDolikeAccount({
+      email: user.email,
+      balance: user.balance,
+      sessionCookie: user.sessionCookie || "",
+      isLoggedIn: true,
+    });
+  };
+
+  const handleDolikeLogout = () => {
+    try {
+      localStorage.removeItem("dolike_email");
+      localStorage.removeItem("dolike_balance");
+      localStorage.removeItem("dolike_session_cookie");
+    } catch {
+      // ignore
+    }
+    setDolikeAccount({
+      email: "",
+      balance: "",
+      sessionCookie: "",
+      isLoggedIn: false,
+    });
+    showSuccessToast("Đã đăng xuất tài khoản DoLike");
   };
 
   const handleLinkNvcAccount = async (targetAccount: FacebookAccount) => {
@@ -2583,6 +2672,51 @@ export default function HomePage() {
               transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
               className="flex w-full flex-1 flex-col"
             >
+              {/* DoLike Platform Toolbar */}
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-border/40">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-7 items-center justify-center rounded-lg bg-fuchsia-500/10 text-fuchsia-500 font-bold text-xs">
+                    DL
+                  </span>
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground">DoLike</h2>
+                    <p className="text-[11px] text-muted-foreground">congtingudolike.servehttp.com</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {dolikeAccount.isLoggedIn ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-fuchsia-500/30 bg-fuchsia-500/10 px-3 py-1.5 shadow-2xs">
+                      <span className="size-2 rounded-full bg-fuchsia-500 animate-pulse" />
+                      <span className="text-xs font-semibold text-foreground">
+                        {dolikeAccount.email}
+                      </span>
+                      <span className="text-[11px] text-fuchsia-500 font-bold ml-1">
+                        💰 {dolikeAccount.balance || "0 đ"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleDolikeLogout}
+                        className="ml-2 text-[11px] font-medium text-rose-500 hover:underline cursor-pointer"
+                      >
+                        {tr("Đăng xuất", "Logout")}
+                      </button>
+                    </div>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setIsDolikeLoginOpen(true)}
+                      className="h-8 bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-medium flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <Key className="size-3.5" />
+                      <span>{tr("Đăng nhập DoLike", "Login DoLike")}</span>
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Table View matching app layout */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Table Header */}
                 <div className="grid grid-cols-[40px_2.5fr_1.5fr_1.5fr_1.5fr_1.2fr_1fr_1fr_60px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none">
@@ -2606,23 +2740,43 @@ export default function HomePage() {
                   <div className="text-right">#</div>
                 </div>
 
-                {/* Empty State */}
+                {/* Content / Empty State */}
                 <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
                   <div className="size-12 rounded-full bg-fuchsia-500/10 text-fuchsia-500 flex items-center justify-center font-bold text-sm mb-3">
                     DL
                   </div>
                   <p className="text-sm font-medium text-foreground">
-                    {tr(
-                      "Chưa có tài khoản DoLike nào",
-                      "No DoLike accounts yet",
-                    )}
+                    {dolikeAccount.isLoggedIn
+                      ? tr(
+                          `Đã kết nối DoLike: ${dolikeAccount.email}`,
+                          `Connected to DoLike: ${dolikeAccount.email}`,
+                        )
+                      : tr(
+                          "Chưa đăng nhập tài khoản DoLike",
+                          "Not logged into DoLike yet",
+                        )}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1 max-w-sm">
-                    {tr(
-                      "Giao diện DoLike đã được kết nối vào thanh dock bên dưới. Chưa cấu hình logic tương tác.",
-                      "DoLike interface is connected to the bottom dock. Interaction logic not yet configured.",
-                    )}
+                    {dolikeAccount.isLoggedIn
+                      ? tr(
+                          `Số dư ví hiện tại: ${dolikeAccount.balance || "0 đ"}. Phiên đăng nhập hoạt động tốt qua API account-auth.php và wallet.php.`,
+                          `Current wallet balance: ${dolikeAccount.balance || "0 đ"}. Active session via account-auth.php & wallet.php.`,
+                        )
+                      : tr(
+                          "Vui lòng bấm nút 'Đăng nhập DoLike' phía trên để xác thực tài khoản và đồng bộ ví.",
+                          "Please click 'Login DoLike' above to authenticate and sync your wallet.",
+                        )}
                   </p>
+                  {!dolikeAccount.isLoggedIn && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => setIsDolikeLoginOpen(true)}
+                      className="mt-4 h-8 bg-fuchsia-600 hover:bg-fuchsia-700 text-white text-xs font-medium cursor-pointer"
+                    >
+                      {tr("Đăng nhập ngay", "Login now")}
+                    </Button>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -2687,6 +2841,13 @@ export default function HomePage() {
         isOpen={isNvcLoginOpen}
         onClose={() => setIsNvcLoginOpen(false)}
         onLoginSuccess={handleNvcLoginSuccess}
+      />
+
+      {/* Dialog Đăng nhập DoLike */}
+      <DolikeLoginDialog
+        isOpen={isDolikeLoginOpen}
+        onClose={() => setIsDolikeLoginOpen(false)}
+        onLoginSuccess={handleDolikeLoginSuccess}
       />
 
       {/* Settings Dialog */}
