@@ -216,7 +216,7 @@ export function parseDolikeJwt(token: string): {
         ? payload.sub
         : undefined);
 
-    const userId =
+    let userId =
       (payload.user_id as string | number) ||
       (payload.id as string | number) ||
       (payload.uid as string | number) ||
