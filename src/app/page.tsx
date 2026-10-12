@@ -1060,8 +1060,16 @@ export default function HomePage() {
 
     let isMounted = true;
     void (async () => {
+      const updates = new Map<
+        string,
+        {
+          username: string;
+          avatar?: string;
+          isLive?: boolean;
+          status?: "live" | "checkpoint" | "die" | "unverified";
+        }
+      >();
       let hasChanges = false;
-      const updates = new Map<string, { username: string; avatar?: string }>();
 
       for (const acc of igAccountsNeedingResolution) {
         if (!isMounted) break;
