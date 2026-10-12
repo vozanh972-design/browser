@@ -9,13 +9,7 @@ export interface DolikeUser {
   status?: string;
 }
 
-export interface DolikeLoginResponse {
-  success: boolean;
-  user?: DolikeUser;
-  sessionCookie?: string;
-  token?: string;
-  error?: string;
-}
+
 
 export interface DolikeWalletResponse {
   success: boolean;
@@ -110,97 +104,7 @@ export async function runDolikeCurl(options: {
   return await res.text();
 }
 
-/**
- * Đăng nhập tài khoản DoLike
- * POST https://congtingudolike.servehttp.com/api/account-auth.php
- */
-export async function loginDolike(
-  email: string,
-  password: string,
-): Promise<DolikeLoginResponse> {
-  try {
-    const rawOutput = await runDolikeCurl({
-      url: `${DOLIKE_BASE_URL}/api/account-auth.php`,
-      method: "POST",
-      includeHeaders: true,
-      headers: [
-        ...DOLIKE_DEFAULT_HEADERS,
-        "content-type: application/json",
-        `origin: ${DOLIKE_BASE_URL}`,
-      ],
-      body: JSON.stringify({
-        action: "login",
-        email: email.trim(),
-        password,
-      }),
-    });
 
-    let headerText = "";
-    let bodyText = rawOutput;
-
-    const parts = rawOutput.split(/\r?\n\r?\n/);
-    if (parts.length > 1) {
-      bodyText = parts[parts.length - 1].trim();
-      headerText = parts.slice(0, parts.length - 1).join("\n");
-    }
-
-    const phpSessMatch = headerText.match(/PHPSESSID=([^;\r\n]+)/);
-    const persistMatch = headerText.match(/mgauto_email_persist=([^;\r\n]+)/);
-
-    const cookies: string[] = [];
-    if (phpSessMatch) cookies.push(`PHPSESSID=${phpSessMatch[1].trim()}`);
-    if (persistMatch) cookies.push(`mgauto_email_persist=${persistMatch[1].trim()}`);
-    const sessionCookie = cookies.join("; ");
-
-    let data: Record<string, unknown> = {};
-    try {
-      data = JSON.parse(bodyText);
-    } catch {
-      return {
-        success: false,
-        error: "Email hoặc mật khẩu DoLike không chính xác",
-      };
-    }
-
-    if (data.status === "error" || data.error) {
-      const errMsg =
-        String(data.error || data.message || "Đăng nhập DoLike thất bại");
-      return { success: false, error: errMsg };
-    }
-
-    const token =
-      (data.token as string) ||
-      (data.access_token as string) ||
-      (data?.data && typeof data.data === "object"
-        ? ((data.data as Record<string, unknown>).token as string) ||
-          ((data.data as Record<string, unknown>).access_token as string)
-        : undefined);
-
-    let balance = "0 đ";
-    if (sessionCookie) {
-      const walletRes = await getDolikeWallet(sessionCookie);
-      if (walletRes.success && walletRes.balance) {
-        balance = walletRes.balance;
-      }
-    }
-
-    const user: DolikeUser = {
-      email: email.trim(),
-      balance,
-      token,
-    };
-
-    return {
-      success: true,
-      user,
-      sessionCookie,
-      token,
-    };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Lỗi kết nối máy chủ DoLike";
-    return { success: false, error: msg };
-  }
-}
 
 /**
  * Lấy số dư ví DoLike:
@@ -242,30 +146,118 @@ export async function getDolikeWallet(
 }
 
 /**
- * Kiểm tra trạng thái phiên DoLike
- * GET https://congtingudolike.servehttp.com/api/account-auth.php
+ * Xác thực Authorization Token DoLike 100% chuẩn GoMax (Lx/n2; & Lx/iq;->x)
+ * Kiểm tra qua /api/wallet.php và /api/users.php
  */
-export async function checkDolikeAuth(
-  cookie: string,
-  bearerToken?: string,
-): Promise<boolean> {
+export async function verifyDolikeToken(token: string): Promise<{
+  success: boolean;
+  email?: string;
+  balance?: string;
+  displayName?: string;
+  error?: string;
+}> {
+  const cleanToken = token.trim().replace(/^Bearer\s+/i, "");
+  if (!cleanToken) {
+    return {
+      success: false,
+      error: "Authorization Token DoLike không hợp lệ!",
+    };
+  }
+
   try {
-    const headers = [...DOLIKE_DEFAULT_HEADERS];
-    if (bearerToken) {
-      headers.push(`authorization: Bearer ${bearerToken}`);
-    }
-    const raw = await runDolikeCurl({
-      url: `${DOLIKE_BASE_URL}/api/account-auth.php`,
+    const headers = [
+      ...DOLIKE_DEFAULT_HEADERS,
+      `authorization: Bearer ${cleanToken}`,
+      `origin: ${DOLIKE_BASE_URL}`,
+      `referer: ${DOLIKE_BASE_URL}/`,
+    ];
+
+    // 1. Thử kiểm tra ví qua /api/wallet.php (GoMax Lx/n2;)
+    const rawWallet = await runDolikeCurl({
+      url: `${DOLIKE_BASE_URL}/api/wallet.php`,
       method: "GET",
-      cookie,
       headers,
     });
-    const parsed = JSON.parse(raw);
-    return !!(parsed?.data?.logged_in || parsed?.logged_in);
+
+    let balance = "0 đ";
+    let isWalletOk = false;
+    try {
+      const parsedWallet = JSON.parse(rawWallet);
+      if (parsedWallet && !parsedWallet.error && parsedWallet.status !== "error") {
+        const balanceNum =
+          parsedWallet?.data?.balance ??
+          parsedWallet?.data?.coins ??
+          parsedWallet?.balance ??
+          parsedWallet?.coins ??
+          0;
+        balance = `${Number(balanceNum).toLocaleString("vi-VN")} đ`;
+        isWalletOk = true;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 2. Kiểm tra thông tin người dùng qua /api/users.php (GoMax Lx/n2;)
+    let email = "dolike_user";
+    let displayName = "DoLike User";
+
+    try {
+      const rawUser = await runDolikeCurl({
+        url: `${DOLIKE_BASE_URL}/api/users.php`,
+        method: "GET",
+        headers,
+      });
+      const parsedUser = JSON.parse(rawUser);
+      if (parsedUser && !parsedUser.error) {
+        const uData = parsedUser.data || parsedUser.user || parsedUser;
+        if (uData.email) email = String(uData.email);
+        if (uData.username || uData.name || uData.display_name) {
+          displayName = String(uData.username || uData.name || uData.display_name);
+        }
+        isWalletOk = true;
+      }
+    } catch {
+      // ignore
+    }
+
+    // 3. Nếu cả 2 đều không parse được, thử kiểm tra platform-accounts.php
+    if (!isWalletOk) {
+      const rawAccs = await runDolikeCurl({
+        url: `${DOLIKE_BASE_URL}/api/platform-accounts.php`,
+        method: "GET",
+        headers,
+      });
+      try {
+        const parsedAccs = JSON.parse(rawAccs);
+        if (Array.isArray(parsedAccs) || Array.isArray(parsedAccs?.data)) {
+          isWalletOk = true;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (isWalletOk) {
+      return {
+        success: true,
+        email,
+        displayName,
+        balance,
+      };
+    }
+
+    return {
+      success: false,
+      error: "Authorization Token DoLike không hợp lệ!",
+    };
   } catch {
-    return false;
+    return {
+      success: false,
+      error: "Authorization Token DoLike không hợp lệ!",
+    };
   }
 }
+
 
 /**
  * Sinh x-api-token chuẩn GoMax Lx/iq;->l
