@@ -222,10 +222,18 @@ export function parseDolikeJwt(token: string): {
       (payload.uid as string | number) ||
       (payload.userId as string | number);
 
+    const placeholderMatch =
+      (email && email.match(/^(?:email|user)_(\d+)$/i)) ||
+      (username && username.match(/^(?:email|user)_(\d+)$/i));
+    if (placeholderMatch && !userId) {
+      userId = placeholderMatch[1];
+    }
+
     const displayName =
+      (placeholderMatch ? `UID: ${placeholderMatch[1]}` : undefined) ||
       username ||
-      (email ? email.split("@")[0] : undefined) ||
-      (userId ? `user_${userId}` : undefined);
+      (email && email.includes("@") ? email.split("@")[0] : undefined) ||
+      (userId ? `UID: ${userId}` : undefined);
 
     return {
       isValid: isDolike,
@@ -334,11 +342,22 @@ export async function verifyDolikeToken(token: string): Promise<{
 
   // 3. Nếu server xác nhận HOẶC token là JWT DoLike hợp lệ -> Chấp thuận kết nối thành công!
   if (isServerVerified || jwtInfo.isValid) {
+    // Phát hiện nếu username/email là dạng placeholder tự sinh của hệ thống DoLike (email_165, user_165)
+    const placeholderMatch =
+      (userEmail && userEmail.match(/^(?:email|user)_(\d+)$/i)) ||
+      (userDisplay && userDisplay.match(/^(?:email|user)_(\d+)$/i));
+    if (placeholderMatch) {
+      if (!userId) userId = placeholderMatch[1];
+      userDisplay = `UID: ${placeholderMatch[1]}`;
+    }
+
     if (!userDisplay) {
-      userDisplay = userEmail ? userEmail.split("@")[0] : (userId ? `ID: ${userId}` : "DoLike User");
+      userDisplay = userEmail && userEmail.includes("@")
+        ? userEmail.split("@")[0]
+        : (userId ? `UID: ${userId}` : "DoLike User");
     }
     if (!userEmail) {
-      userEmail = userDisplay || (userId ? `user_${userId}` : "DoLike User");
+      userEmail = userDisplay || (userId ? `UID: ${userId}` : "DoLike User");
     }
     return {
       success: true,

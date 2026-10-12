@@ -1512,6 +1512,106 @@ fn extract_golike_session() -> Result<serde_json::Value, String> {
   Ok(serde_json::json!({ "success": false, "hasSession": false }))
 }
 
+fn scan_leveldb_for_dolike() -> Option<serde_json::Value> {
+  use base64::prelude::*;
+  let mut candidate_dirs = Vec::new();
+
+  if let Ok(local_app) = std::env::var("LOCALAPPDATA") {
+    candidate_dirs.push(format!(r"{}\com.autolunex.app\EBWebView\Default\Local Storage\leveldb", local_app));
+  }
+  for letter in b'D'..=b'Z' {
+    candidate_dirs.push(format!(r"{}:\AutoLunex\webview_data\Default\Local Storage\leveldb", letter as char));
+  }
+
+  for dir_str in candidate_dirs {
+    let dir = std::path::Path::new(&dir_str);
+    if !dir.exists() {
+      continue;
+    }
+
+    let Ok(entries) = std::fs::read_dir(dir) else { continue };
+    let mut files: Vec<_> = entries
+      .flatten()
+      .map(|e| e.path())
+      .filter(|p| {
+        let ext = p.extension().and_then(|s| s.to_str()).unwrap_or("");
+        ext == "ldb" || ext == "log"
+      })
+      .collect();
+
+    files.sort_by(|a, b| {
+      let m_a = a.metadata().and_then(|m| m.modified()).ok();
+      let m_b = b.metadata().and_then(|m| m.modified()).ok();
+      m_b.cmp(&m_a)
+    });
+
+    for file_path in files {
+      let Ok(bytes) = std::fs::read(&file_path) else { continue };
+      if bytes.is_empty() {
+        continue;
+      }
+
+      let pattern = b"eyJhbGciOi";
+      let mut search_start = 0;
+      while let Some(rel_pos) = bytes[search_start..].windows(pattern.len()).position(|w| w == pattern) {
+        let idx = search_start + rel_pos;
+        search_start = idx + pattern.len();
+
+        let mut tok_bytes = Vec::new();
+        for &byte in &bytes[idx..] {
+          if byte.is_ascii_alphanumeric() || byte == b'.' || byte == b'-' || byte == b'_' {
+            tok_bytes.push(byte);
+          } else {
+            break;
+          }
+        }
+
+        if tok_bytes.len() > 60 {
+          if let Ok(tok_str) = std::str::from_utf8(&tok_bytes) {
+            let parts: Vec<&str> = tok_str.split('.').collect();
+            if parts.len() == 3 {
+              let payload_b64 = parts[1];
+              let mut padded = payload_b64.replace('-', "+").replace('_', "/");
+              while padded.len() % 4 != 0 {
+                padded.push('=');
+              }
+              if let Ok(decoded) = BASE64_STANDARD.decode(&padded) {
+                if let Ok(val) = serde_json::from_slice::<serde_json::Value>(&decoded) {
+                  let is_dolike = val.get("iss").and_then(|i| i.as_str()) == Some("mgauto")
+                    || val.get("iss").and_then(|i| i.as_str()) == Some("dolike")
+                    || val.get("user_id").is_some()
+                    || val.get("email").is_some();
+
+                  if is_dolike {
+                    let email = val.get("email").and_then(|e| e.as_str()).unwrap_or("").to_string();
+                    let uid = val.get("user_id").map(|u| u.to_string()).unwrap_or_default();
+                    return Some(serde_json::json!({
+                      "success": true,
+                      "token": tok_str,
+                      "email": email,
+                      "userId": uid,
+                    }));
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  None
+}
+
+#[tauri::command]
+fn extract_dolike_session() -> Result<serde_json::Value, String> {
+  if let Some(data) = scan_leveldb_for_dolike() {
+    return Ok(data);
+  }
+  Ok(serde_json::json!({ "success": false, "hasSession": false }))
+}
+
 // ============================================================
 // Tauri app entry point
 // ============================================================
@@ -1569,6 +1669,7 @@ pub fn run() {
       reset_golike_logged_out_tokens,
       clear_golike_session,
       extract_golike_session,
+      extract_dolike_session,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

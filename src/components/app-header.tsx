@@ -25,6 +25,8 @@ export interface DolikeAccountInfo {
   username: string;
   balance: string;
   isLoggedIn: boolean;
+  userId?: string | number;
+  email?: string;
 }
 
 interface AppHeaderProps {
@@ -232,7 +234,10 @@ export function AppHeader({
 
         {showDolike &&
           (dolikeAccount?.isLoggedIn ? (
-            <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs">
+            <div
+              className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/40 px-2.5 py-1 text-xs"
+              title={`Tài khoản DoLike: ${dolikeAccount.email || dolikeAccount.username}${dolikeAccount.userId ? ` | UID: ${dolikeAccount.userId}` : ""} | Số dư: ${dolikeAccount.balance}`}
+            >
               {/* User */}
               <div className="flex items-center gap-1.5 font-medium text-foreground">
                 <User className="size-3.5 text-fuchsia-400" />

@@ -213,6 +213,7 @@ export default function HomePage() {
   const [dolikeAccount, setDolikeAccount] = useState<{
     email: string;
     displayName?: string;
+    userId?: string;
     balance: string;
     sessionCookie: string;
     bearerToken?: string;
@@ -222,6 +223,7 @@ export default function HomePage() {
       return {
         email: "",
         displayName: "",
+        userId: "",
         balance: "",
         sessionCookie: "",
         bearerToken: "",
@@ -229,15 +231,38 @@ export default function HomePage() {
       };
     }
     const email = localStorage.getItem("dolike_email") || "";
-    const displayName = localStorage.getItem("dolike_display_name") || "";
+    let displayName = localStorage.getItem("dolike_display_name") || "";
+    let userId = localStorage.getItem("dolike_user_id") || "";
     const balance = localStorage.getItem("dolike_balance") || "";
     const bearerToken =
       localStorage.getItem("dolike_auth_token") ||
       localStorage.getItem("dolike_bearer_token") ||
       "";
+
+    const placeholderMatch =
+      (email && email.match(/^(?:email|user)_(\d+)$/i)) ||
+      (displayName && displayName.match(/^(?:email|user)_(\d+)$/i));
+    if (placeholderMatch) {
+      userId = userId || placeholderMatch[1];
+      displayName = `UID: ${placeholderMatch[1]}`;
+      try {
+        localStorage.setItem("dolike_display_name", displayName);
+        if (userId) localStorage.setItem("dolike_user_id", userId);
+      } catch {
+        // ignore
+      }
+    }
+
     return {
       email,
-      displayName: displayName || (email ? email.split("@")[0] : ""),
+      displayName:
+        displayName ||
+        (email && email.includes("@")
+          ? email.split("@")[0]
+          : userId
+            ? `UID: ${userId}`
+            : ""),
+      userId,
       balance,
       sessionCookie: "",
       bearerToken,
@@ -691,16 +716,30 @@ export default function HomePage() {
   const handleDolikeLoginSuccess = (user: {
     email: string;
     displayName?: string;
+    userId?: string | number;
     balance: string;
     sessionCookie?: string;
     bearerToken?: string;
   }) => {
+    let resolvedUserId = user.userId ? String(user.userId) : "";
+    if (!resolvedUserId) {
+      const match = (user.email || "").match(/^(?:email|user)_(\d+)$/i);
+      if (match) resolvedUserId = match[1];
+    }
     const finalDisplay =
-      user.displayName || (user.email ? user.email.split("@")[0] : "DoLike User");
+      user.displayName ||
+      (resolvedUserId
+        ? `UID: ${resolvedUserId}`
+        : user.email && user.email.includes("@")
+          ? user.email.split("@")[0]
+          : "DoLike User");
     try {
       localStorage.setItem("dolike_email", user.email);
       localStorage.setItem("dolike_display_name", finalDisplay);
       localStorage.setItem("dolike_balance", user.balance);
+      if (resolvedUserId) {
+        localStorage.setItem("dolike_user_id", resolvedUserId);
+      }
       if (user.sessionCookie) {
         localStorage.setItem("dolike_session_cookie", user.sessionCookie);
       }
@@ -715,6 +754,7 @@ export default function HomePage() {
     setDolikeAccount({
       email: user.email,
       displayName: finalDisplay,
+      userId: resolvedUserId,
       balance: user.balance,
       sessionCookie: user.sessionCookie || "",
       bearerToken: user.bearerToken || "",
@@ -831,12 +871,14 @@ export default function HomePage() {
     logoutDolike();
     try {
       localStorage.removeItem("dolike_linked_usernames");
+      localStorage.removeItem("dolike_user_id");
     } catch {
       // ignore
     }
     setDolikeAccount({
       email: "",
       displayName: "",
+      userId: "",
       balance: "",
       sessionCookie: "",
       bearerToken: "",
@@ -2318,6 +2360,8 @@ export default function HomePage() {
             "DoLike User",
           balance: dolikeAccount.balance || "0 đ",
           isLoggedIn: dolikeAccount.isLoggedIn,
+          userId: dolikeAccount.userId,
+          email: dolikeAccount.email,
         }}
         onDolikeLoginClick={() => setIsDolikeLoginOpen(true)}
         onDolikeLogoutClick={handleDolikeLogout}
