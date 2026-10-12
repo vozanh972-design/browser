@@ -13,7 +13,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getDolikeWallet, loginDolike } from "@/lib/dolike-api";
+import {
+  getDolikePlatformAccounts,
+  getDolikeWallet,
+  loginDolike,
+} from "@/lib/dolike-api";
 import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 
 interface DolikeLoginDialogProps {
@@ -71,6 +75,27 @@ export function DolikeLoginDialog({
           cookieClean = cookies.join("; ");
         }
 
+        // Kiểm tra kết nối với server DoLike theo chuẩn GoMax
+        const verifyRes = await getDolikePlatformAccounts({
+          cookie: cookieClean,
+          bearerToken: extractedBearer,
+        });
+
+        if (!verifyRes.success && verifyRes.error) {
+          const err = verifyRes.error;
+          if (
+            err.includes("thiết bị") ||
+            err.includes("Telegram") ||
+            err.includes("gắn với thiết bị")
+          ) {
+            setErrorMsg(
+              "Phiên này chưa được gắn với thiết bị hoặc đã hết hạn trên DoLike. Vui lòng mở Telegram DoLike để lấy Authorization Token mới.",
+            );
+            setLoading(false);
+            return;
+          }
+        }
+
         let balance = "0 đ";
         if (cookieClean) {
           const wRes = await getDolikeWallet(cookieClean);
@@ -94,7 +119,9 @@ export function DolikeLoginDialog({
           // ignore
         }
 
-        showSuccessToast(`Đã lưu phiên DoLike thành công! Số dư: ${balance}`);
+        showSuccessToast(
+          `Đã kết nối DoLike thành công! Đã đồng bộ ${verifyRes.accounts?.length || 0} tài khoản.`,
+        );
         onLoginSuccess({
           email: userEmail,
           balance,

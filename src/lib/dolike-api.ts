@@ -431,9 +431,9 @@ export async function previewDolikePlatformAccount(options: {
 }
 
 /**
- * Thêm tài khoản vào DoLike:
+ * Thêm tài khoản vào DoLike theo logic GoMax:
  * POST https://congtingudolike.servehttp.com/api/platform-accounts.php
- * Body: {"action":"add","platform":"instagram","account_url":"..."}
+ * Body: {"platform":"instagram","account_url":"...","account_type":"vn"}
  */
 export async function addDolikePlatformAccount(options: {
   accountUrl: string;
@@ -458,25 +458,62 @@ export async function addDolikePlatformAccount(options: {
     }
 
     const cleanUrl = options.accountUrl.trim().replace(/^@/, "");
-    const bodyObj = {
-      action: options.action || "add",
+    // Thử theo định dạng payload chuẩn GoMax (Lx/iq;->m)
+    const gomaxBody = {
       platform: options.platform || "instagram",
       account_url: cleanUrl,
+      account_type: "vn",
       ...(options.extraData || {}),
     };
 
-    const raw = await runDolikeCurl({
+    let raw = await runDolikeCurl({
       url: `${DOLIKE_BASE_URL}/api/platform-accounts.php`,
       method: "POST",
       cookie: options.cookie,
       headers,
-      body: JSON.stringify(bodyObj),
+      body: JSON.stringify(gomaxBody),
     });
 
-    const parsed = JSON.parse(raw);
+    let parsed: Record<string, unknown> = {};
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      parsed = {};
+    }
+
+    // Nếu format GoMax trả về lỗi đòi hỏi action add/preview thì fallback
+    if (parsed.error && String(parsed.error).includes("action")) {
+      const fallbackBody = {
+        action: options.action || "add",
+        platform: options.platform || "instagram",
+        account_url: cleanUrl,
+        ...(options.extraData || {}),
+      };
+      raw = await runDolikeCurl({
+        url: `${DOLIKE_BASE_URL}/api/platform-accounts.php`,
+        method: "POST",
+        cookie: options.cookie,
+        headers,
+        body: JSON.stringify(fallbackBody),
+      });
+      try {
+        parsed = JSON.parse(raw);
+      } catch {
+        parsed = {};
+      }
+    }
+
     if (parsed.error || parsed.status === "error" || parsed.success === false) {
-      const errMsg =
-        parsed.error || parsed.message || "Không thể thêm tài khoản vào DoLike";
+      let errMsg = String(
+        parsed.error || parsed.message || "Không thể thêm tài khoản vào DoLike",
+      );
+      if (
+        errMsg.includes("thiết bị khác") ||
+        errMsg.includes("gắn với thiết bị")
+      ) {
+        errMsg =
+          "Phiên DoLike chưa được gắn thiết bị hoặc đã hết hạn. Hãy lấy token mới hoặc đăng nhập lại.";
+      }
       return { success: false, error: errMsg, data: parsed };
     }
 
@@ -489,9 +526,10 @@ export async function addDolikePlatformAccount(options: {
 }
 
 /**
- * Quy trình liên kết tài khoản trọn vẹn:
- * Bước 1: Preview để xác định acc đúng hay acc sai
- * Bước 2: Add tài khoản vào nền tảng DoLike
+ * Quy trình kiểm tra và liên kết tài khoản chuẩn GoMax (Lx/iq;->e & Lx/gu1;):
+ * Bước 1: Lấy danh sách tài khoản DoLike hiện có (GET /api/platform-accounts.php)
+ * Bước 2: Nếu đã tồn tại -> Xác nhận và đánh dấu thành công ("Đã xác nhận tài khoản @{username} trên DoLike; không liên kết lại")
+ * Bước 3: Nếu chưa có -> Gửi POST liên kết tài khoản (Server Việt Nam) lên DoLike
  */
 export async function linkDolikeAccountFull(options: {
   accountUrl: string;
@@ -501,6 +539,8 @@ export async function linkDolikeAccountFull(options: {
 }): Promise<{
   success: boolean;
   username: string;
+  id?: string | number;
+  alreadyLinked?: boolean;
   error?: string;
 }> {
   const cleanUrl = options.accountUrl.trim().replace(/^@/, "");
@@ -512,46 +552,61 @@ export async function linkDolikeAccountFull(options: {
     };
   }
 
-  // Bước 1: Preview để xác định acc đúng hay acc sai
-  const prevRes = await previewDolikePlatformAccount({
-    accountUrl: cleanUrl,
-    platform: options.platform || "instagram",
+  // Bước 1: Lấy danh sách tài khoản hiện có trên DoLike theo GoMax Lx/iq;->h
+  const listRes = await getDolikePlatformAccounts({
     cookie: options.cookie,
     bearerToken: options.bearerToken,
   });
 
-  if (!prevRes.isValid || !prevRes.success) {
+  if (listRes.success && Array.isArray(listRes.accounts)) {
+    const existing = listRes.accounts.find((a) => {
+      const u = String(a.username || a.account_url || a.account_name || "")
+        .replace(/^@/, "")
+        .trim()
+        .toLowerCase();
+      return u === cleanUrl.toLowerCase();
+    });
+
+    if (existing) {
+      // Đã có trên DoLike, không cần liên kết lại (chuẩn GoMax)
+      return {
+        success: true,
+        username: cleanUrl,
+        id: existing.id || existing.uid,
+        alreadyLinked: true,
+      };
+    }
+  } else if (
+    listRes.error &&
+    (listRes.error.includes("thiết bị khác") ||
+      listRes.error.includes("gắn với thiết bị"))
+  ) {
     return {
       success: false,
       username: cleanUrl,
       error:
-        prevRes.error ||
-        "Tài khoản không hợp lệ (acc sai), vui lòng kiểm tra lại username Instagram",
+        "Phiên DoLike chưa được gắn thiết bị hoặc đã hết hạn. Hãy đăng nhập lại Telegram để cấp token mới.",
     };
   }
 
-  // Bước 2: Thêm acc vào DoLike
+  // Bước 2: Chưa có trên DoLike -> Gửi yêu cầu liên kết theo GoMax Lx/iq;->m
   const addRes = await addDolikePlatformAccount({
     accountUrl: cleanUrl,
     platform: options.platform || "instagram",
     cookie: options.cookie,
     bearerToken: options.bearerToken,
     action: "add",
-    extraData:
-      typeof prevRes.data === "object" && prevRes.data
-        ? (prevRes.data as Record<string, unknown>)
-        : undefined,
   });
 
   if (!addRes.success) {
     const errText = addRes.error || "";
     if (errText.includes("đã tồn tại") || errText.includes("already")) {
-      return { success: true, username: cleanUrl };
+      return { success: true, username: cleanUrl, alreadyLinked: true };
     }
     return {
       success: false,
       username: cleanUrl,
-      error: errText || "Không thể lưu tài khoản vào DoLike",
+      error: errText || "Không thể liên kết tài khoản vào DoLike",
     };
   }
 
@@ -607,3 +662,254 @@ export async function getDolikeCauHinh(options: {
     return null;
   }
 }
+
+export interface DolikeJob {
+  id?: string | number;
+  run_id?: string;
+  type?: "like" | "follow" | "comment" | string;
+  platform?: string;
+  link?: string;
+  post_id?: string;
+  comment_text?: string;
+  coin?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Nhận job DoLike Instagram (Chuẩn GoMax Lx/iq;->i & Lx/iq;->j):
+ * Endpoint: https://congtingudolike.servehttp.com/api/bot/users/nhan-instagram/ig-cudau.php
+ * Fallback: https://congtingudolike.servehttp.com/api/session.php
+ * Body: {"type":"get_jobs","job_type":"all","platform":"instagram","account_id":"...","account_uid":"..."}
+ */
+export async function getDolikeJob(options: {
+  accountId: string | number;
+  accountUid?: string;
+  platform?: string;
+  cookie?: string;
+  bearerToken?: string;
+}): Promise<{
+  success: boolean;
+  job?: DolikeJob;
+  error?: string;
+  retryAfter?: number;
+}> {
+  try {
+    const payload = JSON.stringify({
+      type: "get_jobs",
+      job_type: "all",
+      platform: options.platform || "instagram",
+      account_id: String(options.accountId),
+      account_uid: options.accountUid || "",
+    });
+
+    // Thử endpoint bot Instagram ig-cudau.php trước (chuẩn GoMax Lx/iq;->j)
+    const targetPaths = [
+      "/api/bot/users/nhan-instagram/ig-cudau.php",
+      "/api/session.php",
+    ];
+
+    for (const path of targetPaths) {
+      try {
+        const sessionToken = await getDolikeSessionToken({
+          path,
+          method: "POST",
+          body: payload,
+          cookie: options.cookie,
+          bearerToken: options.bearerToken,
+        });
+
+        const headers = [
+          ...DOLIKE_DEFAULT_HEADERS,
+          "content-type: application/json",
+          `origin: ${DOLIKE_BASE_URL}`,
+          `referer: ${DOLIKE_BASE_URL}/`,
+        ];
+        if (options.bearerToken) {
+          headers.push(`authorization: Bearer ${options.bearerToken}`);
+        }
+        if (sessionToken) {
+          headers.push(`x-api-token: ${sessionToken}`);
+        }
+
+        const raw = await runDolikeCurl({
+          url: `${DOLIKE_BASE_URL}${path}`,
+          method: "POST",
+          cookie: options.cookie,
+          headers,
+          body: payload,
+        });
+
+        if (!raw || raw.trim().startsWith("<")) continue;
+        const parsed = JSON.parse(raw);
+
+        if (parsed.status === "error" || parsed.error) {
+          const errMsg = String(
+            parsed.error || parsed.message || parsed.msg || "Không có job",
+          );
+          return {
+            success: false,
+            error: errMsg,
+            retryAfter: parsed.retry_after,
+          };
+        }
+
+        const jobData = parsed.data || parsed.job || parsed;
+        if (jobData && (jobData.run_id || jobData.id || jobData.link)) {
+          return { success: true, job: jobData as DolikeJob };
+        }
+      } catch {
+        // Thử path tiếp theo
+      }
+    }
+
+    return { success: false, error: "Hết job hoặc server bận" };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Lỗi nhận job DoLike";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Báo cáo hoàn thành job DoLike (Chuẩn GoMax Lx/iq;->c & Lx/iq;->j):
+ * Endpoint: https://congtingudolike.servehttp.com/api/bot/users/nhan-instagram/ig-cudau.php
+ * Fallback: https://congtingudolike.servehttp.com/api/session.php
+ * Body: {"type":"perform_job","run_id":"..."}
+ */
+export async function reportDolikeJob(options: {
+  runId: string;
+  cookie?: string;
+  bearerToken?: string;
+}): Promise<{ success: boolean; coins?: number; error?: string }> {
+  try {
+    const payload = JSON.stringify({
+      type: "perform_job",
+      run_id: options.runId,
+    });
+
+    const targetPaths = [
+      "/api/bot/users/nhan-instagram/ig-cudau.php",
+      "/api/session.php",
+    ];
+
+    for (const path of targetPaths) {
+      try {
+        const sessionToken = await getDolikeSessionToken({
+          path,
+          method: "POST",
+          body: payload,
+          cookie: options.cookie,
+          bearerToken: options.bearerToken,
+        });
+
+        const headers = [
+          ...DOLIKE_DEFAULT_HEADERS,
+          "content-type: application/json",
+          `origin: ${DOLIKE_BASE_URL}`,
+          `referer: ${DOLIKE_BASE_URL}/`,
+        ];
+        if (options.bearerToken) {
+          headers.push(`authorization: Bearer ${options.bearerToken}`);
+        }
+        if (sessionToken) {
+          headers.push(`x-api-token: ${sessionToken}`);
+        }
+
+        const raw = await runDolikeCurl({
+          url: `${DOLIKE_BASE_URL}${path}`,
+          method: "POST",
+          cookie: options.cookie,
+          headers,
+          body: payload,
+        });
+
+        if (!raw || raw.trim().startsWith("<")) continue;
+        const parsed = JSON.parse(raw);
+
+        if (parsed.status === "error" || parsed.error) {
+          return {
+            success: false,
+            error: String(
+              parsed.error || parsed.message || parsed.msg || "Lỗi báo cáo job",
+            ),
+          };
+        }
+
+        const coins = Number(
+          parsed.coins || parsed.xu || parsed.data?.coins || parsed.data?.xu || 0,
+        );
+        return { success: true, coins };
+      } catch {
+        // Thử path tiếp theo
+      }
+    }
+
+    return { success: false, error: "Lỗi kết nối khi gửi báo cáo job DoLike" };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Lỗi gửi báo cáo job DoLike";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Bỏ qua job DoLike (Chuẩn GoMax Lx/iq;->z & Lx/iq;->j):
+ * Endpoint: https://congtingudolike.servehttp.com/api/bot/users/nhan-instagram/ig-cudau.php
+ * Fallback: https://congtingudolike.servehttp.com/api/session.php
+ * Body: {"type":"nopjobing","run_id":"...","report_type":"skip_unwanted","report_reason":"error","report_details":"error"}
+ */
+export async function skipDolikeJob(options: {
+  runId: string;
+  reportType?: string;
+  cookie?: string;
+  bearerToken?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const payload = JSON.stringify({
+      type: "nopjobing",
+      run_id: options.runId,
+      report_type: options.reportType || "skip_unwanted",
+      report_reason: "error",
+      report_details: "error",
+    });
+
+    const targetPaths = [
+      "/api/bot/users/nhan-instagram/ig-cudau.php",
+      "/api/session.php",
+    ];
+
+    for (const path of targetPaths) {
+      try {
+        const headers = [
+          ...DOLIKE_DEFAULT_HEADERS,
+          "content-type: application/json",
+          `origin: ${DOLIKE_BASE_URL}`,
+          `referer: ${DOLIKE_BASE_URL}/`,
+        ];
+        if (options.bearerToken) {
+          headers.push(`authorization: Bearer ${options.bearerToken}`);
+        }
+
+        const raw = await runDolikeCurl({
+          url: `${DOLIKE_BASE_URL}${path}`,
+          method: "POST",
+          cookie: options.cookie,
+          headers,
+          body: payload,
+        });
+
+        if (!raw || raw.trim().startsWith("<")) continue;
+        const parsed = JSON.parse(raw);
+        if (parsed.status !== "error" && !parsed.error) {
+          return { success: true };
+        }
+      } catch {
+        // Thử path tiếp theo
+      }
+    }
+
+    return { success: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Lỗi bỏ qua job DoLike";
+    return { success: false, error: msg };
+  }
+}
+

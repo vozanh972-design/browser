@@ -64,6 +64,7 @@ import {
 } from "@/lib/version-checker";
 import { getXsmmUser } from "@/lib/xsmm-api";
 import { type AccountRunState, xsmmRunner } from "@/lib/xsmm-runner";
+import { dolikeRunner } from "@/lib/dolike-runner";
 
 export interface FacebookAccount {
   id: string;
@@ -422,6 +423,33 @@ export default function HomePage() {
         return {
           ...prev,
           balance: newBalance,
+        };
+      });
+    });
+    return () => unsub();
+  }, []);
+
+  // Đăng ký nhận cập nhật trạng thái tác vụ từ DoLike Runner (Độc lập cho DoLike)
+  useEffect(() => {
+    const unsub = dolikeRunner.subscribe((states) => {
+      setRunnerStates((prev) => {
+        const next = new Map(prev);
+        for (const [k, v] of states) {
+          next.set(k, v);
+        }
+        return next;
+      });
+    });
+    dolikeRunner.setOnBalanceUpdated((balance) => {
+      setDolikeAccount((prev) => {
+        try {
+          localStorage.setItem("dolike_balance", balance);
+        } catch {
+          // ignore
+        }
+        return {
+          ...prev,
+          balance,
         };
       });
     });
@@ -1017,17 +1045,21 @@ export default function HomePage() {
           return updatedList;
         });
 
-        showSuccessToast(
-          tr(
-            `Đã liên kết tài khoản @${cleanUsername} vào DoLike thành công!`,
-            `Successfully linked account @${cleanUsername} to DoLike!`,
-          ),
-        );
+        const successMsg = res.alreadyLinked
+          ? tr(
+              `Đã xác nhận tài khoản @${cleanUsername} trên DoLike (không cần liên kết lại).`,
+              `Account @${cleanUsername} verified on DoLike (no re-linking needed).`,
+            )
+          : tr(
+              `Đã liên kết tài khoản @${cleanUsername} lên DoLike thành công!`,
+              `Successfully linked account @${cleanUsername} to DoLike!`,
+            );
+        showSuccessToast(successMsg);
       } else {
         showErrorToast(
           res.error ||
             tr(
-              "Lỗi liên kết tài khoản vào DoLike (acc không hợp lệ)",
+              "Lỗi liên kết tài khoản vào DoLike",
               "Failed to link account to DoLike",
             ),
         );
@@ -2000,8 +2032,8 @@ export default function HomePage() {
         );
         return;
       }
-      if (xsmmRunner.isRunning(acc.id)) {
-        xsmmRunner.stopAccount(acc.id);
+      if (dolikeRunner.isRunning(acc.id)) {
+        dolikeRunner.stopAccount(acc.id);
         showSuccessToast(
           tr(
             `Đã dừng chạy tài khoản DoLike: ${acc.name || acc.uid}`,
@@ -2009,13 +2041,21 @@ export default function HomePage() {
           ),
         );
       } else {
-        const token =
-          xsmmAccount.token ||
+        const dlCookie =
+          dolikeAccount.sessionCookie ||
           (typeof window !== "undefined"
-            ? localStorage.getItem("xsmm_token")
-            : "") ||
-          "dolike_mode";
-        xsmmRunner.startAccount(acc, token);
+            ? localStorage.getItem("dolike_session_cookie") || undefined
+            : undefined);
+        const dlBearer =
+          dolikeAccount.bearerToken ||
+          (typeof window !== "undefined"
+            ? localStorage.getItem("dolike_bearer_token") || undefined
+            : undefined);
+
+        void dolikeRunner.startAccount(acc, {
+          cookie: dlCookie,
+          bearerToken: dlBearer,
+        });
         showSuccessToast(
           tr(
             `Bắt đầu chạy nhiệm vụ DoLike: ${acc.name || acc.uid}`,
@@ -2150,13 +2190,21 @@ export default function HomePage() {
         );
         return;
       }
-      const token =
-        xsmmAccount.token ||
+      const dlCookie =
+        dolikeAccount.sessionCookie ||
         (typeof window !== "undefined"
-          ? localStorage.getItem("xsmm_token")
-          : "") ||
-        "dolike_mode";
-      xsmmRunner.startAccounts(runnableAccounts, token);
+          ? localStorage.getItem("dolike_session_cookie") || undefined
+          : undefined);
+      const dlBearer =
+        dolikeAccount.bearerToken ||
+        (typeof window !== "undefined"
+          ? localStorage.getItem("dolike_bearer_token") || undefined
+          : undefined);
+
+      void dolikeRunner.startAccounts(runnableAccounts, {
+        cookie: dlCookie,
+        bearerToken: dlBearer,
+      });
       showSuccessToast(
         tr(
           `Bắt đầu chạy ${runnableAccounts.length} tài khoản DoLike!`,
