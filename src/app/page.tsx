@@ -2,6 +2,9 @@
 
 import {
   CircleAlert,
+  Coins,
+  Eye,
+  EyeOff,
   Flag,
   Key,
   Link2,
@@ -73,6 +76,7 @@ export interface FacebookAccount {
   note?: string;
   proxy?: string;
   platform?: "facebook" | "instagram";
+  isDolike?: boolean;
   status: "live" | "checkpoint" | "die" | "unverified";
   isLive?: boolean;
   rawText: string;
@@ -80,6 +84,9 @@ export interface FacebookAccount {
   dolikeEmail?: string;
   dolikeBalance?: string;
 }
+
+export const isDoLikeAccount = (a: FacebookAccount) =>
+  Boolean(a.isDolike || a.id.startsWith("acc_dl_") || a.dolikeEmail);
 
 function AccountAvatar({
   url,
@@ -92,7 +99,14 @@ function AccountAvatar({
   const hasError = !url || errorUrl === url;
 
   return (
-    <div className="relative size-7 rounded-full overflow-hidden bg-muted/60 shrink-0 border border-border/70 flex items-center justify-center shadow-2xs">
+    <div
+      className={cn(
+        "relative size-7 rounded-full overflow-hidden shrink-0 border flex items-center justify-center shadow-2xs",
+        hasError && isInstagram
+          ? "bg-[#E1306C]/10 border-[#E1306C]/25"
+          : "bg-muted/60 border-border/70",
+      )}
+    >
       {!hasError ? (
         // biome-ignore lint/performance/noImgElement: dynamic external avatar URL
         <img
@@ -283,6 +297,10 @@ export default function HomePage() {
     return [];
   });
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [revealedEmails, setRevealedEmails] = useState<Record<string, boolean>>({});
+  const toggleRevealEmail = (id: string) => {
+    setRevealedEmails((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
   const [currentPlatform, setCurrentPlatform] = useState<
     "facebook" | "instagram"
   >("facebook");
@@ -585,20 +603,21 @@ export default function HomePage() {
     if (!email) return;
 
     setAccounts((prev) => {
-      const igAccounts = prev.filter(
-        (a) => (a.platform || "facebook") === "instagram",
+      const dlAccounts = prev.filter(
+        (a) => (a.platform || "facebook") === "instagram" && isDoLikeAccount(a),
       );
-      if (igAccounts.some((a) => a.dolikeEmail === email)) {
+      if (dlAccounts.some((a) => a.dolikeEmail === email)) {
         return prev;
       }
 
-      const unassigned = igAccounts.find((a) => !a.dolikeEmail);
+      const unassigned = dlAccounts.find((a) => !a.dolikeEmail);
       let updated: FacebookAccount[];
       if (unassigned) {
         updated = prev.map((a) =>
           a.id === unassigned.id
             ? {
                 ...a,
+                isDolike: true,
                 dolikeEmail: email,
                 dolikeBalance:
                   dolikeAccount.balance || a.dolikeBalance || "0 đ",
@@ -611,6 +630,7 @@ export default function HomePage() {
           uid: "",
           name: "",
           platform: "instagram",
+          isDolike: true,
           status: "unverified",
           rawText: "",
           dolikeEmail: email,
@@ -654,8 +674,8 @@ export default function HomePage() {
     });
 
     setAccounts((prev) => {
-      const igAccounts = prev.filter(
-        (a) => (a.platform || "facebook") === "instagram",
+      const dlAccounts = prev.filter(
+        (a) => (a.platform || "facebook") === "instagram" && isDoLikeAccount(a),
       );
       const hasSelected = selectedIds.length > 0;
 
@@ -664,6 +684,7 @@ export default function HomePage() {
           if (selectedIds.includes(a.id)) {
             return {
               ...a,
+              isDolike: true,
               dolikeEmail: user.email,
               dolikeBalance: user.balance,
             };
@@ -681,13 +702,13 @@ export default function HomePage() {
         return updated;
       }
 
-      const existingSameEmail = igAccounts.find(
+      const existingSameEmail = dlAccounts.find(
         (a) => a.dolikeEmail === user.email,
       );
       if (existingSameEmail) {
         const updated = prev.map((a) =>
           a.id === existingSameEmail.id
-            ? { ...a, dolikeBalance: user.balance }
+            ? { ...a, isDolike: true, dolikeBalance: user.balance }
             : a,
         );
         try {
@@ -701,13 +722,14 @@ export default function HomePage() {
         return updated;
       }
 
-      const unassigned = igAccounts.find((a) => !a.dolikeEmail);
+      const unassigned = dlAccounts.find((a) => !a.dolikeEmail);
       let updated: FacebookAccount[];
       if (unassigned) {
         updated = prev.map((a) =>
           a.id === unassigned.id
             ? {
                 ...a,
+                isDolike: true,
                 dolikeEmail: user.email,
                 dolikeBalance: user.balance,
               }
@@ -719,6 +741,7 @@ export default function HomePage() {
           uid: "",
           name: "",
           platform: "instagram",
+          isDolike: true,
           status: "unverified",
           rawText: "",
           dolikeEmail: user.email,
@@ -1482,18 +1505,22 @@ export default function HomePage() {
 
     setAccounts((prev) => {
       const currentPrev = [...prev];
-      if (currentPlatform === "instagram") {
+      if (currentPage === "dolike") {
+        for (const n of newAccounts) {
+          n.isDolike = true;
+          n.platform = "instagram";
+        }
         const placeholderIdx = currentPrev.findIndex(
           (a) =>
-            (a.platform || "facebook") === "instagram" &&
+            isDoLikeAccount(a) &&
             !a.uid &&
-            !a.name &&
-            a.dolikeEmail,
+            !a.name,
         );
         if (placeholderIdx !== -1 && newAccounts.length > 0) {
           const placeholder = currentPrev[placeholderIdx];
-          newAccounts[0].dolikeEmail = placeholder.dolikeEmail;
-          newAccounts[0].dolikeBalance = placeholder.dolikeBalance;
+          newAccounts[0].dolikeEmail = placeholder.dolikeEmail || dolikeAccount.email;
+          newAccounts[0].dolikeBalance = placeholder.dolikeBalance || dolikeAccount.balance || "0 đ";
+          newAccounts[0].isDolike = true;
           currentPrev.splice(placeholderIdx, 1);
         } else if (dolikeAccount.email) {
           for (const n of newAccounts) {
@@ -1502,6 +1529,10 @@ export default function HomePage() {
               n.dolikeBalance = dolikeAccount.balance || "0 đ";
             }
           }
+        }
+      } else {
+        for (const n of newAccounts) {
+          n.isDolike = false;
         }
       }
       const merged = [...newAccounts, ...currentPrev];
@@ -1706,9 +1737,12 @@ export default function HomePage() {
     showSuccessToast(tr("Đã sao chép vào bộ nhớ tạm!", "Copied to clipboard!"));
   };
 
-  const filteredAccounts = accounts.filter(
-    (a) => (a.platform || "facebook") === currentPlatform,
-  );
+  const filteredAccounts = accounts.filter((a) => {
+    if (currentPage === "dolike") {
+      return (a.platform || "facebook") === "instagram" && isDoLikeAccount(a);
+    }
+    return (a.platform || "facebook") === currentPlatform && !isDoLikeAccount(a);
+  });
 
   const getAllSelectableIds = () => {
     const ids: string[] = [];
@@ -3125,7 +3159,10 @@ export default function HomePage() {
 
                             {/* Tên & UID */}
                             <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                              <AccountAvatar url={avatarSrc} />
+                              <AccountAvatar
+                                url={avatarSrc}
+                                isInstagram={acc.platform === "instagram" || true}
+                              />
                               <div className="flex flex-col min-w-0">
                                 {acc.name || acc.uid ? (
                                   <>
@@ -3170,55 +3207,90 @@ export default function HomePage() {
                             {/* TK DoLike */}
                             <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
                               {acc.dolikeEmail || (dolikeAccount.isLoggedIn && dolikeAccount.email) ? (
-                                <span
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-medium bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/25 whitespace-nowrap max-w-[240px] truncate"
-                                  title={`DoLike: ${acc.dolikeEmail || dolikeAccount.email} | Số dư: ${acc.dolikeBalance || dolikeAccount.balance || "0 đ"}`}
-                                >
-                                  <span className="size-1.5 rounded-full bg-fuchsia-500 shrink-0" />
-                                  <span className="truncate font-semibold text-foreground">{acc.dolikeEmail || dolikeAccount.email}</span>
-                                  <span className="text-[10px] text-amber-400 font-bold shrink-0">
-                                    💰 {acc.dolikeBalance || dolikeAccount.balance || "0 đ"}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setAccounts((prev) => {
-                                        const updated = prev.map((a) =>
-                                          a.id === acc.id
-                                            ? {
-                                                ...a,
-                                                dolikeEmail: undefined,
-                                                dolikeBalance: undefined,
-                                              }
-                                            : a,
-                                        );
-                                        try {
-                                          localStorage.setItem(
-                                            "autolunex_facebook_accounts_v1",
-                                            JSON.stringify(updated),
+                                (() => {
+                                  const isEmailRevealed = !!revealedEmails[acc.id];
+                                  const emailStr = acc.dolikeEmail || dolikeAccount.email;
+                                  return (
+                                    <span
+                                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-medium bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/25 whitespace-nowrap max-w-[270px] truncate"
+                                      title={
+                                        isEmailRevealed
+                                          ? tr("Bấm để làm mờ email DoLike", "Click to blur DoLike email")
+                                          : tr("Bấm để xem rõ email DoLike", "Click to reveal DoLike email")
+                                      }
+                                    >
+                                      <span className="size-1.5 rounded-full bg-fuchsia-500 shrink-0" />
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleRevealEmail(acc.id);
+                                        }}
+                                        className="inline-flex items-center gap-1 cursor-pointer hover:opacity-85 transition-opacity"
+                                      >
+                                        <span
+                                          className={cn(
+                                            "truncate font-semibold text-foreground select-none transition-all duration-200",
+                                            isEmailRevealed
+                                              ? "filter-none"
+                                              : "blur-[3.5px] hover:blur-[1.5px]"
+                                          )}
+                                        >
+                                          {emailStr}
+                                        </span>
+                                        {isEmailRevealed ? (
+                                          <EyeOff className="size-3 text-muted-foreground/80 hover:text-foreground shrink-0" />
+                                        ) : (
+                                          <Eye className="size-3 text-muted-foreground/80 hover:text-foreground shrink-0" />
+                                        )}
+                                      </button>
+                                      <span className="inline-flex items-center gap-1 text-[10.5px] text-amber-400 font-bold shrink-0">
+                                        <Coins className="size-3 text-amber-400 shrink-0" />
+                                        <span>{acc.dolikeBalance || dolikeAccount.balance || "0 đ"}</span>
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setAccounts((prev) => {
+                                            const updated = prev.map((a) =>
+                                              a.id === acc.id
+                                                ? {
+                                                    ...a,
+                                                    isDolike: false,
+                                                    dolikeEmail: undefined,
+                                                    dolikeBalance: undefined,
+                                                  }
+                                                : a,
+                                            );
+                                            try {
+                                              localStorage.setItem(
+                                                "autolunex_facebook_accounts_v1",
+                                                JSON.stringify(updated),
+                                              );
+                                            } catch {
+                                              // ignore
+                                            }
+                                            return updated;
+                                          });
+                                          showSuccessToast(
+                                            tr(
+                                              "Đã gỡ tài khoản DoLike khỏi dòng này",
+                                              "Unlinked DoLike from this row",
+                                            ),
                                           );
-                                        } catch {
-                                          // ignore
-                                        }
-                                        return updated;
-                                      });
-                                      showSuccessToast(
-                                        tr(
-                                          "Đã gỡ tài khoản DoLike khỏi dòng này",
-                                          "Unlinked DoLike from this row",
-                                        ),
-                                      );
-                                    }}
-                                    className="ml-0.5 p-0.5 hover:text-destructive text-muted-foreground/60 transition-colors cursor-pointer"
-                                    title={tr(
-                                      "Gỡ tài khoản DoLike khỏi dòng này",
-                                      "Unlink DoLike from this row",
-                                    )}
-                                  >
-                                    <LogOut className="size-2.5" />
-                                  </button>
-                                </span>
+                                        }}
+                                        className="ml-0.5 p-0.5 hover:text-destructive text-muted-foreground/60 transition-colors cursor-pointer"
+                                        title={tr(
+                                          "Gỡ tài khoản DoLike khỏi dòng này",
+                                          "Unlink DoLike from this row",
+                                        )}
+                                      >
+                                        <LogOut className="size-2.5" />
+                                      </button>
+                                    </span>
+                                  );
+                                })()
                               ) : (
                                 <button
                                   type="button"
