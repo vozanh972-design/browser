@@ -219,8 +219,10 @@ class DolikeRunnerManager {
     // 1. Kiểm tra trạng thái Cookie Instagram
     this.updateState(acc.id, { status: "Kiểm tra Cookie Instagram..." });
     const checkRes = await checkCookieIg(igCookie);
-    if (!checkRes.live) {
-      const err = checkRes.error || "Cookie hết hạn/checkpoint";
+    if (!checkRes.isLive) {
+      const err = checkRes.isCheckpoint
+        ? "Tài khoản bị checkpoint"
+        : "Cookie hết hạn/checkpoint";
       this.updateState(acc.id, {
         isRunning: false,
         status: `[IG Checkpoint] ${err}`,
@@ -230,7 +232,7 @@ class DolikeRunnerManager {
     }
 
     // Tên tài khoản chuẩn hóa theo GoMax (bỏ @, trim)
-    const rawName = acc.name || acc.uid || "";
+    const rawName = checkRes.username || acc.name || acc.uid || "";
     const cleanUsername = rawName.replace(/^@+/, "").trim();
 
     if (!cleanUsername) {
