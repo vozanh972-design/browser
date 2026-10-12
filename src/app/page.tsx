@@ -212,7 +212,7 @@ export default function HomePage() {
   const [isDolikeLoginOpen, setIsDolikeLoginOpen] = useState(false);
   const [dolikeAccount, setDolikeAccount] = useState<{
     email: string;
-    displayName: string;
+    displayName?: string;
     balance: string;
     sessionCookie: string;
     bearerToken?: string;
@@ -672,6 +672,7 @@ export default function HomePage() {
             ...prev,
             balance: res.balance ?? prev.balance,
             email: res.email ?? prev.email,
+            displayName: res.displayName ?? prev.displayName,
             bearerToken: token,
             isLoggedIn: true,
           }));
@@ -835,6 +836,7 @@ export default function HomePage() {
     }
     setDolikeAccount({
       email: "",
+      displayName: "",
       balance: "",
       sessionCookie: "",
       bearerToken: "",
