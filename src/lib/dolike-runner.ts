@@ -342,7 +342,12 @@ class DolikeRunnerManager {
 
         // 5. Thực hiện tương tác Instagram
         this.updateState(acc.id, { status: `Đang làm job ${jobType}...` });
-        let actRes: IgActionResult = { success: false, error: "Chưa hỗ trợ loại job" };
+        let actRes: IgActionResult = {
+          isSuccess: false,
+          httpCode: 0,
+          rawBody: "",
+          errorMessage: "Chưa hỗ trợ loại job",
+        };
 
         if (jobType.includes("like")) {
           let mediaId = postId;
@@ -356,7 +361,12 @@ class DolikeRunnerManager {
           if (mediaId) {
             actRes = await doLike({ mediaId, cookie: igCookie });
           } else {
-            actRes = { success: false, error: "Không tìm thấy Media ID từ link" };
+            actRes = {
+              isSuccess: false,
+              httpCode: 0,
+              rawBody: "",
+              errorMessage: "Không tìm thấy Media ID từ link",
+            };
           }
         } else if (jobType.includes("follow") || jobType.includes("sub")) {
           let targetUserId = postId;
@@ -366,7 +376,12 @@ class DolikeRunnerManager {
           if (targetUserId) {
             actRes = await doFollow({ targetUserId, cookie: igCookie });
           } else {
-            actRes = { success: false, error: "Không tìm thấy User ID từ link" };
+            actRes = {
+              isSuccess: false,
+              httpCode: 0,
+              rawBody: "",
+              errorMessage: "Không tìm thấy User ID từ link",
+            };
           }
         } else if (jobType.includes("comment")) {
           let mediaId = postId;
@@ -384,12 +399,17 @@ class DolikeRunnerManager {
               cookie: igCookie,
             });
           } else {
-            actRes = { success: false, error: "Không tìm thấy Media ID để bình luận" };
+            actRes = {
+              isSuccess: false,
+              httpCode: 0,
+              rawBody: "",
+              errorMessage: "Không tìm thấy Media ID để bình luận",
+            };
           }
         }
 
         // 6. Xử lý kết quả làm job
-        if (actRes.success) {
+        if (actRes.isSuccess) {
           consecutiveErrors = 0;
           // Chờ gửi báo cáo -> đang gửi báo cáo... (Chuẩn GoMax)
           this.updateState(acc.id, { status: "Chờ gửi báo cáo..." });
@@ -432,7 +452,7 @@ class DolikeRunnerManager {
         } else {
           // Làm job Instagram thất bại
           consecutiveErrors++;
-          const igErr = actRes.error || "Không tương tác được";
+          const igErr = actRes.errorMessage || "Không tương tác được";
 
           // Gửi bỏ qua theo chuẩn GoMax Lx/gu1;
           await skipDolikeJob({
