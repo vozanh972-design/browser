@@ -3918,11 +3918,6 @@ export default function HomePage() {
                                   </button>
                                 );
                               })()}
-                            </div>  {acc.twoFactor ? (
-                                <span className="text-[10px] font-mono text-muted-foreground/80 px-1 py-0.5 rounded bg-muted/40 border border-border/30">
-                                  2FA
-                                </span>
-                              ) : null}
                             </div>
 
                             {/* Proxy / VPN */}
