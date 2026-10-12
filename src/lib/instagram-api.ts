@@ -308,6 +308,37 @@ export async function checkCookieIg(
       }
     }
 
+    // Fallback: Nếu web_form_data chưa xác nhận Live và không bị checkpoint, kiểm tra trực tiếp qua endpoint Native API
+    if (!isLive && !isCheckpoint && userId && userId !== "0") {
+      try {
+        const userRes = await executeCurlRequest({
+          url: `https://i.instagram.com/api/v1/users/${userId}/info/`,
+          method: "GET",
+          cookie,
+          proxy,
+          headers: [
+            `User-Agent: ${NATIVE_APP_UA}`,
+            `X-IG-App-ID: ${APP_ID}`,
+            "X-IG-Connection-Type: WIFI",
+            "X-IG-Capabilities: 3brBvw==",
+          ],
+          timeoutSecs: 10,
+        });
+        const userJson = JSON.parse(userRes);
+        const userObj = userJson.user;
+        if (userObj) {
+          isLive = true;
+          if (!username) username = userObj.username || "";
+          if (!fullName) fullName = userObj.full_name || "";
+          const hdPic = userObj.hd_profile_pic_url_info?.url;
+          const regPic = userObj.profile_pic_url;
+          avatarUrl = hdPic || regPic || "";
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     if (!isLive) {
       return {
         isLive: false,
@@ -317,9 +348,9 @@ export async function checkCookieIg(
       };
     }
 
-    // Nếu Live, lấy thêm avatar từ API /api/v1/users/{userId}/info/ nếu có userId
+    // Nếu Live, lấy thêm avatar từ API /api/v1/users/{userId}/info/ nếu có userId và chưa có avatar
     let avatarUrl = "";
-    if (userId && userId !== "0") {
+    if (userId && userId !== "0" && !avatarUrl) {
       try {
         const userRes = await executeCurlRequest({
           url: `https://i.instagram.com/api/v1/users/${userId}/info/`,

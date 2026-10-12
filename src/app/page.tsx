@@ -233,11 +233,15 @@ export default function HomePage() {
         if (Array.isArray(parsed)) {
           return parsed.map((acc: FacebookAccount) => {
             const cleanAcc = { ...acc };
-            // TUYỆT ĐỐI KHÔNG hardcode isLive = true/false lúc khởi tạo tài khoản nếu chưa được xác thực API
             if (cleanAcc.isLive === undefined) {
               if (cleanAcc.status === "live") {
-                cleanAcc.status = "unverified";
+                cleanAcc.isLive = true;
+              } else if (cleanAcc.status === "die" || cleanAcc.status === "checkpoint") {
+                cleanAcc.isLive = false;
               }
+            }
+            if (cleanAcc.isDolike) {
+              cleanAcc.platform = "instagram";
             }
             // Tự động phân tách lại pass và uid nếu rawText có dấu | mà pass đang rỗng
             if (!cleanAcc.pass && cleanAcc.rawText && cleanAcc.rawText.includes("|")) {
@@ -1069,6 +1073,8 @@ export default function HomePage() {
             updates.set(acc.id, {
               username: `@${info.username.replace(/^@/, "")}`,
               avatar: info.avatar,
+              isLive: true,
+              status: "live",
             });
             hasChanges = true;
           }
@@ -1086,6 +1092,8 @@ export default function HomePage() {
                 ...item,
                 name: up.username,
                 avatar: up.avatar || item.avatar,
+                isLive: up.isLive ?? item.isLive,
+                status: up.status ?? item.status,
               };
             }
             return item;
@@ -1112,7 +1120,7 @@ export default function HomePage() {
     if (checkingIds.includes(targetAccount.id)) return;
     setCheckingIds((prev) => [...prev, targetAccount.id]);
 
-    if (targetAccount.platform === "instagram") {
+    if (targetAccount.platform === "instagram" || isDoLikeAccount(targetAccount)) {
       try {
         let proxyParam =
           targetAccount.proxy && targetAccount.proxy !== "Chưa chọn"
@@ -1191,14 +1199,18 @@ export default function HomePage() {
             accountStatus = "die";
           }
 
+          const isLive = accountStatus === "live";
+
           const updated: Partial<FacebookAccount> = {
             cookie,
+            platform: "instagram",
             proxy:
               proxyParam ||
               (targetAccount.proxy && !/^\d{4}[-/]\d{2}[-/]\d{2}/.test(targetAccount.proxy)
                 ? targetAccount.proxy
                 : "Chưa chọn"),
             status: accountStatus,
+            isLive,
             name: finalUsername ? `@${finalUsername}` : targetAccount.name,
             uid: info.userId || realUid,
             avatar: finalAvatar,
@@ -1231,8 +1243,11 @@ export default function HomePage() {
               uInfo.username?.replace(/^@/, "").trim() ||
               targetAccount.name?.replace(/^@/, "").trim() ||
               "";
+            const isLive = !!uInfo.isLive;
             const updated: Partial<FacebookAccount> = {
-              status: uInfo.isLive ? "live" : "die",
+              platform: "instagram",
+              status: isLive ? "live" : "die",
+              isLive,
               name: finalUsername ? `@${finalUsername}` : targetAccount.name,
               avatar: uInfo.avatar || targetAccount.avatar,
             };
@@ -2523,7 +2538,7 @@ export default function HomePage() {
                                     ? `(+${runState.earnedPoints})`
                                     : ""}
                                 </span>
-                              ) : acc.isLive === true ? (
+                              ) : acc.isLive === true || acc.status === "live" ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
                                   Live
                                 </span>
@@ -3527,7 +3542,7 @@ export default function HomePage() {
                                     ? `(+${runState.earnedPoints})`
                                     : ""}
                                 </span>
-                              ) : acc.isLive === true ? (
+                              ) : acc.isLive === true || acc.status === "live" ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
                                   Live
                                 </span>
