@@ -287,6 +287,22 @@ export default function HomePage() {
             ) {
               cleanAcc.name = "";
             }
+            // Tự động sửa nếu proxy của Instagram bị dính chuỗi ngày tháng hoặc cookie bị dính pipes
+            if (cleanAcc.platform === "instagram") {
+              if (cleanAcc.proxy && /^\d{4}[-/]\d{2}[-/]\d{2}/.test(cleanAcc.proxy)) {
+                cleanAcc.proxy = "Chưa chọn";
+              }
+              if (cleanAcc.cookie && cleanAcc.cookie.includes("|")) {
+                const parts = cleanAcc.cookie.split("|").map((s) => s.trim());
+                const cPart = parts.find(
+                  (p) =>
+                    p.includes("ds_user_id=") ||
+                    p.includes("sessionid=") ||
+                    p.includes("csrftoken="),
+                );
+                if (cPart) cleanAcc.cookie = cPart;
+              }
+            }
             return cleanAcc;
           });
         }
@@ -1098,22 +1114,36 @@ export default function HomePage() {
 
     if (targetAccount.platform === "instagram") {
       try {
-        const proxyParam =
+        let proxyParam =
           targetAccount.proxy && targetAccount.proxy !== "Chưa chọn"
             ? targetAccount.proxy
             : undefined;
+        // Bỏ qua nếu proxy là chuỗi ngày tháng
+        if (proxyParam && /^\d{4}[-/]\d{2}[-/]\d{2}/.test(proxyParam)) {
+          proxyParam = undefined;
+        }
+
         let cookie = targetAccount.cookie?.trim() || "";
-        if (!cookie) {
-          if (
-            targetAccount.rawText?.includes("ds_user_id=") ||
-            targetAccount.rawText?.includes("sessionid=")
-          ) {
-            cookie = targetAccount.rawText.split("|")[0].trim();
-          } else if (
-            targetAccount.uid?.includes("ds_user_id=") ||
-            targetAccount.uid?.includes("sessionid=")
-          ) {
-            cookie = targetAccount.uid.split("|")[0].trim();
+        if (cookie.includes("|")) {
+          const parts = cookie.split("|").map((s) => s.trim());
+          const cPart = parts.find(
+            (p) =>
+              p.includes("ds_user_id=") ||
+              p.includes("sessionid=") ||
+              p.includes("csrftoken="),
+          );
+          if (cPart) cookie = cPart;
+        }
+        if (!cookie || !cookie.includes("=")) {
+          if (targetAccount.rawText) {
+            const parts = targetAccount.rawText.split("|").map((s) => s.trim());
+            const cPart = parts.find(
+              (p) =>
+                p.includes("ds_user_id=") ||
+                p.includes("sessionid=") ||
+                p.includes("csrftoken="),
+            );
+            if (cPart) cookie = cPart;
           }
         }
 
@@ -1163,6 +1193,11 @@ export default function HomePage() {
 
           const updated: Partial<FacebookAccount> = {
             cookie,
+            proxy:
+              proxyParam ||
+              (targetAccount.proxy && !/^\d{4}[-/]\d{2}[-/]\d{2}/.test(targetAccount.proxy)
+                ? targetAccount.proxy
+                : "Chưa chọn"),
             status: accountStatus,
             name: finalUsername ? `@${finalUsername}` : targetAccount.name,
             uid: info.userId || realUid,
@@ -1387,8 +1422,9 @@ export default function HomePage() {
   const handleAddAccounts = (lines: string[], format: string) => {
     const formatKeys = format.split("|").map((f) => f.trim().toLowerCase());
     const newAccounts: FacebookAccount[] = lines.map((line, idx) => {
-      // 1. Tự động nhận diện tài khoản Instagram (từ tab Instagram hoặc chuỗi cookie có ds_user_id/sessionid/csrftoken)
+      // 1. Tự động nhận diện tài khoản Instagram (từ tab DoLike, tab Instagram hoặc chuỗi cookie có ds_user_id/sessionid/csrftoken)
       const isIg =
+        currentPage === "dolike" ||
         currentPlatform === "instagram" ||
         line.includes("ds_user_id=") ||
         line.includes("sessionid=") ||
@@ -1398,12 +1434,36 @@ export default function HomePage() {
         let rawCookie = line.trim();
         let proxyStr = "Chưa chọn";
         if (line.includes("|")) {
-          const lastPipeIndex = line.lastIndexOf("|");
-          rawCookie = line.substring(0, lastPipeIndex).trim();
-          proxyStr = line.substring(lastPipeIndex + 1).trim() || "Chưa chọn";
+          const parts = line.split("|").map((p) => p.trim());
+          const cIdx = parts.findIndex(
+            (p) =>
+              p.includes("ds_user_id=") ||
+              p.includes("sessionid=") ||
+              p.includes("csrftoken="),
+          );
+          if (cIdx !== -1) {
+            rawCookie = parts[cIdx];
+            const pPart = parts.find(
+              (p, i) =>
+                i !== cIdx &&
+                p.includes(":") &&
+                !p.includes(" ") &&
+                !/^\d{4}[-/]\d{2}[-/]\d{2}/.test(p),
+            );
+            if (pPart) proxyStr = pPart;
+          } else {
+            const lastPipeIndex = line.lastIndexOf("|");
+            rawCookie = line.substring(0, lastPipeIndex).trim();
+            const maybeProxy = line.substring(lastPipeIndex + 1).trim();
+            if (maybeProxy && maybeProxy.includes(":") && !maybeProxy.includes(" ") && !/^\d{4}[-/]\d{2}[-/]\d{2}/.test(maybeProxy)) {
+              proxyStr = maybeProxy;
+            }
+          }
         }
+
         const dsMatch = rawCookie.match(/ds_user_id=(\d+)/);
         const uid = dsMatch ? dsMatch[1] : `acc_ig_${Date.now()}_${idx + 1}`;
+
         const account: FacebookAccount = {
           id: `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
           uid,
@@ -1571,6 +1631,52 @@ export default function HomePage() {
       return;
     }
 
+    if (currentPage === "dolike") {
+      if (!dolikeAccount.isLoggedIn && !dolikeAccount.email) {
+        setIsDolikeLoginOpen(true);
+        showSuccessToast(
+          tr(
+            "Vui lòng đăng nhập tài khoản DoLike trước khi chạy nhiệm vụ!",
+            "Please log in to DoLike account before running tasks!",
+          ),
+        );
+        return;
+      }
+      if (!acc.cookie && !acc.rawText) {
+        showSuccessToast(
+          tr(
+            "Tài khoản chưa có Cookie Instagram để chạy nhiệm vụ!",
+            "Account missing Instagram Cookie to run tasks!",
+          ),
+        );
+        return;
+      }
+      if (xsmmRunner.isRunning(acc.id)) {
+        xsmmRunner.stopAccount(acc.id);
+        showSuccessToast(
+          tr(
+            `Đã dừng chạy tài khoản DoLike: ${acc.name || acc.uid}`,
+            `Stopped running DoLike account: ${acc.name || acc.uid}`,
+          ),
+        );
+      } else {
+        const token =
+          xsmmAccount.token ||
+          (typeof window !== "undefined"
+            ? localStorage.getItem("xsmm_token")
+            : "") ||
+          "dolike_mode";
+        xsmmRunner.startAccount(acc, token);
+        showSuccessToast(
+          tr(
+            `Bắt đầu chạy nhiệm vụ DoLike: ${acc.name || acc.uid}`,
+            `Started running DoLike task: ${acc.name || acc.uid}`,
+          ),
+        );
+      }
+      return;
+    }
+
     const savedToken =
       xsmmAccount.token || localStorage.getItem("xsmm_token") || "";
     if (!savedToken) {
@@ -1684,6 +1790,33 @@ export default function HomePage() {
       return;
     }
 
+    if (currentPage === "dolike") {
+      if (!dolikeAccount.isLoggedIn && !dolikeAccount.email) {
+        setIsDolikeLoginOpen(true);
+        showSuccessToast(
+          tr(
+            "Vui lòng đăng nhập tài khoản DoLike trước khi chạy nhiệm vụ!",
+            "Please log in to DoLike account before running tasks!",
+          ),
+        );
+        return;
+      }
+      const token =
+        xsmmAccount.token ||
+        (typeof window !== "undefined"
+          ? localStorage.getItem("xsmm_token")
+          : "") ||
+        "dolike_mode";
+      xsmmRunner.startAccounts(runnableAccounts, token);
+      showSuccessToast(
+        tr(
+          `Bắt đầu chạy ${runnableAccounts.length} tài khoản DoLike!`,
+          `Started running ${runnableAccounts.length} DoLike accounts!`,
+        ),
+      );
+      return;
+    }
+
     const savedToken =
       xsmmAccount.token || localStorage.getItem("xsmm_token") || "";
     if (!savedToken) {
@@ -1715,7 +1848,33 @@ export default function HomePage() {
 
   const handleDeleteAccount = (id: string) => {
     setAccounts((prev) => {
-      const updated = prev.filter((a) => a.id !== id);
+      const updated = prev
+        .map((a) => {
+          if (a.id !== id) return a;
+          // Nếu ở tab DoLike và dòng này có tài khoản DoLike, chỉ xóa nick Instagram và giữ lại DoLike
+          if (currentPage === "dolike" && a.dolikeEmail) {
+            return {
+              ...a,
+              uid: "",
+              name: "",
+              cookie: undefined,
+              token: undefined,
+              pass: undefined,
+              twoFactor: undefined,
+              avatar: undefined,
+              cover: undefined,
+              rawText: "",
+              proxy: undefined,
+              status: "unverified" as const,
+              isLive: undefined,
+              note: undefined,
+              tag: undefined,
+              isDolike: true,
+            };
+          }
+          return null;
+        })
+        .filter((a): a is FacebookAccount => a !== null);
       try {
         localStorage.setItem(
           "autolunex_facebook_accounts_v1",
@@ -1728,7 +1887,12 @@ export default function HomePage() {
     });
     setSelectedIds((prev) => prev.filter((i) => i !== id));
     showSuccessToast(
-      tr("Đã xóa vĩnh viễn tài khoản!", "Account permanently deleted!"),
+      currentPage === "dolike"
+        ? tr(
+            "Đã xóa nick Instagram, vẫn giữ lại tài khoản DoLike!",
+            "Deleted Instagram account, kept DoLike account!",
+          )
+        : tr("Đã xóa vĩnh viễn tài khoản!", "Account permanently deleted!"),
     );
   };
 
@@ -2972,9 +3136,32 @@ export default function HomePage() {
                       onClick={() => {
                         const count = selectedIds.length;
                         setAccounts((prev) => {
-                          const updated = prev.filter(
-                            (a) => !selectedIds.includes(a.id),
-                          );
+                          const updated = prev
+                            .map((a) => {
+                              if (!selectedIds.includes(a.id)) return a;
+                              if (a.dolikeEmail) {
+                                return {
+                                  ...a,
+                                  uid: "",
+                                  name: "",
+                                  cookie: undefined,
+                                  token: undefined,
+                                  pass: undefined,
+                                  twoFactor: undefined,
+                                  avatar: undefined,
+                                  cover: undefined,
+                                  rawText: "",
+                                  proxy: undefined,
+                                  status: "unverified" as const,
+                                  isLive: undefined,
+                                  note: undefined,
+                                  tag: undefined,
+                                  isDolike: true,
+                                };
+                              }
+                              return null;
+                            })
+                            .filter((a): a is FacebookAccount => a !== null);
                           try {
                             localStorage.setItem(
                               "autolunex_facebook_accounts_v1",
@@ -2988,8 +3175,8 @@ export default function HomePage() {
                         setSelectedIds([]);
                         showSuccessToast(
                           tr(
-                            `Đã xóa vĩnh viễn ${count} mục đã chọn!`,
-                            `Permanently deleted ${count} selected items!`,
+                            `Đã xóa nick Instagram của ${count} mục đã chọn, vẫn giữ lại tài khoản DoLike!`,
+                            `Deleted Instagram of ${count} items, kept DoLike accounts!`,
                           ),
                         );
                       }}
