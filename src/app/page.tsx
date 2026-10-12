@@ -42,6 +42,8 @@ import {
   getDolikeWallet,
   getDolikePlatformAccounts,
   linkDolikeAccountFull,
+  logoutDolike,
+  verifyDolikeToken,
 } from "@/lib/dolike-api";
 import {
   getNvcMe,
@@ -226,14 +228,16 @@ export default function HomePage() {
     }
     const email = localStorage.getItem("dolike_email") || "";
     const balance = localStorage.getItem("dolike_balance") || "";
-    const sessionCookie = localStorage.getItem("dolike_session_cookie") || "";
-    const bearerToken = localStorage.getItem("dolike_bearer_token") || "";
+    const bearerToken =
+      localStorage.getItem("dolike_auth_token") ||
+      localStorage.getItem("dolike_bearer_token") ||
+      "";
     return {
       email,
       balance,
-      sessionCookie,
+      sessionCookie: "",
       bearerToken,
-      isLoggedIn: !!(email || sessionCookie || bearerToken),
+      isLoggedIn: !!(email || bearerToken),
     };
   });
   const [dolikeLinkedUsernames, setDolikeLinkedUsernames] = useState<string[]>(
@@ -629,30 +633,39 @@ export default function HomePage() {
     showSuccessToast("Đã đăng xuất tài khoản Nhiệm Vụ Chéo");
   };
 
-  // Đồng bộ số dư DoLike ngầm nếu có session
+  // Đồng bộ số dư DoLike ngầm nếu có Token Bearer chuẩn GoMax
   useEffect(() => {
     let isMounted = true;
-    const cookie =
-      dolikeAccount.sessionCookie ||
+    const token =
+      dolikeAccount.bearerToken ||
       (typeof window !== "undefined"
-        ? localStorage.getItem("dolike_session_cookie")
+        ? localStorage.getItem("dolike_auth_token") ||
+          localStorage.getItem("dolike_bearer_token")
         : "") ||
       "";
 
-    if (!cookie) return;
+    if (!token) return;
 
     void (async () => {
       try {
-        const res = await getDolikeWallet(cookie);
-        if (res.success && res.balance && isMounted) {
-          try {
-            localStorage.setItem("dolike_balance", res.balance);
-          } catch {
-            // ignore
+        const res = await verifyDolikeToken(token);
+        if (res.success && isMounted) {
+          if (res.balance) {
+            try {
+              localStorage.setItem("dolike_balance", res.balance);
+              if (res.email) localStorage.setItem("dolike_email", res.email);
+              if (res.displayName) {
+                localStorage.setItem("dolike_display_name", res.displayName);
+              }
+            } catch {
+              // ignore
+            }
           }
           setDolikeAccount((prev) => ({
             ...prev,
             balance: res.balance ?? prev.balance,
+            email: res.email ?? prev.email,
+            bearerToken: token,
             isLoggedIn: true,
           }));
         }
@@ -664,7 +677,7 @@ export default function HomePage() {
     return () => {
       isMounted = false;
     };
-  }, [dolikeAccount.sessionCookie]);
+  }, [dolikeAccount.bearerToken]);
 
   // Tự động đồng bộ tài khoản DoLike đã đăng nhập vào bảng DoLike nếu chưa có dòng nào hiển thị
   useEffect(() => {
@@ -739,6 +752,7 @@ export default function HomePage() {
         localStorage.setItem("dolike_session_cookie", user.sessionCookie);
       }
       if (user.bearerToken) {
+        localStorage.setItem("dolike_auth_token", user.bearerToken);
         localStorage.setItem("dolike_bearer_token", user.bearerToken);
       }
     } catch {
@@ -930,11 +944,8 @@ export default function HomePage() {
   }, [currentPage, dolikeAccount]);
 
   const handleDolikeLogout = () => {
+    logoutDolike();
     try {
-      localStorage.removeItem("dolike_email");
-      localStorage.removeItem("dolike_balance");
-      localStorage.removeItem("dolike_session_cookie");
-      localStorage.removeItem("dolike_bearer_token");
       localStorage.removeItem("dolike_linked_usernames");
     } catch {
       // ignore
@@ -2415,7 +2426,13 @@ export default function HomePage() {
         onNvcLoginClick={() => setIsNvcLoginOpen(true)}
         onNvcLogoutClick={handleNvcLogout}
         showDolike={currentPage === "dolike"}
+        dolikeAccount={{
+          username: dolikeAccount.email || "DoLike User",
+          balance: dolikeAccount.balance || "0 đ",
+          isLoggedIn: dolikeAccount.isLoggedIn,
+        }}
         onDolikeLoginClick={() => setIsDolikeLoginOpen(true)}
+        onDolikeLogoutClick={handleDolikeLogout}
         hideInstagram={currentPage === "nvc"}
         hideFacebook={currentPage === "dolike"}
         onNewClick={() => setIsAddFacebookOpen(true)}

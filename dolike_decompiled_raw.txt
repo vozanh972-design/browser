@@ -1,0 +1,2345 @@
+﻿================================================================================
+CLASS: Lcom/hoanguyen/gomax/ui/dolike/DolikeWebLoginActivity;
+================================================================================
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init> ---
+  [0] Call: Lx/t5;-><init>
+  [5] Call: Landroid/os/Looper;->getMainLooper
+  [9] Call: Landroid/os/Handler;-><init>
+  [17] Call: Lx/x9;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$SoftKeyboardController;->getShowMode ---
+  [9] Call: Landroid/webkit/CookieManager;->getInstance
+  [13] String: "https://congtingudolike.servehttp.com"
+  [15] Call: Landroid/webkit/CookieManager;->getCookie
+  [19] Call: Landroid/text/TextUtils;->isEmpty
+  [35] Call: Lx/n2;-><init>
+  [38] Call: Ljava/lang/Thread;-><init>
+  [39] Call: Landroid/animation/Animator;->pause
+  [41] Call: Ljava/lang/Thread;->start
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$SoftKeyboardController;->setShowMode ---
+  [4] Call: Landroid/webkit/WebView;->canGoBack
+  [12] Call: Landroid/webkit/WebView;->goBack
+  [16] Call: Landroidx/activity/a;->onBackPressed
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;-><init> ---
+  [0] Call: Lx/t5;->onCreate
+  [3] String: "Đăng nhập Web DoLike"
+  [5] Call: Landroid/app/Activity;->setTitle
+  [8] Call: Lx/t5;->j
+  [15] Call: Lx/t5;->j
+  [19] Call: Lx/vd1;->d
+  [22] Call: Landroid/webkit/CookieManager;->getInstance
+  [26] Call: Landroid/webkit/CookieManager;->setAcceptCookie
+  [31] Call: Landroid/webkit/WebView;-><init>
+  [36] Call: Lx/t5;->setContentView
+  [41] Call: Landroid/webkit/WebView;->getSettings
+  [45] Call: Landroid/webkit/WebSettings;->setJavaScriptEnabled
+  [48] Call: Landroid/webkit/WebSettings;->setDomStorageEnabled
+  [52] Call: Landroid/webkit/WebSettings;->setCacheMode
+  [57] Call: Landroid/webkit/CookieManager;->setAcceptThirdPartyCookies
+  [63] Call: Landroid/content/Intent;->hasExtra
+  [65] Call: Lx/jr;-><init>
+  [68] Call: Landroid/webkit/WebView;->setWebViewClient
+  [71] String: "Đăng nhập DoLike trên trang chính chủ để đồng bộ số dư."
+  [73] Call: Landroid/widget/Toast;->makeText
+  [77] Call: Landroid/widget/Toast;->show
+  [82] String: "https://congtingudolike.servehttp.com/"
+  [84] Call: Landroid/webkit/WebView;->loadUrl
+  [93] Call: Landroid/os/Handler;->postDelayed
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->dispatchGesture ---
+  [4] Call: Landroid/os/Handler;->removeCallbacks
+  [11] Call: Landroid/webkit/WebView;->stopLoading
+  [16] Call: Landroid/webkit/WebView;->destroy
+  [22] Call: Lx/t5;->onDestroy
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->getRootInActiveWindow ---
+  [0] Call: Landroid/view/MenuItem;->getItemId
+  [9] Call: Landroid/app/Activity;->finish
+  [14] Call: Landroid/app/Activity;->onOptionsItemSelected
+================================================================================
+CLASS: Lx/gu1;
+================================================================================
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init> ---
+  [2] Call: Ljava/lang/Object;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$SoftKeyboardController;->getShowMode ---
+  [5] Call: Ljava/lang/Object;-><init>
+  [10] Call: Landroid/graphics/Rect;-><init>
+  [17] Call: Landroid/graphics/Rect;-><init>
+  [23] Call: Ljava/lang/Object;-><init>
+  [28] Call: Ljava/util/TreeMap;-><init>
+  [35] Call: Ljava/util/TreeMap;-><init>
+  [43] Call: Ljava/lang/Object;-><init>
+  [48] Call: Landroid/util/SparseIntArray;-><init>
+  [56] Call: Ljava/lang/Object;-><init>
+  [61] Call: Ljava/util/ArrayList;-><init>
+  [68] Call: Landroid/animation/AnimatorListenerAdapter;-><init>
+  [74] Call: Ljava/lang/Object;-><init>
+  [79] Call: Landroid/util/SparseIntArray;-><init>
+  [86] Call: Landroid/util/SparseIntArray;-><init>
+  [92] Call: Ljava/lang/Object;-><init>
+  [97] Call: Ljava/util/ArrayList;-><init>
+  [102] String: "https://www.tiktok.com/@gosen.vietnam"
+  [107] Call: Ljava/lang/Object;-><init>
+  [112] Call: Ljava/util/ArrayList;-><init>
+  [119] Call: Ljava/util/ArrayList;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$SoftKeyboardController;->setShowMode ---
+  [4] Call: Ljava/lang/Object;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;-><init> ---
+  [6] Call: Ljava/lang/Object;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->dispatchGesture ---
+  [6] Call: Ljava/lang/Object;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->getRootInActiveWindow ---
+  [5] Call: Ljava/lang/Object;-><init>
+  [8] Call: Ljava/util/concurrent/Executors;->newSingleThreadScheduledExecutor
+  [12] Call: Ljava/util/concurrent/Executors;->newSingleThreadExecutor
+  [24] Call: Lx/x9;-><init>
+  [34] Call: Ljava/util/concurrent/ScheduledExecutorService;->scheduleAtFixedRate
+  [38] Call: Ljava/lang/Object;-><init>
+  [44] Call: Landroidx/appcompat/widget/Toolbar;->setTitle
+  [45] Call: Ljava/lang/Object;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->getSoftKeyboardController ---
+  [4] Call: Ljava/lang/Object;-><init>
+  [7] Call: Landroid/os/IBinder;->getInterfaceDescriptor
+  [12] String: "android.os.IMessenger"
+  [18] Call: Ljava/lang/Object;->equals
+  [25] String: "com.google.android.gms.iid.IMessengerCompat"
+  [31] Call: Ljava/lang/Object;->equals
+  [38] Call: Ljava/lang/String;->valueOf
+  [42] String: "MessengerIpcClient"
+  [44] String: "Invalid interface descriptor: "
+  [46] Call: Ljava/lang/String;->concat
+  [50] Call: Landroid/util/Log;->w
+  [55] Call: Landroid/os/RemoteException;-><init>
+  [61] Call: Lx/gm1;-><init>
+  [71] Call: Landroid/os/Messenger;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->getWindows ---
+  [5] Call: Ljava/lang/Object;-><init>
+  [12] Call: Lx/w30;-><init>
+  [18] Call: Ljava/lang/Object;-><init>
+  [25] Call: Lx/zt;-><init>
+  [30] Call: Landroid/widget/TextView;->addTextChangedListener
+  [46] Call: Landroid/text/Editable$Factory;-><init>
+  [49] String: "android.text.DynamicLayout$ChangeWatcher"
+  [53] Call: Ljava/lang/Class;->getClassLoader
+  [58] Call: Ljava/lang/Class;->forName
+  [75] Call: Landroid/widget/TextView;->setEditableFactory
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->onServiceConnected ---
+  [4] Call: Ljava/lang/Object;-><init>
+  [11] Call: Landroid/graphics/Rect;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->performGlobalAction ---
+  [3] Call: Ljava/lang/Object;-><init>
+  [8] Call: Lx/iq;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->setServiceInfo ---
+  [4] Call: Ljava/lang/Object;-><init>
+  [11] Call: Ljava/util/ArrayList;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityServiceInfo;-><init> ---
+  [4] Call: Ljava/lang/Object;-><init>
+  [9] Call: Ljava/util/concurrent/CopyOnWriteArrayList;-><init>
+  [16] Call: Ljava/util/HashMap;-><init>
+
+--- METHOD: Landroid/accessibilityservice/GestureDescription$Builder;-><init> ---
+  [4] Call: Ljava/lang/Object;-><init>
+  [9] Call: Ljava/util/concurrent/CopyOnWriteArrayList;-><init>
+
+--- METHOD: Landroid/accessibilityservice/GestureDescription$Builder;->addStroke ---
+  [3] Call: Ljava/lang/Object;-><init>
+  [21] Call: Ljava/lang/IllegalArgumentException;-><init>
+
+--- METHOD: Landroid/accessibilityservice/GestureDescription$Builder;->build ---
+  [4] Call: Ljava/lang/Object;-><init>
+  [11] Call: Ljava/lang/Object;-><init>
+
+--- METHOD: Landroid/accessibilityservice/GestureDescription$StrokeDescription;-><init> ---
+
+--- METHOD: Landroid/accounts/Account;-><init> ---
+  [0] String: "app_set_id_storage"
+  [3] Call: Landroid/content/Context;->getSharedPreferences
+
+--- METHOD: Landroid/accounts/AccountManager;->get ---
+  [0] Call: Lx/gu1;->P
+  [1] Call: Landroid/accessibilityservice/AccessibilityService;->dispatchGesture
+  [4] Call: Ljava/lang/System;->currentTimeMillis
+  [8] Call: Landroid/content/SharedPreferences;->edit
+  [12] String: "app_set_id_last_used_time"
+  [14] Call: Landroid/content/SharedPreferences$Editor;->putLong
+  [18] Call: Landroid/content/SharedPreferences$Editor;->commit
+  [24] Call: Landroid/content/Context;->getPackageName
+  [28] Call: Ljava/lang/String;->valueOf
+  [32] Call: Ljava/lang/String;->length
+  [36] String: "Failed to store app set ID last used time for App "
+  [40] Call: Ljava/lang/String;->concat
+  [47] Call: Ljava/lang/String;-><init>
+  [50] String: "AppSet"
+  [52] Call: Landroid/util/Log;->e
+  [57] String: "Failed to store the app set ID last used time."
+  [59] Call: Ljava/lang/Exception;-><init>
+
+--- METHOD: Landroid/accounts/AccountManager;->getAccountsByTypeAndFeatures ---
+  [0] String: "FirebaseMessaging"
+  [3] Call: Landroid/util/Log;->isLoggable
+  [15] Call: Lx/ze1;-><init>
+  [28] Call: Lx/vw0;->l
+  [32] Call: Lx/vw0;->n
+  [41] Call: Lx/dd;->e
+  [44] String: "com.google.firebase.iid.WakeLockHolder.wakefulintent"
+  [47] Call: Landroid/content/Intent;->getBooleanExtra
+  [51] String: "com.google.firebase.iid.WakeLockHolder.wakefulintent"
+  [54] Call: Landroid/content/Intent;->putExtra
+  [55] String: " must have an ID"
+  [61] Call: Lx/ed1;->a
+  [67] Call: Lx/ze1;->b
+  [75] Call: Lx/ad;-><init>
+  [78] Call: Ljava/lang/Object;->getClass
+  [85] Call: Lx/uq1;-><init>
+  [90] Call: Lx/aq;->d
+  [93] Call: Lx/az1;->n
+  [100] Call: Lx/ze1;->b
+  [104] Call: Ljava/lang/Integer;->valueOf
+  [108] Call: Lx/ks1;->k
+  [113] Call: Lx/ze1;->b
+  [118] Call: Landroidx/appcompat/widget/Toolbar;->setTitle
+  [119] Call: Ljava/lang/Object;-><init>
+  [126] Call: Lx/sb;-><init>
+  [129] Call: Lx/az1;->c
+
+--- METHOD: Landroid/accounts/AccountManagerFuture;->getResult ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->A
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/adservices/measurement/DeletionRequest$Builder;-><init> ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->B
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/adservices/measurement/MeasurementManager;->getMeasurementApiStatus ---
+  [8] Call: Lx/r91;->n
+  [12] Call: Lx/r91;->d
+  [24] Call: Lx/r91;->m
+  [28] Call: Lx/r91;->f
+  [32] Call: Lx/r91;->o
+  [48] Call: Lx/q91;->a
+  [59] Call: Lx/q91;->a
+
+--- METHOD: Landroid/adservices/measurement/MeasurementManager;->registerSource ---
+  [12] Call: Ljava/lang/Object;->getClass
+  [31] Call: Lx/tt;-><init>
+
+--- METHOD: Landroid/adservices/measurement/MeasurementManager;->registerTrigger ---
+  [4] Call: Landroid/util/SparseIntArray;->clear
+
+--- METHOD: Landroid/animation/Animator;->addListener ---
+  [8] Call: Lx/r91;->n
+  [12] Call: Lx/r91;->d
+  [16] Call: Lx/r91;->f
+  [20] Call: Lx/r91;->o
+  [36] Call: Lx/q91;->a
+
+--- METHOD: Landroid/animation/Animator;->addPauseListener ---
+  [4] Call: Landroid/view/View;->getContext
+  [11] Call: Landroid/content/Context;->obtainStyledAttributes
+  [17] Call: Landroid/content/res/TypedArray;->hasValue
+  [24] Call: Landroid/content/res/TypedArray;->getBoolean
+  [31] Call: Landroid/content/res/TypedArray;->recycle
+  [34] Call: Lx/gu1;->M
+  [35] Call: Landroid/accounts/AccountManagerFuture;->getResult
+  [38] Call: Landroid/content/res/TypedArray;->recycle
+
+--- METHOD: Landroid/animation/Animator;->cancel ---
+  [6] Call: Ljava/lang/Object;->getClass
+  [15] Call: Ljava/lang/Object;->getClass
+  [19] Call: Landroid/animation/AnimatorSet;->isStarted
+  [24] Call: Landroidx/constraintlayout/utils/widget/ImageFilterButton;-><init>
+  [29] Call: Lx/qt;-><init>
+  [35] Call: Landroid/app/Notification$BigPictureStyle;->bigLargeIcon
+
+--- METHOD: Landroid/animation/Animator;->end ---
+  [17] Call: Lx/o30;-><init>
+  [20] Call: Landroid/os/Handler;->post
+  [27] Call: Lx/ub;-><init>
+  [30] Call: Landroid/os/Handler;->post
+
+--- METHOD: Landroid/animation/Animator;->getDuration ---
+  [0] String: "gcm.rawData64"
+  [2] Call: Landroid/content/Intent;->getStringExtra
+  [9] String: "rawData"
+  [11] Call: Landroid/util/Base64;->decode
+  [15] Call: Landroid/content/Intent;->putExtra
+  [18] Call: Landroid/content/Intent;->removeExtra
+  [28] Call: Landroid/animation/ValueAnimator;->setRepeatCount
+  [29] Call: Lx/en;->j
+  [36] Call: Landroid/content/Context;->getApplicationInfo
+  [43] String: "getOffset"
+  [49] Call: Landroid/content/Intent;->getFlags
+  [64] Call: Lx/gu1;->d
+  [65] Call: Landroid/graphics/Paint;->getFontFeatureSettings
+  [66] Call: Landroid/text/Spannable;->setSpan
+  [71] Call: Lx/sz;-><init>
+  [74] Call: Lx/ks1;->d
+  [80] Call: Lx/tz;-><init>
+  [83] Call: Lx/az1;->d
+
+--- METHOD: Landroid/animation/Animator;->getStartDelay ---
+  [20] String: "@"
+  [22] String: ""
+  [28] Call: Ljava/lang/String;->replace
+  [32] Call: Ljava/lang/String;->trim
+  [36] Call: Landroid/text/TextUtils;->isEmpty
+  [41] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [42] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->t
+  [44] String: "&profile_id="
+  [56] String: "dolike_instagram"
+  [58] Call: Lcom/hoanguyen/gomax/manager/a;->c
+  [62] String: "instagram"
+  [68] Call: Lcom/hoanguyen/gomax/manager/a;->c
+  [76] String: "xsmm_instagram"
+  [78] Call: Lcom/hoanguyen/gomax/manager/a;->c
+  [84] String: "[DoLike Instagram] Không tìm thấy tài khoản đã lưu: @"
+  [86] String: ". Bỏ qua."
+  [88] Call: Lx/xl;->t
+  [99] Call: Landroid/text/TextUtils;->isEmpty
+  [103] String: "^\d+$"
+  [109] Call: Ljava/lang/String;->matches
+  [117] Call: Ljava/lang/String;->replace
+  [121] Call: Ljava/lang/String;->trim
+  [128] Call: Landroid/text/TextUtils;->isEmpty
+  [136] Call: Ljava/lang/String;->matches
+  [144] Call: Ljava/lang/String;->replace
+  [148] Call: Ljava/lang/String;->trim
+  [154] Call: Landroid/text/TextUtils;->isEmpty
+  [160] Call: Ljava/lang/String;->matches
+  [167] Call: Landroid/text/TextUtils;->isEmpty
+  [176] String: "[DoLike Instagram] Bắt đầu @"
+  [180] String: " ("
+  [182] Call: Lx/xl;->p
+  [190] Call: Ljava/lang/StringBuilder;->append
+  [193] String: "/"
+  [195] Call: Ljava/lang/StringBuilder;->append
+  [200] Call: Ljava/lang/StringBuilder;->append
+  [203] String: ")"
+  [205] Call: Ljava/lang/StringBuilder;->append
+  [208] Call: Ljava/lang/StringBuilder;->toString
+  [212] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [219] String: "https://www.instagram.com/"
+  [221] Call: Ljava/lang/StringBuilder;-><init>
+  [224] Call: Ljava/lang/StringBuilder;->append
+  [227] Call: Ljava/lang/StringBuilder;->append
+  [230] Call: Ljava/lang/StringBuilder;->toString
+  [234] Call: Lx/iq;->e
+  [252] String: "[DoLike Instagram] @"
+  [268] String: "---"
+  [274] String: "Không xác nhận được liên kết DoLike: "
+  [276] Call: Ljava/lang/StringBuilder;-><init>
+  [281] Call: Ljava/lang/StringBuilder;->append
+  [284] Call: Ljava/lang/StringBuilder;->toString
+  [298] Call: Lx/gu1;->N
+  [299] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>
+  [301] String: " "
+  [303] String: ". Chưa nhận job; thử chạy lại sau."
+  [305] Call: Lx/ha0;->l
+  [309] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [323] String: "[DoLike Instagram] Đã xác nhận tài khoản @"
+  [325] Call: Ljava/lang/StringBuilder;-><init>
+  [327] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [328] Call: Ljava/lang/StringBuilder;->append
+  [331] String: " trên DoLike (ID: "
+  [333] Call: Ljava/lang/StringBuilder;->append
+  [335] Call: Lx/d7;-><init>
+  [336] Call: Ljava/lang/StringBuilder;->append
+  [339] String: "); không liên kết lại."
+  [341] Call: Ljava/lang/StringBuilder;->append
+  [343] Call: Landroidx/appcompat/widget/Toolbar;->setSubtitleTextColor
+  [344] Call: Ljava/lang/StringBuilder;->toString
+  [348] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [354] String: "[DoLike Instagram] Đã liên kết tài khoản @"
+  [356] Call: Ljava/lang/StringBuilder;-><init>
+  [358] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [359] Call: Ljava/lang/StringBuilder;->append
+  [362] String: " (Server Việt Nam) lên DoLike (ID: "
+  [363] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [364] Call: Ljava/lang/StringBuilder;->append
+  [366] Call: Lx/d7;-><init>
+  [367] Call: Ljava/lang/StringBuilder;->append
+  [370] Call: Ljava/lang/StringBuilder;->append
+  [373] Call: Ljava/lang/StringBuilder;->toString
+  [377] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [382] Call: Lx/ca0;-><init>
+  [387] Call: Ljava/util/HashSet;-><init>
+  [404] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->t
+  [406] String: "Lx/ht;"
+  [410] String: "đã dừng"
+  [414] Call: Landroid/text/TextUtils;->isEmpty
+  [426] Call: Lx/q2;->b
+  [427] Call: Landroid/accessibilityservice/AccessibilityService;->setServiceInfo
+  [432] String: "Hết hạn bản quyền GoMax (License Expired)"
+  [446] String: " • Đang check..."
+  [461] Call: Ljava/lang/Math;->max
+  [466] String: "Chờ nhận job"
+  [484] String: "DIFFERENCE"
+  [498] Call: Lx/gu1;->f
+  [525] String: "đang nhận job..."
+  [528] String: "all"
+  [536] Call: Lx/gu1;->N
+  [537] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>
+  [546] Call: Landroid/text/TextUtils;->isEmpty
+  [559] Call: Landroid/text/TextUtils;->isEmpty
+  [569] Call: Ljava/lang/String;->matches
+  [581] String: "11111"
+  [588] String: "instagram"
+  [597] Call: Lx/iq;->i
+  [646] Call: Landroid/text/TextUtils;->isEmpty
+  [659] Call: Ljava/lang/Math;->max
+  [669] Call: Ljava/lang/String;->toLowerCase
+  [673] String: "comment"
+  [675] Call: Ljava/lang/String;->contains
+  [683] Call: Landroid/text/TextUtils;->isEmpty
+  [689] String: "Thích quá ạ"
+  [691] String: "Dễ thương quá nè ❤️"
+  [693] String: "❤️"
+  [694] Call: Ljava/util/zip/Inflater;-><init>
+  [695] String: "Tuyệt vời quá!"
+  [697] String: "Xinh quá nè"
+  [699] String: "Đẹp quá"
+  [705] Call: Ljava/lang/Math;->random
+  [720] String: "[DoLike Instagram] DoLike không trả sẵn nội dung comment; dùng nội dung mẫu: ""
+  [722] Call: Ljava/lang/StringBuilder;-><init>
+  [727] Call: Ljava/lang/StringBuilder;->append
+  [730] String: """
+  [732] Call: Ljava/lang/StringBuilder;->append
+  [735] Call: Ljava/lang/StringBuilder;->toString
+  [741] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [749] Call: Ljava/lang/Long;->valueOf
+  [753] Call: Ljava/util/HashSet;->contains
+  [763] String: "[DoLike Instagram] Job "
+  [765] Call: Ljava/lang/StringBuilder;-><init>
+  [770] Call: Ljava/lang/StringBuilder;->append
+  [775] Call: Ljava/lang/StringBuilder;->append
+  [778] Call: Ljava/lang/StringBuilder;->append
+  [781] String: ") đã từng lỗi, đang gửi lệnh bỏ qua lại..."
+  [783] Call: Ljava/lang/StringBuilder;->append
+  [786] Call: Ljava/lang/StringBuilder;->toString
+  [790] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [803] String: "skip_unwanted"
+  [807] String: "instagram"
+  [816] Call: Lx/iq;->z
+  [819] Call: Ljava/lang/Thread;->sleep
+  [835] String: "Không tìm thấy nút mở bảng cảm xúc trên "
+  [868] String: " nhận job "
+  [870] String: " (run_id: "
+  [874] Call: Lx/ha0;->o
+  [880] Call: Ljava/lang/StringBuilder;->append
+  [883] Call: Ljava/lang/StringBuilder;->append
+  [886] Call: Ljava/lang/StringBuilder;->toString
+  [890] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [893] String: "đang làm job "
+  [895] Call: Lx/ha0;->k
+  [914] Call: Lx/gu1;->N
+  [915] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>
+  [919] Call: Lcom/hoanguyen/gomax/model/JobData;-><init>
+  [924] Call: Lcom/hoanguyen/gomax/model/JobData;->setType
+  [929] Call: Lcom/hoanguyen/gomax/model/JobData;->setLink
+  [934] Call: Lcom/hoanguyen/gomax/model/JobData;->setTargetId
+  [939] Call: Lcom/hoanguyen/gomax/model/JobData;->setMessage
+  [944] Call: Lx/ca0;->d
+  [948] String: ") -> "
+  [950] String: " thất bại ("
+  [952] String: "Gửi bỏ qua DoLike thất bại"
+  [954] String: "Đã gửi bỏ qua DoLike"
+  [966] Call: Lx/hw;->g
+  [979] Call: Lx/hw;->f
+  [985] Call: Ljava/lang/Math;->random
+  [989] Call: Ljava/lang/Math;->max
+  [1009] String: "Chờ gửi báo cáo"
+  [1039] Call: Lx/gu1;->f
+  [1061] String: "đang gửi báo cáo..."
+  [1073] Call: Lx/gu1;->N
+  [1074] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>
+  [1085] Call: Lx/iq;->c
+  [1105] Call: Ljava/lang/Math;->round
+  [1115] Call: Ljava/lang/Math;->max
+  [1120] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->O
+  [1123] String: " hoàn thành job "
+  [1125] String: " (+"
+  [1129] Call: Lx/ha0;->o
+  [1133] Call: Ljava/lang/StringBuilder;->append
+  [1136] String: " Xu)"
+  [1138] Call: Ljava/lang/StringBuilder;->append
+  [1141] Call: Ljava/lang/StringBuilder;->toString
+  [1145] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [1147] Call: Landroid/text/SpannableStringBuilder;->setSpan
+  [1150] String: "thành công (+"
+  [1152] Call: Ljava/lang/StringBuilder;-><init>
+  [1155] Call: Lx/xl;->l
+  [1176] Call: Lx/gu1;->N
+  [1177] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>
+  [1183] Call: Ljava/util/concurrent/atomic/AtomicInteger;->incrementAndGet
+  [1188] Call: Ljava/util/concurrent/atomic/AtomicInteger;->addAndGet
+  [1191] Call: Ljava/util/concurrent/atomic/AtomicInteger;->get
+  [1195] Call: Ljava/util/concurrent/atomic/AtomicInteger;->get
+  [1199] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->H
+  [1214] Call: Ljava/lang/String;->valueOf
+  [1218] Call: Lx/hw;->x
+  [1226] String: "dolike_balance"
+  [1228] String: "0"
+  [1230] Call: Landroid/content/SharedPreferences;->getString
+  [1234] Call: Ljava/lang/Double;->parseDouble
+  [1235] Call: Landroid/accessibilityservice/AccessibilityService$SoftKeyboardController;->setShowMode
+  [1243] Call: Ljava/lang/String;->valueOf
+  [1247] Call: Lx/hw;->x
+  [1250] Call: Ljava/lang/Thread;->sleep
+  [1293] Call: Ljava/lang/Long;->valueOf
+  [1299] Call: Ljava/util/HashSet;->add
+  [1309] String: "skip_unwanted"
+  [1311] String: "instagram"
+  [1318] Call: Lx/iq;->z
+  [1331] Call: Landroid/text/TextUtils;->isEmpty
+  [1340] String: " báo cáo job "
+  [1342] Call: Lx/xl;->p
+  [1348] Call: Ljava/lang/StringBuilder;->append
+  [1353] Call: Ljava/lang/StringBuilder;->append
+  [1356] Call: Ljava/lang/StringBuilder;->append
+  [1361] Call: Ljava/lang/StringBuilder;->append
+  [1364] Call: Ljava/lang/StringBuilder;->append
+  [1367] Call: Ljava/lang/StringBuilder;->toString
+  [1371] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [1374] String: "báo cáo thất bại: "
+  [1376] Call: Ljava/lang/String;->concat
+  [1393] Call: Lx/gu1;->N
+  [1394] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>
+  [1400] Call: Ljava/lang/Thread;->sleep
+  [1458] Call: Ljava/lang/Long;->valueOf
+  [1462] Call: Ljava/util/HashSet;->add
+  [1473] String: "Cookie hết hạn/checkpoint"
+  [1474] Call: Landroid/graphics/Canvas;->drawText
+  [1476] String: "Không tương tác được"
+  [1490] String: "skip_unwanted"
+  [1495] String: "instagram"
+  [1516] Call: Lx/iq;->z
+  [1529] Call: Landroid/text/TextUtils;->isEmpty
+  [1538] String: " làm job "
+  [1540] Call: Lx/xl;->p
+  [1546] Call: Ljava/lang/StringBuilder;->append
+  [1549] Call: Ljava/lang/StringBuilder;->append
+  [1551] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [1552] Call: Ljava/lang/StringBuilder;->append
+  [1555] Call: Ljava/lang/StringBuilder;->append
+  [1558] Call: Ljava/lang/StringBuilder;->append
+  [1561] Call: Ljava/lang/StringBuilder;->toString
+  [1565] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [1570] String: "làm job thất bại ("
+  [1572] Call: Ljava/lang/StringBuilder;-><init>
+  [1577] Call: Lx/xl;->m
+  [1596] Call: Lx/gu1;->N
+  [1597] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>
+  [1604] String: "die"
+  [1610] Call: Lcom/hoanguyen/gomax/manager/a;->j
+  [1613] String: "Cookie tài khoản hết hạn hoặc bị Instagram checkpoint (-9)"
+  [1635] String: "Lỗi liên tiếp 5 lần"
+  [1660] String: "Không tìm thấy nút mở bảng cảm xúc trên "
+  [1687] Call: Lx/fq;->a
+  [1695] Call: Ljava/lang/StringBuilder;-><init>
+  [1698] Call: Ljava/lang/StringBuilder;->append
+  [1701] String: " dừng: "
+  [1703] Call: Ljava/lang/StringBuilder;->append
+  [1706] Call: Ljava/lang/StringBuilder;->append
+  [1709] Call: Ljava/lang/StringBuilder;->toString
+  [1713] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [1731] Call: Ljava/lang/StringBuilder;-><init>
+  [1734] Call: Ljava/lang/StringBuilder;->append
+  [1737] String: " Cooldown DoLike: chờ "
+  [1739] Call: Ljava/lang/StringBuilder;->append
+  [1742] Call: Ljava/lang/StringBuilder;->append
+  [1745] String: "s theo yêu cầu server..."
+  [1747] Call: Ljava/lang/StringBuilder;->append
+  [1750] Call: Ljava/lang/StringBuilder;->toString
+  [1754] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [1760] String: "Cooldown DoLike"
+  [1778] Call: Lx/gu1;->f
+  [1813] String: "Không tìm thấy nút mở bảng cảm xúc trên "
+  [1854] Call: Lcom/hoanguyen/gomax/manager/a;->j
+  [1857] Call: Landroid/text/TextUtils;->isEmpty
+  [1865] String: "Chưa có job mới"
+  [1866] Call: 
+  [1870] Call: Ljava/lang/StringBuilder;-><init>
+  [1873] Call: Ljava/lang/StringBuilder;->append
+  [1876] String: " (ID: "
+  [1877] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [1878] Call: Ljava/lang/StringBuilder;->append
+  [1885] Call: Ljava/lang/StringBuilder;->append
+  [1888] String: ") chưa có job ("
+  [1890] Call: Ljava/lang/StringBuilder;->append
+  [1893] Call: Ljava/lang/StringBuilder;->append
+  [1898] Call: Ljava/lang/StringBuilder;->append
+  [1903] Call: Ljava/lang/StringBuilder;->append
+  [1906] String: "): "
+  [1908] Call: Ljava/lang/StringBuilder;->append
+  [1911] Call: Ljava/lang/StringBuilder;->append
+  [1914] Call: Ljava/lang/StringBuilder;->toString
+  [1918] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [1923] String: "hết job ("
+  [1925] Call: Ljava/lang/StringBuilder;-><init>
+  [1928] Call: Ljava/lang/StringBuilder;->append
+  [1931] Call: Ljava/lang/StringBuilder;->append
+  [1934] Call: Ljava/lang/StringBuilder;->append
+  [1937] Call: Ljava/lang/StringBuilder;->append
+  [1940] Call: Ljava/lang/StringBuilder;->toString
+  [1963] Call: Lx/gu1;->N
+  [1964] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>
+  [1970] String: "Hết job liên tiếp "
+  [1972] Call: Ljava/lang/StringBuilder;-><init>
+  [1975] Call: Ljava/lang/StringBuilder;->append
+  [1978] Call: Ljava/lang/StringBuilder;->append
+  [1981] Call: Ljava/lang/StringBuilder;->append
+  [1984] String: " lần ("
+  [1986] Call: Ljava/lang/StringBuilder;->append
+  [1989] Call: Lx/xl;->m
+  [1995] Call: Ljava/lang/StringBuilder;-><init>
+  [2000] Call: Ljava/lang/StringBuilder;->append
+  [2003] String: " dừng do hết job "
+  [2005] Call: Ljava/lang/StringBuilder;->append
+  [2008] Call: Ljava/lang/StringBuilder;->append
+  [2011] String: " lần."
+  [2013] Call: Ljava/lang/StringBuilder;->append
+  [2016] Call: Ljava/lang/StringBuilder;->toString
+  [2022] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+  [2039] Call: Ljava/lang/Math;->max
+  [2044] String: "Hết job, chờ"
+  [2068] Call: Lx/gu1;->f
+  [2100] String: "Không tìm thấy nút mở bảng cảm xúc trên "
+  [2134] String: ""
+  [2141] Call: Landroid/text/TextUtils;->isEmpty
+  [2149] Call: Ljava/lang/String;->equalsIgnoreCase
+  [2155] String: "người dùng dừng"
+  [2157] Call: Ljava/lang/String;->equalsIgnoreCase
+  [2166] String: "Hoàn thành"
+  [2176] String: "Đã dừng"
+  [2179] Call: Lx/gu1;->N
+  [2180] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>
+  [2185] Call: Ljava/lang/StringBuilder;-><init>
+  [2188] Call: Ljava/lang/StringBuilder;->append
+  [2191] String: " kết thúc phiên chạy: "
+  [2193] Call: Ljava/lang/StringBuilder;->append
+  [2196] Call: Ljava/lang/StringBuilder;->append
+  [2199] Call: Ljava/lang/StringBuilder;->toString
+  [2203] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->b
+
+--- METHOD: Landroid/animation/Animator;->isPaused ---
+  [20] Call: Lx/nt;->a
+  [26] Call: Ljava/lang/Object;->getClass
+  [29] String: "initCallback cannot be null"
+  [31] Call: Lx/nl0;->i
+  [36] Call: Ljava/util/concurrent/locks/ReentrantReadWriteLock;->writeLock
+  [40] Call: Ljava/util/concurrent/locks/Lock;->lock
+  [45] Call: Lx/v8;->remove
+  [48] Call: Ljava/util/concurrent/locks/ReentrantReadWriteLock;->writeLock
+  [52] Call: Ljava/util/concurrent/locks/Lock;->unlock
+  [57] Call: Ljava/util/concurrent/locks/ReentrantReadWriteLock;->writeLock
+  [61] Call: Ljava/util/concurrent/locks/Lock;->unlock
+  [71] Call: Lx/nt;->a
+  [75] Call: Lx/nt;->b
+  [79] Call: Lx/zt;->a
+
+--- METHOD: Landroid/animation/Animator;->isRunning ---
+  [24] Call: Lcom/hoanguyen/gomax/manager/a;->j
+  [27] String: "account_updated"
+  [29] String: "dolike_instagram"
+  [31] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->c
+
+--- METHOD: Landroid/animation/Animator;->isStarted ---
+  [6] Call: Lx/zv1;-><init>
+  [13] Call: Ljava/util/TreeMap;->keySet
+  [17] Call: Ljava/util/Set;->iterator
+  [21] Call: Ljava/util/Iterator;->hasNext
+  [27] Call: Ljava/util/Iterator;->next
+  [37] Call: Lx/ei1;->clone
+  [43] Call: Ljava/util/TreeMap;->get
+  [49] Call: Ljava/util/Collections;->singletonList
+  [53] Call: Lx/dj1;->a
+  [65] Call: Landroidx/appcompat/widget/Toolbar;->setSubtitleTextColor
+  [66] Call: Ljava/lang/Double;->doubleValue
+  [67] Call: Landroid/accessibilityservice/AccessibilityService;-><init>
+  [70] Call: Lx/s71;->H
+  [84] Call: Ljava/util/TreeMap;->keySet
+  [88] Call: Ljava/util/Set;->iterator
+  [92] Call: Ljava/util/Iterator;->hasNext
+  [98] Call: Ljava/util/Iterator;->next
+  [104] Call: Ljava/util/TreeMap;->get
+  [110] Call: Ljava/util/Collections;->singletonList
+  [114] Call: Lx/dj1;->a
+  [125] Call: Landroidx/appcompat/widget/Toolbar;->setSubtitleTextColor
+  [126] Call: Ljava/lang/Double;->doubleValue
+  [127] Call: Landroid/accessibilityservice/AccessibilityServiceInfo;-><init>
+  [130] Call: Lx/s71;->H
+
+--- METHOD: Landroid/animation/Animator;->pause ---
+  [0] Call: Ljava/lang/String;->valueOf
+  [4] String: "="
+  [6] Call: Lx/xl;->j
+  [14] Call: Ljava/util/ArrayList;->add
+
+--- METHOD: Landroid/animation/Animator;->removeListener ---
+  [0] Call: Ljava/lang/Object;->getClass
+  [3] Call: Ljava/lang/Object;->getClass
+  [13] String: " "':;<=>@[]^`{}|/\?#&!$(),~"
+  [15] Call: Lx/an1;->i
+  [19] Call: Ljava/util/ArrayList;->add
+  [26] Call: Lx/an1;->i
+  [30] Call: Ljava/util/ArrayList;->add
+
+--- METHOD: Landroid/animation/Animator;->resume ---
+  [3] Call: Lx/vz0;-><init>
+  [10] Call: Landroid/animation/Animator;->addListener
+  [17] Call: Ljava/util/ArrayList;->add
+
+--- METHOD: Landroid/animation/Animator;->setDuration ---
+  [10] Call: Lx/m10;-><init>
+
+--- METHOD: Landroid/animation/Animator;->setInterpolator ---
+  [10] Call: Ljava/lang/Math;->max
+  [17] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->t
+  [25] Call: Ljava/lang/StringBuilder;-><init>
+  [30] Call: Ljava/lang/StringBuilder;->append
+  [33] String: " ("
+  [35] Call: Ljava/lang/StringBuilder;->append
+  [38] Call: Ljava/lang/StringBuilder;->append
+  [41] String: "s)"
+  [43] Call: Ljava/lang/StringBuilder;->append
+  [46] Call: Ljava/lang/StringBuilder;->toString
+  [66] Call: Lx/gu1;->N
+  [67] Call: Landroid/accessibilityservice/AccessibilityService$SoftKeyboardController;->getShowMode
+  [71] Call: Ljava/lang/Thread;->sleep
+  [77] Call: Lcom/hoanguyen/gomax/service/automation/GolikeAutoService;->t
+
+--- METHOD: Landroid/animation/Animator;->setStartDelay ---
+  [18] Call: Landroid/view/View;->getParent
+  [26] Call: Landroid/view/View;->getMeasuredHeight
+  [31] Call: Landroid/view/View;->getParent
+  [37] Call: Landroid/view/View;->getLayoutParams
+  [47] Call: Landroid/view/View;->getMeasuredHeight
+  [52] Call: Landroid/view/View;->getPaddingTop
+  [56] Call: Landroid/view/View;->getPaddingBottom
+  [61] Call: Landroid/view/View;->getLayoutParams
+  [69] Call: Landroid/view/View;->getLayoutParams
+  [84] Call: Landroid/view/View;->getHeight
+  [97] Call: Landroid/view/View;->getMeasuredHeight
+
+--- METHOD: Landroid/animation/Animator;->setTarget ---
+  [8] Call: Lx/vz0;-><init>
+  [14] Call: Lx/vz0;-><init>
+  [21] Call: Lx/rp0;->get
+  [37] Call: Lx/tu0;-><init>
+  [53] Call: Lx/du0;->get
+  [61] Call: Lx/bj0;-><init>
+
+--- METHOD: Landroid/animation/Animator;->start ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->h
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorInflater;->loadAnimator ---
+
+--- METHOD: Landroid/animation/AnimatorInflater;->loadStateListAnimator ---
+  [6] Call: Ljava/lang/Object;->getClass
+  [10] Call: Landroid/animation/AnimatorSet;->isStarted
+  [13] Call: Lx/u10;->k
+  [20] Call: Lx/gu1;->j
+  [27] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [31] Call: Ljava/util/Iterator;->hasNext
+  [37] Call: Ljava/util/Iterator;->next
+  [48] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorListenerAdapter;-><init> ---
+
+--- METHOD: Landroid/animation/AnimatorListenerAdapter;->onAnimationCancel ---
+  [4] Call: Lx/oa1;->j
+  [6] Call: Landroid/text/Spannable;->setSpan
+  [10] Call: Lx/pe1;->m
+  [21] Call: Lx/re1;->b
+  [27] Call: Lx/re1;->d
+  [33] Call: Lx/re1;->c
+  [39] Call: Lx/re1;->a
+  [45] Call: Landroid/view/ViewGroup;->getChildCount
+  [52] Call: Landroid/view/ViewGroup;->getChildAt
+  [56] Call: Lx/oa1;->b
+  [60] Call: Lx/re1;->b
+  [66] Call: Ljava/lang/Math;->min
+  [72] Call: Lx/re1;->d
+  [78] Call: Ljava/lang/Math;->min
+  [84] Call: Lx/re1;->c
+  [90] Call: Ljava/lang/Math;->min
+  [96] Call: Lx/re1;->a
+  [102] Call: Ljava/lang/Math;->min
+  [119] Call: Lx/re1;->f
+  [121] Call: Landroid/os/Bundle;-><init>
+
+--- METHOD: Landroid/animation/AnimatorListenerAdapter;->onAnimationEnd ---
+  [8] Call: Landroid/view/View;->getParent
+  [16] Call: Lx/du0;->m
+  [21] Call: Landroid/view/View;->getParent
+  [27] Call: Landroid/view/View;->getLayoutParams
+  [38] Call: Lx/du0;->m
+  [43] Call: Landroid/view/View;->getPaddingLeft
+  [47] Call: Landroid/view/View;->getPaddingRight
+  [52] Call: Landroid/view/View;->getLayoutParams
+  [60] Call: Landroid/view/View;->getLayoutParams
+  [75] Call: Landroid/view/View;->getWidth
+
+--- METHOD: Landroid/animation/AnimatorListenerAdapter;->onAnimationRepeat ---
+  [3] Call: Landroidx/constraintlayout/utils/widget/ImageFilterButton;-><init>
+  [12] Call: Ljava/util/Map;->remove
+
+--- METHOD: Landroid/animation/AnimatorListenerAdapter;->onAnimationStart ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->o
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorSet$Builder;->with ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->p
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorSet;-><init> ---
+  [12] Call: Landroid/view/ViewGroup$LayoutParams;-><init>
+
+--- METHOD: Landroid/animation/AnimatorSet;->cancel ---
+  [8] Call: Ljava/lang/Object;->getClass
+  [11] Call: Lx/az1;->h
+  [18] Call: Lx/az1;->f
+  [26] String: "google.messenger"
+  [28] Call: Landroid/os/BaseBundle;->containsKey
+  [34] Call: Lx/ku0;->a
+  [42] Call: Lx/az1;->i
+
+--- METHOD: Landroid/animation/AnimatorSet;->end ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->s
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorSet;->getChildAnimations ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->t
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorSet;->getDuration ---
+  [6] Call: Ljava/lang/Object;->toString
+  [13] String: "Bounds{lower="
+  [15] Call: Ljava/lang/StringBuilder;-><init>
+  [22] Call: Ljava/lang/StringBuilder;->append
+  [25] String: " upper="
+  [27] Call: Ljava/lang/StringBuilder;->append
+  [34] Call: Ljava/lang/StringBuilder;->append
+  [37] String: "}"
+  [39] Call: Ljava/lang/StringBuilder;->append
+  [42] Call: Ljava/lang/StringBuilder;->toString
+  [51] String: "[ "
+  [59] Call: Lx/xl;->o
+  [71] Call: Ljava/lang/StringBuilder;->append
+  [74] String: " "
+  [76] Call: Ljava/lang/StringBuilder;->append
+  [79] Call: Ljava/lang/StringBuilder;->toString
+  [86] String: "] "
+  [88] Call: Lx/ha0;->n
+  [96] Call: Ljava/lang/StringBuilder;->append
+  [99] Call: Ljava/lang/StringBuilder;->toString
+  [108] Call: Ljava/lang/StringBuilder;-><init>
+  [113] Call: Ljava/lang/Object;->getClass
+  [117] Call: Ljava/lang/Class;->getSimpleName
+  [121] Call: Ljava/lang/StringBuilder;->append
+  [126] Call: Ljava/lang/StringBuilder;->append
+  [133] Call: Ljava/util/ArrayList;->size
+  [139] Call: Ljava/util/ArrayList;->get
+  [145] Call: Ljava/lang/StringBuilder;->append
+  [152] String: ", "
+  [154] Call: Ljava/lang/StringBuilder;->append
+  [162] Call: Ljava/lang/StringBuilder;->append
+  [165] Call: Ljava/lang/StringBuilder;->toString
+
+--- METHOD: Landroid/animation/AnimatorSet;->getTotalDuration ---
+  [6] Call: Ljava/lang/Object;->getClass
+  [10] Call: Landroid/animation/AnimatorSet;->isStarted
+  [13] Call: Lx/u10;->k
+  [20] Call: Lx/gu1;->u
+  [27] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [31] Call: Ljava/util/Iterator;->hasNext
+  [37] Call: Ljava/util/Iterator;->next
+  [48] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorSet;->isRunning ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->v
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorSet;->isStarted ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->w
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorSet;->pause ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->x
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorSet;->play ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->y
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+
+--- METHOD: Landroid/animation/AnimatorSet;->playSequentially ---
+  [5] Call: Landroid/animation/AnimatorSet;->isStarted
+  [8] Call: Lx/u10;->k
+  [15] Call: Lx/gu1;->z
+  [22] Call: Ljava/util/concurrent/CopyOnWriteArrayList;->iterator
+  [26] Call: Ljava/util/Iterator;->hasNext
+  [32] Call: Ljava/util/Iterator;->next
+  [43] Call: Lx/sb;->b
+================================================================================
+CLASS: Lx/iq;
+================================================================================
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init> ---
+  [0] String: "application/json; charset=utf-8"
+  [4] Call: Lx/in;->l
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$SoftKeyboardController;->getShowMode ---
+  [4] Call: Lx/sb;-><init>
+  [7] Call: Ljava/lang/Object;-><init>
+  [12] Call: Lx/sm0;-><init>
+  [16] Call: Landroid/graphics/Canvas;->drawBitmap
+  [17] String: "congtingudolike.servehttp.com"
+  [19] Call: Lx/hd;-><init>
+  [24] Call: Ljava/util/ArrayList;->add
+  [29] Call: Lx/sm0;->b
+  [36] Call: Lx/x81;->b
+  [42] Call: Lx/sm0;->d
+  [50] Call: Lx/tm0;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$SoftKeyboardController;->setShowMode ---
+  [4] Call: Ljava/util/ArrayList;-><init>
+  [8] Call: Lx/aq;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;-><init> ---
+  [0] Call: Lx/iq;->n
+  [4] Call: Landroid/text/TextUtils;->isEmpty
+  [12] String: "Bearer "
+  [14] Call: Ljava/lang/StringBuilder;-><init>
+  [17] Call: Ljava/lang/StringBuilder;->append
+  [20] Call: Ljava/lang/StringBuilder;->toString
+  [24] String: "Authorization"
+  [26] Call: Lx/we0;->o
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->dispatchGesture ---
+  [0] Call: Landroid/text/TextUtils;->isEmpty
+  [6] String: "A256GCM"
+  [8] Call: Ljava/lang/String;->equals
+  [15] String: "v(?:[1-9]|10)giaima"
+  [17] Call: Ljava/lang/String;->matches
+  [23] Call: Ljava/lang/String;->length
+  [30] Call: Ljava/lang/String;->substring
+  [34] Call: Ljava/lang/Integer;->parseInt
+  [39] String: "Bộ giải mã DoLike không được hỗ trợ: "
+  [41] Call: Ljava/lang/String;->concat
+  [45] Call: Lx/sb;->e
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->getRootInActiveWindow ---
+  [0] String: ""
+  [5] String: "text"
+  [7] String: "description"
+  [9] String: "comment"
+  [11] String: "comments"
+  [13] String: "comment_text"
+  [15] String: "content"
+  [17] String: "message"
+  [19] String: "noi_dung"
+  [21] String: "noidung"
+  [35] Call: Lorg/json/JSONObject;->opt
+  [45] Call: Ljava/lang/String;->trim
+  [49] Call: Ljava/lang/String;->isEmpty
+  [54] Call: Landroid/os/Bundle;->putByteArray
+  [55] String: "null"
+  [57] Call: Ljava/lang/String;->equalsIgnoreCase
+  [63] String: "["
+  [65] Call: Ljava/lang/String;->startsWith
+  [71] String: "]"
+  [73] Call: Ljava/lang/String;->endsWith
+  [81] Call: Lorg/json/JSONArray;-><init>
+  [84] Call: Lorg/json/JSONArray;->length
+  [85] Call: Landroid/accessibilityservice/AccessibilityService;->setServiceInfo
+  [90] Call: Lorg/json/JSONArray;->optString
+  [91] Call: Landroid/animation/AnimatorInflater;->loadStateListAnimator
+  [94] Call: Ljava/lang/String;->trim
+  [98] Call: Ljava/lang/String;->isEmpty
+  [112] Call: Lorg/json/JSONArray;->length
+  [113] Call: Landroid/accessibilityservice/AccessibilityService;->dispatchGesture
+  [118] Call: Lorg/json/JSONArray;->opt
+  [119] Call: Landroid/animation/Animator;->setDuration
+  [128] Call: Ljava/lang/String;->trim
+  [139] Call: Lx/iq;->f
+  [143] Call: Ljava/lang/String;->isEmpty
+  [156] Call: Lx/iq;->f
+  [160] Call: Ljava/lang/String;->isEmpty
+  [170] Call: Landroid/app/Notification$Builder;-><init>
+  [171] String: "job"
+  [173] Call: Lorg/json/JSONObject;->has
+  [175] String: " máy)..."
+  [179] Call: Lorg/json/JSONObject;->optJSONObject
+  [181] String: " ngày"
+  [185] Call: Lorg/json/JSONObject;->optJSONObject
+  [187] String: " can only be used with android:layout_width="match_parent" (or fill_parent)"
+  [189] Call: Lx/iq;->f
+  [193] Call: Ljava/lang/String;->isEmpty
+  [200] String: "data"
+  [202] Call: Lorg/json/JSONObject;->has
+  [204] String: " máy)..."
+  [208] Call: Lorg/json/JSONObject;->optJSONObject
+  [210] String: " ngày"
+  [214] Call: Lorg/json/JSONObject;->optJSONObject
+  [216] String: "BumxAutoThread"
+  [218] Call: Lx/iq;->f
+  [222] Call: Ljava/lang/String;->isEmpty
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->getSoftKeyboardController ---
+  [0] String: ""
+  [11] Call: Lorg/json/JSONObject;->optString
+  [15] Call: Ljava/lang/String;->trim
+  [19] Call: Ljava/lang/String;->isEmpty
+  [25] String: "null"
+  [27] Call: Ljava/lang/String;->equalsIgnoreCase
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->getWindows ---
+  [0] String: "facebook"
+  [2] Call: Ljava/lang/String;->equalsIgnoreCase
+  [8] String: "/api/bot/users/nhan-facebook/facebook-cuchuoi.php"
+  [11] String: "instagram"
+  [13] Call: Ljava/lang/String;->equalsIgnoreCase
+  [19] String: "/api/bot/users/nhan-instagram/ig-cudau.php"
+  [22] String: "/api/bot/users/nhan-instagram/tiktok-cuchuoi.php"
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->onServiceConnected ---
+  [0] Call: Lx/iq;->n
+  [4] String: "\."
+  [7] Call: Ljava/lang/String;->split
+  [18] Call: Landroid/text/TextUtils;->isEmpty
+  [27] Call: Landroid/text/TextUtils;->isEmpty
+  [36] Call: Landroid/text/TextUtils;->isEmpty
+  [49] Call: Landroid/util/Base64;->decode
+  [55] Call: Ljava/lang/String;-><init>
+  [56] String: ""?[^}]*?"name"\s*:\s*"((?:\\.|[^"])*)"|"__typename"\s*:\s*"User"[^}]*?"name"\s*:\s*"((?:\\.|[^"])*)"[^}]*?"id"\s*:\s*"?"
+  [60] Call: Lorg/json/JSONObject;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->performGlobalAction ---
+  [2] String: ""
+  [5] Call: Ljava/lang/String;->trim
+  [13] String: "Bearer "
+  [15] Call: Ljava/lang/String;->regionMatches
+  [22] Call: Ljava/lang/String;->substring
+  [26] Call: Ljava/lang/String;->trim
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService;->setServiceInfo ---
+  [0] String: "data"
+  [2] Call: Lorg/json/JSONObject;->optJSONObject
+  [9] String: "encrypted_job"
+  [11] Call: Lorg/json/JSONObject;->optJSONObject
+  [21] Call: Lorg/json/JSONObject;->toString
+  [25] Call: Lorg/json/JSONObject;-><init>
+  [28] Call: Lx/iq;->y
+  [32] Call: Lx/iq;->d
+  [35] String: "decoder"
+  [37] Call: Lorg/json/JSONObject;->put
+  [40] String: "algorithm"
+  [42] Call: Lorg/json/JSONObject;->has
+  [48] String: "A256GCM"
+  [50] String: "cipher"
+  [51] Call: Lx/d7;-><init>
+  [52] Call: Lorg/json/JSONObject;->optString
+  [56] Call: Lorg/json/JSONObject;->optString
+  [60] Call: Lorg/json/JSONObject;->put
+  [64] String: "Thiếu encrypted_job"
+  [66] Call: Lx/sb;->e
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityServiceInfo;-><init> ---
+  [0] String: "error"
+  [2] Call: Lorg/json/JSONObject;->has
+  [6] String: ""
+  [10] Call: Lorg/json/JSONObject;->optString
+  [14] Call: Landroid/text/TextUtils;->isEmpty
+  [20] String: "success"
+  [22] Call: Lorg/json/JSONObject;->has
+  [28] Call: Lorg/json/JSONObject;->optBoolean
+  [34] String: "status"
+  [36] Call: Lorg/json/JSONObject;->optString
+  [40] Call: Ljava/lang/String;->equalsIgnoreCase
+  [46] Call: Lorg/json/JSONObject;->toString
+  [50] String: "Lỗi danh sách tài khoản"
+  [52] Call: Lx/iq;->u
+  [56] Call: Lx/iq;->a
+  [61] String: "data"
+  [63] Call: Lorg/json/JSONObject;->optJSONObject
+  [69] String: "items"
+  [71] Call: Lorg/json/JSONObject;->optJSONArray
+  [76] Call: Lorg/json/JSONObject;->optJSONArray
+  [82] String: "Phản hồi danh sách tài khoản DoLike không đúng định dạng"
+  [84] Call: Lx/iq;->a
+  [91] Call: Ljava/util/ArrayList;-><init>
+  [96] Call: Lorg/json/JSONArray;->length
+  [97] Call: Landroid/accessibilityservice/GestureDescription$Builder;-><init>
+  [102] Call: Lorg/json/JSONArray;->optJSONObject
+  [103] Call: Landroid/animation/AnimatorSet;->playTogether
+  [108] String: "Dữ liệu tài khoản DoLike không hợp lệ"
+  [110] Call: Lx/iq;->a
+  [115] String: "platform"
+  [117] Call: Lorg/json/JSONObject;->optString
+  [121] Call: Ljava/lang/String;->trim
+  [125] Call: Landroid/text/TextUtils;->isEmpty
+  [131] String: "Tài khoản DoLike thiếu nền tảng"
+  [132] String: "Favorites"
+  [133] Call: Lx/iq;->a
+  [138] Call: Landroid/text/TextUtils;->isEmpty
+  [144] Call: Ljava/lang/String;->equalsIgnoreCase
+  [154] Call: Ljava/lang/Object;-><init>
+  [157] String: "id"
+  [161] Call: Lorg/json/JSONObject;->optLong
+  [167] String: "username"
+  [169] Call: Lorg/json/JSONObject;->optString
+  [173] String: "account_username"
+  [175] Call: Lorg/json/JSONObject;->optString
+  [181] Call: Ljava/lang/String;->trim
+  [185] String: "^@+"
+  [187] Call: Ljava/lang/String;->replaceFirst
+  [201] Call: Landroid/text/TextUtils;->isEmpty
+  [208] String: "account_uid"
+  [210] Call: Lorg/json/JSONObject;->optString
+  [214] Call: Landroid/text/TextUtils;->isEmpty
+  [220] String: "uid"
+  [222] Call: Lorg/json/JSONObject;->optString
+  [226] Call: Landroid/text/TextUtils;->isEmpty
+  [232] String: "account_id_str"
+  [234] Call: Lorg/json/JSONObject;->optString
+  [238] Call: Landroid/text/TextUtils;->isEmpty
+  [244] String: "user_id"
+  [246] Call: Lorg/json/JSONObject;->optString
+  [252] String: "type_acc"
+  [254] Call: Lorg/json/JSONObject;->optString
+  [257] String: "is_primary"
+  [259] Call: Lorg/json/JSONObject;->optInt
+  [262] String: "display_name"
+  [266] Call: Lorg/json/JSONObject;->optString
+  [272] String: "followers"
+  [274] Call: Lorg/json/JSONObject;->optInt
+  [280] Call: Ljava/util/ArrayList;->add
+  [287] String: "Tài khoản DoLike thiếu ID hoặc tên người dùng"
+  [289] Call: Lx/iq;->a
+  [296] String: "OK"
+  [299] Call: Lx/aq;-><init>
+
+--- METHOD: Landroid/accessibilityservice/GestureDescription$Builder;-><init> ---
+  [4] Call: Ljava/lang/Object;-><init>
+  [7] String: "id"
+  [9] Call: Lorg/json/JSONObject;->optLong
+  [13] String: "run_id"
+  [15] Call: Lorg/json/JSONObject;->optLong
+  [21] String: "platform"
+  [25] Call: Lorg/json/JSONObject;->optString
+  [28] String: "job_type"
+  [30] Call: Lorg/json/JSONObject;->optString
+  [34] String: "type"
+  [36] Call: Lorg/json/JSONObject;->optString
+  [42] String: "service_kind"
+  [44] String: ""
+  [46] Call: Lorg/json/JSONObject;->optString
+  [52] String: "target_url"
+  [54] String: "link"
+  [55] Call: Landroid/graphics/drawable/BitmapDrawable;->setTileModeX
+  [56] String: "url"
+  [58] String: "post_url"
+  [59] Call: Lx/kk0;->j
+  [64] Call: Lx/iq;->g
+  [70] String: "id_post"
+  [72] String: "uid"
+  [74] String: "target_id"
+  [76] String: "media_id"
+  [78] String: "object_id"
+  [80] String: "post_id"
+  [82] String: "author_id"
+  [88] Call: Lx/iq;->g
+  [94] String: "comment_id"
+  [96] String: "commentId"
+  [98] String: "id_comment"
+  [100] String: "comment_id_str"
+  [102] String: "target_id_2"
+  [106] Call: Landroid/widget/AdapterView;->setSelection
+  [108] Call: Lx/iq;->g
+  [114] String: "post_id"
+  [116] String: "postId"
+  [118] String: "id_post"
+  [120] String: "post_id_str"
+  [121] Call: Lx/kk0;->j
+  [126] Call: Lx/iq;->g
+  [132] String: "target"
+  [134] Call: Lorg/json/JSONObject;->optJSONObject
+  [142] Call: Landroid/text/TextUtils;->isEmpty
+  [148] String: "profile_url"
+  [154] Call: Lx/iq;->g
+  [162] Call: Landroid/text/TextUtils;->isEmpty
+  [168] String: "uid"
+  [170] String: "id"
+  [172] String: "target_id"
+  [174] String: "media_id"
+  [176] String: "object_id"
+  [178] String: "post_id"
+  [180] String: "author_id"
+  [182] String: "id_post"
+  [188] Call: Lx/iq;->g
+  [196] Call: Landroid/text/TextUtils;->isEmpty
+  [204] Call: Landroid/accessibilityservice/GestureDescription$Builder;-><init>
+  [206] Call: Lx/iq;->g
+  [214] Call: Landroid/text/TextUtils;->isEmpty
+  [224] Call: Lx/iq;->g
+  [230] Call: Lx/iq;->f
+  [236] String: "reaction_type"
+  [237] Call: Landroid/content/Intent;->putExtra
+  [238] String: "mc_type"
+  [240] String: "reaction"
+  [248] Call: Lx/iq;->g
+  [254] String: "reward"
+  [256] String: "xu"
+  [258] String: "coins"
+  [260] String: "coin"
+  [262] String: "price"
+  [276] Call: Lorg/json/JSONObject;->opt
+  [280] Call: Lx/iq;->r
+  [293] Call: Ljava/lang/Math;->round
+
+--- METHOD: Landroid/accessibilityservice/GestureDescription$Builder;->addStroke ---
+  [11] Call: Ljava/lang/Number;->doubleValue
+  [16] Call: Ljava/lang/String;->valueOf
+  [20] Call: Ljava/lang/String;->trim
+  [24] String: ","
+  [26] String: ""
+  [28] Call: Ljava/lang/String;->replace
+  [32] Call: Ljava/lang/Double;->parseDouble
+  [33] Call: Landroid/accessibilityservice/AccessibilityService;->dispatchGesture
+
+--- METHOD: Landroid/accessibilityservice/GestureDescription$Builder;->build ---
+  [0] String: "status"
+  [2] Call: Lorg/json/JSONObject;->optString
+  [6] String: "error"
+  [8] Call: Ljava/lang/String;->equalsIgnoreCase
+  [14] String: "success"
+  [16] Call: Lorg/json/JSONObject;->has
+  [22] Call: Lorg/json/JSONObject;->optBoolean
+  [30] String: "data"
+  [32] Call: Lorg/json/JSONObject;->optJSONObject
+  [40] String: "user"
+  [42] Call: Lorg/json/JSONObject;->optJSONObject
+  [48] String: "app_user"
+  [50] Call: Lorg/json/JSONObject;->optJSONObject
+  [54] String: "payout"
+  [56] Call: Lorg/json/JSONObject;->optJSONObject
+  [60] String: "full_name"
+  [62] String: "telegram_uid"
+  [66] Call: Lorg/json/JSONObject;->has
+  [72] Call: Lorg/json/JSONObject;->has
+  [78] String: "id"
+  [80] Call: Lorg/json/JSONObject;->has
+  [86] String: "sotien"
+  [88] Call: Lorg/json/JSONObject;->has
+  [99] Call: Lx/iq;->t
+  [104] String: "name"
+  [105] Call: Landroid/os/Bundle;->putByteArray
+  [106] String: "username"
+  [108] String: "display_name"
+  [114] Call: Lx/iq;->g
+  [118] String: "email_"
+  [120] Call: Ljava/lang/String;->startsWith
+  [126] String: ""
+  [129] String: "email"
+  [135] Call: Lx/iq;->g
+  [139] String: "telegram_id"
+  [145] Call: Lx/iq;->g
+  [149] Call: Lx/iq;->v
+  [159] Call: Lx/iq;->v
+  [167] Call: Lx/iq;->v
+  [175] Call: Lx/hq;-><init>
+  [179] Call: Lorg/json/JSONObject;->toString
+  [183] String: "Phản hồi tài khoản DoLike không hợp lệ"
+  [185] Call: Lx/iq;->u
+  [188] Call: Lx/iq;->t
+
+--- METHOD: Landroid/accessibilityservice/GestureDescription$StrokeDescription;-><init> ---
+  [2] String: ""
+  [7] String: ""
+  [9] String: ""
+  [11] Call: Lx/hq;-><init>
+
+--- METHOD: Landroid/accounts/Account;-><init> ---
+  [2] Call: Lorg/json/JSONObject;-><init>
+  [5] String: "message"
+  [7] String: "msg"
+  [9] String: "error"
+  [21] String: ""
+  [23] Call: Lorg/json/JSONObject;->optString
+  [27] Call: Landroid/text/TextUtils;->isEmpty
+
+--- METHOD: Landroid/accounts/AccountManager;->get ---
+  [5] String: "coins"
+  [7] String: "coin"
+  [9] String: "balance"
+  [11] String: "wallet_balance"
+  [13] String: "sotien"
+  [25] Call: Lorg/json/JSONObject;->has
+  [31] Call: Lorg/json/JSONObject;->isNull
+  [38] Call: Lorg/json/JSONObject;->opt
+  [48] Call: Ljava/lang/Number;->doubleValue
+  [53] Call: Ljava/lang/String;->valueOf
+  [57] Call: Ljava/lang/String;->trim
+  [61] String: ","
+  [63] String: ""
+  [65] Call: Ljava/lang/String;->replace
+  [69] Call: Ljava/lang/Double;->parseDouble
+  [70] Call: Landroid/accessibilityservice/AccessibilityService;->getWindows
+  [73] Call: Ljava/lang/Double;->isNaN
+  [74] Call: Landroid/animation/AnimatorSet;->cancel
+  [79] Call: Ljava/lang/Double;->isInfinite
+  [80] Call: Landroid/animation/AnimatorSet;->cancel
+
+--- METHOD: Landroid/accounts/AccountManager;->getAccountsByTypeAndFeatures ---
+  [14] String: "decoder"
+  [16] String: "encryption_type"
+  [27] String: ""
+  [29] Call: Lorg/json/JSONObject;->optString
+  [33] Call: Landroid/text/TextUtils;->isEmpty
+  [46] String: "v2giaima"
+
+--- METHOD: Landroid/accounts/AccountManagerFuture;->getResult ---
+  [0] String: "success"
+  [2] String: "POST"
+  [4] String: "application/json"
+  [6] String: "issueApiToken skipped for completeJob: "
+  [8] String: "https://congtingudolike.servehttp.com"
+  [10] Call: Lx/iq;->j
+  [16] Call: Lorg/json/JSONObject;-><init>
+  [19] String: "type"
+  [21] String: "perform_job"
+  [23] Call: Lorg/json/JSONObject;->put
+  [26] String: "run_id"
+  [28] Call: Lorg/json/JSONObject;->put
+  [31] Call: Lorg/json/JSONObject;->toString
+  [37] Call: Lx/we0;-><init>
+  [40] Call: Ljava/lang/String;->concat
+  [44] Call: Lx/we0;->x
+  [47] String: "Accept"
+  [49] Call: Lx/we0;->o
+  [52] String: "Content-Type"
+  [54] Call: Lx/we0;->o
+  [57] String: "Origin"
+  [59] Call: Lx/we0;->o
+  [62] String: "Referer"
+  [64] String: "https://congtingudolike.servehttp.com/"
+  [66] Call: Lx/we0;->o
+  [71] Call: Lx/zp1;->k
+  [75] Call: Lx/we0;->q
+  [78] Call: Lx/iq;->k
+  [84] Call: Lx/iq;->l
+  [88] Call: Landroid/text/TextUtils;->isEmpty
+  [94] String: "x-api-token"
+  [96] Call: Lx/we0;->o
+  [102] String: "DolikeApi"
+  [106] Call: Ljava/lang/StringBuilder;-><init>
+  [109] Call: Ljava/lang/Throwable;->getMessage
+  [113] Call: Ljava/lang/StringBuilder;->append
+  [116] Call: Ljava/lang/StringBuilder;->toString
+  [120] Call: Landroid/util/Log;->w
+  [123] Call: Lx/iq;->b
+  [126] Call: Lx/we0;->h
+  [132] Call: Ljava/lang/Object;->getClass
+  [138] Call: Lx/tq0;-><init>
+  [141] Call: Lx/tq0;->f
+  [147] String: ""
+  [151] Call: Lx/ar0;->p
+  [161] Call: Lx/vt0;->a
+  [171] Call: Ljava/lang/StringBuilder;-><init>
+  [174] String: "Lỗi hoàn thành job"
+  [176] Call: Lx/iq;->u
+  [180] Call: Ljava/lang/StringBuilder;->append
+  [183] String: " (HTTP "
+  [184] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [185] Call: Ljava/lang/StringBuilder;->append
+  [190] Call: Ljava/lang/StringBuilder;->append
+  [193] String: ")"
+  [195] Call: Ljava/lang/StringBuilder;->append
+  [198] Call: Ljava/lang/StringBuilder;->toString
+  [207] Call: Lx/bq;-><init>
+  [210] Call: Lx/vt0;->close
+  [216] Call: Lorg/json/JSONObject;-><init>
+  [219] String: "status"
+  [221] Call: Lorg/json/JSONObject;->optString
+  [225] String: "msg"
+  [227] String: "message"
+  [229] Call: Lorg/json/JSONObject;->optString
+  [233] Call: Lorg/json/JSONObject;->optString
+  [237] Call: Ljava/lang/String;->equalsIgnoreCase
+  [243] Call: Lorg/json/JSONObject;->optBoolean
+  [254] String: "data"
+  [256] Call: Lorg/json/JSONObject;->optJSONObject
+  [262] String: "coins"
+  [264] Call: Lorg/json/JSONObject;->opt
+  [268] Call: Lx/iq;->r
+  [277] Call: Lx/iq;->v
+  [283] Call: Lx/bq;-><init>
+  [286] Call: Lx/vt0;->close
+  [290] Call: Lx/vt0;->close
+  [296] Call: Ljava/lang/Throwable;->addSuppressed
+  [306] String: "Lỗi hoàn thành job: "
+  [308] Call: Ljava/lang/StringBuilder;-><init>
+  [311] Call: Ljava/lang/Throwable;->getMessage
+  [315] Call: Ljava/lang/StringBuilder;->append
+  [318] Call: Ljava/lang/StringBuilder;->toString
+  [327] Call: Lx/bq;-><init>
+
+--- METHOD: Landroid/adservices/measurement/DeletionRequest$Builder;-><init> ---
+  [0] String: ""
+  [4] Call: Ljava/lang/String;->trim
+  [8] String: "^@+"
+  [10] Call: Ljava/lang/String;->replaceFirst
+  [14] Call: Landroid/text/TextUtils;->isEmpty
+  [22] String: "Thiếu tên tài khoản DoLike"
+  [24] Call: Lx/cq;-><init>
+  [28] Call: Lx/iq;->h
+  [42] Call: Lx/cq;-><init>
+  [50] Call: Ljava/util/ArrayList;->size
+  [57] Call: Ljava/util/ArrayList;->get
+  [67] Call: Ljava/lang/String;->equalsIgnoreCase
+  [75] Call: Ljava/lang/String;->equals
+  [91] String: "Tài khoản đã liên kết"
+  [93] Call: Lx/cq;-><init>
+  [101] Call: Lx/iq;->m
+
+--- METHOD: Landroid/adservices/measurement/MeasurementManager;->getMeasurementApiStatus ---
+  [0] String: "Lỗi HTTP "
+  [4] Call: Lx/we0;-><init>
+  [7] String: "https://congtingudolike.servehttp.com/api/platform-accounts.php"
+  [9] Call: Lx/we0;->x
+  [12] String: "Accept"
+  [14] String: "application/json"
+  [16] Call: Lx/we0;->o
+  [19] String: "Referer"
+  [21] String: "https://congtingudolike.servehttp.com/"
+  [23] Call: Lx/we0;->o
+  [26] Call: Lx/we0;->l
+  [29] Call: Lx/iq;->b
+  [32] Call: Lx/we0;->h
+  [38] Call: Ljava/lang/Object;->getClass
+  [44] Call: Lx/tq0;-><init>
+  [47] Call: Lx/tq0;->f
+  [57] Call: Lx/ar0;->p
+  [64] String: ""
+  [66] Call: Lx/vt0;->a
+  [74] Call: Ljava/lang/StringBuilder;-><init>
+  [79] Call: Ljava/lang/StringBuilder;-><init>
+  [82] Call: Ljava/lang/StringBuilder;->append
+  [85] Call: Ljava/lang/StringBuilder;->toString
+  [89] Call: Lx/iq;->u
+  [93] Call: Ljava/lang/StringBuilder;->append
+  [96] String: " (HTTP "
+  [97] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [98] Call: Ljava/lang/StringBuilder;->append
+  [101] Call: Ljava/lang/StringBuilder;->append
+  [104] String: ")"
+  [106] Call: Ljava/lang/StringBuilder;->append
+  [109] Call: Ljava/lang/StringBuilder;->toString
+  [113] Call: Lx/iq;->a
+  [120] Call: Lorg/json/JSONObject;-><init>
+  [123] Call: Lx/iq;->p
+  [127] Call: Lx/vt0;->close
+  [131] Call: Lx/vt0;->close
+  [136] Call: Ljava/lang/Throwable;->addSuppressed
+  [143] String: "Không tải được danh sách tài khoản DoLike: "
+  [145] Call: Ljava/lang/StringBuilder;-><init>
+  [148] Call: Ljava/lang/Throwable;->getMessage
+  [152] Call: Ljava/lang/StringBuilder;->append
+  [155] Call: Ljava/lang/StringBuilder;->toString
+  [159] Call: Lx/iq;->a
+
+--- METHOD: Landroid/adservices/measurement/MeasurementManager;->registerSource ---
+  [6] String: "all"
+  [8] String: "success"
+  [10] String: "POST"
+  [12] String: "application/json"
+  [14] String: "type"
+  [16] String: "DolikeApi"
+  [18] String: "Lỗi giải mã job DoLike ("
+  [20] String: "getJob payload error ("
+  [22] String: "Hết job hoặc server bận ("
+  [24] String: "Lỗi HTTP "
+  [26] String: "issueApiToken skipped for getJob: "
+  [30] String: "https://congtingudolike.servehttp.com"
+  [36] Call: Lx/iq;->j
+  [38] String: "Comment thành công (Cookie Fallback)"
+  [42] Call: Lorg/json/JSONObject;-><init>
+  [47] String: "get_jobs"
+  [49] Call: Lorg/json/JSONObject;->put
+  [52] String: "job_type"
+  [54] Call: Landroid/text/TextUtils;->isEmpty
+  [57] Call: Lorg/json/JSONObject;->put
+  [66] String: "account_id"
+  [68] Call: Lorg/json/JSONObject;->put
+  [75] String: "account_uid"
+  [77] Call: Landroid/text/TextUtils;->isEmpty
+  [86] String: "11111"
+  [88] Call: Lorg/json/JSONObject;->put
+  [91] Call: Lorg/json/JSONObject;->toString
+  [97] Call: Lx/we0;-><init>
+  [100] Call: Ljava/lang/String;->concat
+  [104] Call: Lx/we0;->x
+  [107] String: "Accept"
+  [109] Call: Lx/we0;->o
+  [112] String: "Content-Type"
+  [114] Call: Lx/we0;->o
+  [117] String: "Origin"
+  [119] Call: Lx/we0;->o
+  [122] String: "Referer"
+  [124] String: "https://congtingudolike.servehttp.com/"
+  [126] Call: Lx/we0;->o
+  [131] Call: Lx/zp1;->k
+  [135] Call: Lx/we0;->q
+  [137] Call: Landroidx/appcompat/widget/Toolbar;->setTitleMargin
+  [138] Call: Lx/iq;->k
+  [144] Call: Lx/iq;->l
+  [148] Call: Landroid/text/TextUtils;->isEmpty
+  [154] String: "x-api-token"
+  [156] Call: Lx/we0;->o
+  [163] Call: Ljava/lang/StringBuilder;-><init>
+  [166] Call: Ljava/lang/Throwable;->getMessage
+  [170] Call: Ljava/lang/StringBuilder;->append
+  [173] Call: Ljava/lang/StringBuilder;->toString
+  [177] Call: Landroid/util/Log;->w
+  [180] Call: Lx/iq;->b
+  [183] Call: Lx/we0;->h
+  [189] Call: Ljava/lang/Object;->getClass
+  [195] Call: Lx/tq0;-><init>
+  [198] Call: Lx/tq0;->f
+  [204] String: ""
+  [208] Call: Lx/ar0;->p
+  [218] Call: Lx/vt0;->a
+  [223] String: "msg"
+  [225] String: "retry_after"
+  [231] Call: Ljava/lang/StringBuilder;-><init>
+  [236] Call: Ljava/lang/StringBuilder;->append
+  [239] String: ": "
+  [240] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [241] Call: Ljava/lang/StringBuilder;->append
+  [244] Call: Ljava/lang/StringBuilder;->append
+  [247] Call: Ljava/lang/StringBuilder;->toString
+  [253] Call: Lorg/json/JSONObject;-><init>
+  [256] Call: Lorg/json/JSONObject;->optInt
+  [260] String: "error"
+  [262] Call: Lorg/json/JSONObject;->optString
+  [266] Call: Lorg/json/JSONObject;->optString
+  [270] Call: Landroid/text/TextUtils;->isEmpty
+  [311] Call: Lx/fq;-><init>
+  [314] Call: Lx/vt0;->close
+  [320] Call: Lorg/json/JSONObject;-><init>
+  [323] String: "status"
+  [325] Call: Lorg/json/JSONObject;->optString
+  [329] String: "message"
+  [331] Call: Lorg/json/JSONObject;->optString
+  [335] Call: Lorg/json/JSONObject;->optString
+  [339] Call: Lorg/json/JSONObject;->optInt
+  [343] Call: Ljava/lang/String;->equalsIgnoreCase
+  [347] String: ")"
+  [351] Call: Lorg/json/JSONObject;->optBoolean
+  [359] Call: Landroid/text/TextUtils;->isEmpty
+  [370] Call: Ljava/lang/StringBuilder;-><init>
+  [373] Call: Ljava/lang/StringBuilder;->append
+  [376] Call: Ljava/lang/StringBuilder;->append
+  [379] Call: Ljava/lang/StringBuilder;->toString
+  [400] Call: Lx/fq;-><init>
+  [405] Call: Lx/vt0;->close
+  [410] String: "data"
+  [412] Call: Lorg/json/JSONObject;->optJSONObject
+  [421] String: "Phản hồi thành công nhưng thiếu data job"
+  [438] Call: Lx/fq;-><init>
+  [441] Call: Lx/vt0;->close
+  [445] String: "encrypted_job"
+  [447] Call: Lorg/json/JSONObject;->optJSONObject
+  [449] Call: Landroid/view/KeyEvent;->isCtrlPressed
+  [452] String: "run_id"
+  [456] Call: Lx/iq;->o
+  [462] Call: Ljava/lang/Object;->getClass
+  [465] Call: Lx/sb;->a
+  [471] Call: Lorg/json/JSONObject;-><init>
+  [474] Call: Lorg/json/JSONObject;->optLong
+  [484] String: "platform"
+  [486] Call: Lorg/json/JSONObject;->optString
+  [490] Call: Landroid/text/TextUtils;->isEmpty
+  [496] Call: Lorg/json/JSONObject;->optString
+  [500] Call: Landroid/text/TextUtils;->isEmpty
+  [509] String: "Lx/nj1;"
+  [510] Call: Lx/iq;->q
+  [527] Call: Lx/fq;-><init>
+  [532] Call: Lx/vt0;->close
+  [540] String: "Job đã giải mã thiếu run_id/platform/type"
+  [542] Call: Ljava/lang/IllegalArgumentException;-><init>
+  [546] Call: Lx/iq;->y
+  [554] Call: Ljava/lang/StringBuilder;-><init>
+  [557] Call: Ljava/lang/StringBuilder;->append
+  [560] Call: Ljava/lang/StringBuilder;->append
+  [563] Call: Ljava/lang/StringBuilder;->toString
+  [567] Call: Landroid/util/Log;->e
+  [576] Call: Ljava/lang/StringBuilder;-><init>
+  [579] Call: Ljava/lang/StringBuilder;->append
+  [582] String: "): "
+  [584] Call: Ljava/lang/StringBuilder;->append
+  [587] Call: Ljava/lang/Throwable;->getMessage
+  [591] Call: Ljava/lang/StringBuilder;->append
+  [594] Call: Ljava/lang/StringBuilder;->toString
+  [613] Call: Lx/fq;-><init>
+  [618] Call: Lx/vt0;->close
+  [626] String: ""
+  [628] Call: Lorg/json/JSONObject;->has
+  [634] String: "id"
+  [636] Call: Lorg/json/JSONObject;->has
+  [645] String: "Không tìm thấy dữ liệu job hợp lệ"
+  [662] Call: Lx/fq;-><init>
+  [665] Call: Lx/vt0;->close
+  [671] Call: Lx/iq;->q
+  [688] Call: Lx/fq;-><init>
+  [693] Call: Lx/vt0;->close
+  [697] Call: Lx/vt0;->close
+  [702] Call: Ljava/lang/Throwable;->addSuppressed
+  [708] String: "getJob error: "
+  [710] Call: Ljava/lang/StringBuilder;-><init>
+  [713] Call: Ljava/lang/Throwable;->getMessage
+  [717] Call: Ljava/lang/StringBuilder;->append
+  [720] Call: Ljava/lang/StringBuilder;->toString
+  [724] Call: Landroid/util/Log;->e
+  [726] String: " coin, đóng lần cuối..."
+  [731] String: "Lỗi nhận job DoLike: "
+  [733] Call: Ljava/lang/StringBuilder;-><init>
+  [736] Call: Ljava/lang/Throwable;->getMessage
+  [740] Call: Ljava/lang/StringBuilder;->append
+  [743] Call: Ljava/lang/StringBuilder;->toString
+  [762] Call: Lx/fq;-><init>
+
+--- METHOD: Landroid/adservices/measurement/MeasurementManager;->registerTrigger ---
+  [0] String: "POST"
+  [2] String: "token"
+  [4] String: "SHA-256"
+  [6] Call: Ljava/security/MessageDigest;->getInstance
+  [12] Call: Ljava/lang/String;->getBytes
+  [16] Call: Ljava/security/MessageDigest;->digest
+  [22] Call: Ljava/lang/StringBuilder;-><init>
+  [34] Call: Ljava/lang/Integer;->toHexString
+  [38] Call: Ljava/lang/String;->length
+  [47] Call: Ljava/lang/StringBuilder;->append
+  [49] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [50] Call: Ljava/lang/StringBuilder;->append
+  [56] Call: Ljava/lang/StringBuilder;->toString
+  [62] Call: Lorg/json/JSONObject;-><init>
+  [65] String: "path"
+  [67] Call: Lorg/json/JSONObject;->put
+  [70] String: "method"
+  [72] Call: Ljava/lang/String;->toUpperCase
+  [76] Call: Lorg/json/JSONObject;->put
+  [79] String: "body_hash"
+  [81] Call: Lorg/json/JSONObject;->put
+  [86] Call: Lx/we0;-><init>
+  [89] String: "https://congtingudolike.servehttp.com/api/session.php"
+  [91] Call: Lx/we0;->x
+  [94] String: "Accept"
+  [96] String: "application/json"
+  [98] Call: Lx/we0;->o
+  [101] String: "Content-Type"
+  [103] Call: Lx/we0;->o
+  [106] String: "Origin"
+  [108] String: "https://congtingudolike.servehttp.com"
+  [110] Call: Lx/we0;->o
+  [113] String: "Referer"
+  [115] String: "https://congtingudolike.servehttp.com/"
+  [117] Call: Lx/we0;->o
+  [120] Call: Lorg/json/JSONObject;->toString
+  [126] Call: Lx/zp1;->k
+  [130] Call: Lx/we0;->q
+  [133] Call: Lx/iq;->b
+  [136] Call: Lx/we0;->h
+  [142] Call: Ljava/lang/Object;->getClass
+  [147] Call: Lx/tq0;-><init>
+  [150] Call: Lx/tq0;->f
+  [158] Call: Lx/ar0;->p
+  [165] String: ""
+  [167] Call: Lx/vt0;->a
+  [175] Call: Lorg/json/JSONObject;-><init>
+  [178] String: "data"
+  [180] Call: Lorg/json/JSONObject;->optJSONObject
+  [186] Call: Lorg/json/JSONObject;->has
+  [188] String: "Cannot find Google Play services package name."
+  [192] Call: Lorg/json/JSONObject;->getString
+  [194] String: "BumxAutoThread"
+  [196] Call: Lx/vt0;->close
+  [202] Call: Lx/vt0;->close
+  [205] String: "Session token missing from response"
+  [207] Call: Lx/sb;->p
+  [216] Call: Ljava/lang/StringBuilder;-><init>
+  [219] String: "Cannot parse session token: "
+  [221] Call: Ljava/lang/StringBuilder;->append
+  [224] Call: Ljava/lang/Throwable;->getMessage
+  [228] Call: Ljava/lang/StringBuilder;->append
+  [231] Call: Ljava/lang/StringBuilder;->toString
+  [235] Call: Ljava/io/IOException;-><init>
+  [243] Call: Ljava/lang/StringBuilder;-><init>
+  [246] String: "issueApiToken failed: HTTP "
+  [248] Call: Ljava/lang/StringBuilder;->append
+  [253] Call: Ljava/lang/StringBuilder;->append
+  [256] String: " "
+  [258] Call: Ljava/lang/StringBuilder;->append
+  [261] Call: Ljava/lang/StringBuilder;->append
+  [264] Call: Ljava/lang/StringBuilder;->toString
+  [268] Call: Ljava/io/IOException;-><init>
+  [272] Call: Lx/vt0;->close
+  [277] Call: Ljava/lang/Throwable;->addSuppressed
+  [284] Call: Ljava/lang/RuntimeException;-><init>
+
+--- METHOD: Landroid/animation/Animator;->addListener ---
+  [0] String: "vn"
+  [2] String: "application/json"
+  [4] String: "Lỗi liên kết (HTTP "
+  [8] Call: Lorg/json/JSONObject;-><init>
+  [11] String: "platform"
+  [13] Call: Lorg/json/JSONObject;->put
+  [16] String: "account_url"
+  [18] Call: Lorg/json/JSONObject;->put
+  [21] String: "instagram"
+  [23] Call: Ljava/lang/String;->equalsIgnoreCase
+  [29] String: "tiktok"
+  [31] Call: Ljava/lang/String;->equalsIgnoreCase
+  [37] String: "account_type"
+  [39] Call: Landroid/text/TextUtils;->isEmpty
+  [42] Call: Lorg/json/JSONObject;->put
+  [47] Call: Lx/we0;-><init>
+  [50] String: "https://congtingudolike.servehttp.com/api/platform-accounts.php"
+  [52] Call: Lx/we0;->x
+  [55] String: "Accept"
+  [57] Call: Lx/we0;->o
+  [60] String: "Content-Type"
+  [62] Call: Lx/we0;->o
+  [65] String: "Origin"
+  [67] String: "https://congtingudolike.servehttp.com"
+  [69] Call: Lx/we0;->o
+  [72] Call: Lorg/json/JSONObject;->toString
+  [78] Call: Lx/zp1;->k
+  [82] String: "POST"
+  [84] Call: Lx/we0;->q
+  [87] Call: Lx/iq;->b
+  [90] Call: Lx/we0;->h
+  [96] Call: Ljava/lang/Object;->getClass
+  [102] Call: Lx/tq0;-><init>
+  [105] Call: Lx/tq0;->f
+  [113] String: ""
+  [117] Call: Lx/ar0;->p
+  [127] Call: Lx/vt0;->a
+  [131] String: ")"
+  [139] Call: Ljava/lang/StringBuilder;-><init>
+  [142] String: "Lỗi liên kết"
+  [144] Call: Lx/iq;->u
+  [148] Call: Ljava/lang/StringBuilder;->append
+  [151] String: " (HTTP "
+  [152] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [153] Call: Ljava/lang/StringBuilder;->append
+  [156] Call: Ljava/lang/StringBuilder;->append
+  [159] Call: Ljava/lang/StringBuilder;->append
+  [162] Call: Ljava/lang/StringBuilder;->toString
+  [166] Call: Lx/cq;-><init>
+  [169] Call: Lx/vt0;->close
+  [175] Call: Lorg/json/JSONObject;-><init>
+  [178] String: "data"
+  [180] Call: Lorg/json/JSONObject;->optJSONObject
+  [184] Call: Lx/vt0;->a
+  [192] String: "saved"
+  [194] Call: Lorg/json/JSONObject;->optBoolean
+  [200] String: "id"
+  [202] Call: Lorg/json/JSONObject;->optLong
+  [206] String: "username"
+  [208] Call: Lorg/json/JSONObject;->optString
+  [212] String: "account_uid"
+  [214] String: "uid"
+  [216] Call: Lorg/json/JSONObject;->optString
+  [220] Call: Lorg/json/JSONObject;->optString
+  [226] String: "Liên kết thành công"
+  [230] Call: Lx/cq;-><init>
+  [233] Call: Lx/vt0;->close
+  [239] Call: Ljava/lang/StringBuilder;-><init>
+  [242] Call: Ljava/lang/StringBuilder;->append
+  [245] Call: Ljava/lang/StringBuilder;->append
+  [248] Call: Ljava/lang/StringBuilder;->toString
+  [252] Call: Lx/iq;->u
+  [258] Call: Lx/cq;-><init>
+  [261] Call: Lx/vt0;->close
+  [265] Call: Lx/vt0;->close
+  [271] Call: Ljava/lang/Throwable;->addSuppressed
+  [279] Call: Ljava/lang/Throwable;->getMessage
+  [283] Call: Lx/cq;-><init>
+
+--- METHOD: Landroid/animation/Animator;->addPauseListener ---
+  [0] String: "https://congtingudolike.servehttp.com"
+  [2] String: ""
+  [6] Call: Lx/we0;-><init>
+  [9] Call: Ljava/lang/String;->concat
+  [13] Call: Lx/we0;->x
+  [16] String: "Accept"
+  [18] String: "application/json"
+  [20] Call: Lx/we0;->o
+  [23] String: "Origin"
+  [25] Call: Lx/we0;->o
+  [28] String: "Referer"
+  [30] String: "https://congtingudolike.servehttp.com/"
+  [32] Call: Lx/we0;->o
+  [35] Call: Lx/we0;->l
+  [38] Call: Landroid/text/TextUtils;->isEmpty
+  [44] String: "X-API-Token"
+  [45] Call: Lx/d7;-><init>
+  [46] Call: Lx/we0;->o
+  [49] Call: Landroid/text/TextUtils;->isEmpty
+  [55] String: "Cookie"
+  [57] Call: Lx/we0;->o
+  [60] Call: Landroid/text/TextUtils;->isEmpty
+  [66] Call: Lx/we0;->h
+  [71] Call: Lx/iq;->b
+  [74] Call: Lx/we0;->h
+  [80] Call: Ljava/lang/Object;->getClass
+  [86] Call: Lx/tq0;-><init>
+  [89] Call: Lx/tq0;->f
+  [97] Call: Lx/ar0;->p
+  [104] Call: Lx/vt0;->a
+  [110] String: "Không tải được tài khoản DoLike"
+  [112] Call: Lx/iq;->u
+  [115] Call: Lx/iq;->t
+  [120] Call: Landroid/text/TextUtils;->isEmpty
+  [126] Call: Lx/iq;->t
+  [133] Call: Lorg/json/JSONObject;-><init>
+  [136] Call: Lx/iq;->s
+  [140] Call: Lx/vt0;->close
+  [144] Call: Lx/vt0;->close
+  [149] Call: Ljava/lang/Throwable;->addSuppressed
+  [154] Call: Ljava/lang/Throwable;->getMessage
+  [157] Call: Lx/iq;->t
+
+--- METHOD: Landroid/animation/Animator;->cancel ---
+  [0] String: "https://congtingudolike.servehttp.com"
+  [2] String: ""
+  [8] Call: Lx/we0;-><init>
+  [11] Call: Ljava/lang/String;->concat
+  [15] Call: Lx/we0;->x
+  [18] String: "Accept"
+  [20] String: "application/json"
+  [22] Call: Lx/we0;->o
+  [25] String: "Origin"
+  [27] Call: Lx/we0;->o
+  [30] String: "Referer"
+  [32] String: "https://congtingudolike.servehttp.com/"
+  [34] Call: Lx/we0;->o
+  [37] Call: Lx/we0;->l
+  [40] Call: Landroid/text/TextUtils;->isEmpty
+  [46] String: "X-API-Token"
+  [47] Call: Lx/d7;-><init>
+  [48] Call: Lx/we0;->o
+  [51] Call: Landroid/text/TextUtils;->isEmpty
+  [57] String: "Cookie"
+  [59] Call: Lx/we0;->o
+  [62] Call: Landroid/text/TextUtils;->isEmpty
+  [68] Call: Lx/we0;->h
+  [73] Call: Lx/iq;->b
+  [75] Call: Landroidx/appcompat/widget/Toolbar;->setSubtitleTextColor
+  [76] Call: Lx/we0;->h
+  [82] Call: Ljava/lang/Object;->getClass
+  [88] Call: Lx/tq0;-><init>
+  [91] Call: Lx/tq0;->f
+  [99] Call: Lx/ar0;->p
+  [106] Call: Lx/vt0;->a
+  [112] Call: Landroid/text/TextUtils;->isEmpty
+  [121] Call: Lorg/json/JSONObject;-><init>
+  [124] String: "success"
+  [126] String: "error"
+  [128] String: "status"
+  [130] Call: Lorg/json/JSONObject;->optString
+  [134] Call: Ljava/lang/String;->equalsIgnoreCase
+  [140] Call: Lorg/json/JSONObject;->has
+  [146] Call: Lorg/json/JSONObject;->optBoolean
+  [153] String: "data"
+  [155] Call: Lorg/json/JSONObject;->optJSONObject
+  [162] Call: Lx/iq;->v
+  [168] Call: Lx/vt0;->close
+  [172] Call: Lx/vt0;->close
+  [176] Call: Lx/vt0;->close
+  [181] Call: Ljava/lang/Throwable;->addSuppressed
+
+--- METHOD: Landroid/animation/Animator;->end ---
+  [6] String: "success"
+  [8] String: "POST"
+  [10] String: "application/json"
+  [12] String: "skip_already_done"
+  [14] String: "issueApiToken skipped for skipJob: "
+  [16] String: "https://congtingudolike.servehttp.com"
+  [18] Call: Lx/iq;->j
+  [22] String: "skip"
+  [24] String: "skip_unwanted"
+  [26] Call: Landroid/text/TextUtils;->isEmpty
+  [30] String: ""
+  [34] Call: Ljava/lang/String;->equalsIgnoreCase
+  [40] String: "already_done"
+  [42] Call: Ljava/lang/String;->equalsIgnoreCase
+  [49] String: "error_quantity_reached"
+  [51] Call: Ljava/lang/String;->equalsIgnoreCase
+  [57] String: "error_post_missing"
+  [59] Call: Ljava/lang/String;->equalsIgnoreCase
+  [64] String: ". State item count is "
+  [65] String: "error_completion_failed"
+  [67] Call: Ljava/lang/String;->equalsIgnoreCase
+  [73] String: "error_private_account"
+  [75] Call: Ljava/lang/String;->equalsIgnoreCase
+  [81] String: "error_other"
+  [83] Call: Ljava/lang/String;->equalsIgnoreCase
+  [89] String: "error"
+  [98] Call: Lorg/json/JSONObject;-><init>
+  [101] String: "type"
+  [103] String: "nopjobing"
+  [105] Call: Lorg/json/JSONObject;->put
+  [108] String: "run_id"
+  [112] Call: Lorg/json/JSONObject;->put
+  [115] String: "report_type"
+  [117] Call: Lorg/json/JSONObject;->put
+  [120] String: "report_reason"
+  [122] Call: Lorg/json/JSONObject;->put
+  [125] String: "report_details"
+  [127] Call: Lorg/json/JSONObject;->put
+  [130] Call: Lorg/json/JSONObject;->toString
+  [136] Call: Lx/we0;-><init>
+  [139] Call: Ljava/lang/String;->concat
+  [143] Call: Lx/we0;->x
+  [146] String: "Accept"
+  [148] Call: Lx/we0;->o
+  [151] String: "Content-Type"
+  [153] Call: Lx/we0;->o
+  [156] String: "Origin"
+  [158] Call: Lx/we0;->o
+  [161] String: "Referer"
+  [163] String: "https://congtingudolike.servehttp.com/"
+  [165] Call: Lx/we0;->o
+  [170] Call: Lx/zp1;->k
+  [174] Call: Lx/we0;->q
+  [177] Call: Lx/iq;->k
+  [183] Call: Lx/iq;->l
+  [187] Call: Landroid/text/TextUtils;->isEmpty
+  [193] String: "x-api-token"
+  [195] Call: Lx/we0;->o
+  [200] String: "DolikeApi"
+  [204] Call: Ljava/lang/StringBuilder;-><init>
+  [206] Call: Landroidx/appcompat/widget/Toolbar;->setSubtitleTextColor
+  [207] Call: Ljava/lang/Throwable;->getMessage
+  [211] Call: Ljava/lang/StringBuilder;->append
+  [214] Call: Ljava/lang/StringBuilder;->toString
+  [218] Call: Landroid/util/Log;->w
+  [221] Call: Lx/iq;->b
+  [224] Call: Lx/we0;->h
+  [230] Call: Ljava/lang/Object;->getClass
+  [236] Call: Lx/tq0;-><init>
+  [239] Call: Lx/tq0;->f
+  [247] Call: Lx/ar0;->p
+  [256] Call: Lx/vt0;->a
+  [266] Call: Ljava/lang/StringBuilder;-><init>
+  [269] String: "Lỗi bỏ qua job"
+  [271] Call: Lx/iq;->u
+  [275] Call: Ljava/lang/StringBuilder;->append
+  [278] String: " (HTTP "
+  [279] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onBind
+  [280] Call: Ljava/lang/StringBuilder;->append
+  [285] Call: Ljava/lang/StringBuilder;->append
+  [288] String: ")"
+  [290] Call: Ljava/lang/StringBuilder;->append
+  [293] Call: Ljava/lang/StringBuilder;->toString
+  [302] Call: Lx/bq;-><init>
+  [305] Call: Lx/vt0;->close
+  [311] Call: Lorg/json/JSONObject;-><init>
+  [314] String: "status"
+  [316] Call: Lorg/json/JSONObject;->optString
+  [320] String: "msg"
+  [322] String: "message"
+  [324] Call: Lorg/json/JSONObject;->optString
+  [328] Call: Lorg/json/JSONObject;->optString
+  [332] Call: Ljava/lang/String;->equalsIgnoreCase
+  [338] Call: Lorg/json/JSONObject;->optBoolean
+  [355] Call: Lx/bq;-><init>
+  [358] Call: Lx/vt0;->close
+  [362] Call: Lx/vt0;->close
+  [367] Call: Ljava/lang/Throwable;->addSuppressed
+  [376] String: "Lỗi bỏ qua job: "
+  [378] Call: Ljava/lang/StringBuilder;-><init>
+  [381] Call: Ljava/lang/Throwable;->getMessage
+  [385] Call: Ljava/lang/StringBuilder;->append
+  [388] Call: Ljava/lang/StringBuilder;->toString
+  [397] Call: Lx/bq;-><init>
+================================================================================
+CLASS: Lx/n2;
+================================================================================
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init> ---
+  [1] Call: Landroid/content/pm/PackageManager;->getPackageInfo
+  [3] Call: Landroid/graphics/Matrix;->setRectToRect
+  [6] Call: Ljava/lang/Object;-><init>
+
+--- METHOD: Landroid/accessibilityservice/AccessibilityService$SoftKeyboardController;->getShowMode ---
+  [1] Call: Lcom/hoanguyen/gomax/ui/main/MainActivity;->onBackPressed
+  [13] Call: Landroid/animation/Animator;->isRunning
+  [22] Call: Lx/u10;->m
+  [28] String: "Lỗi phản hồi từ máy chủ."
+  [30] Call: Lx/v51;->a
+  [34] String: ""
+  [37] Call: Landroid/graphics/drawable/ColorDrawable;->setColor
+  [48] Call: Landroid/view/View;->setEnabled
+  [53] String: "Xác nhận Token"
+  [55] Call: Landroid/widget/TextView;->setText
+  [57] Call: Landroidx/appcompat/widget/Toolbar;->setSubtitleTextColor
+  [58] Call: Lx/u10;->m
+  [76] Call: Landroid/content/SharedPreferences;->edit
+  [80] String: "dolike_display_name"
+  [84] Call: Ljava/lang/String;->trim
+  [90] Call: Landroid/content/SharedPreferences$Editor;->putString
+  [94] Call: Landroid/content/SharedPreferences$Editor;->apply
+  [103] Call: Landroid/content/SharedPreferences;->edit
+  [107] String: "dolike_email"
+  [111] Call: Ljava/lang/String;->trim
+  [117] Call: Landroid/content/SharedPreferences$Editor;->putString
+  [121] Call: Landroid/content/SharedPreferences$Editor;->apply
+  [130] Call: Landroid/content/SharedPreferences;->edit
+  [134] String: "dolike_auth_token"
+  [136] Call: Lx/hw;->u
+  [140] Call: Landroid/content/SharedPreferences$Editor;->putString
+  [144] String: "dolike_cookies"
+  [146] Call: Landroid/content/SharedPreferences$Editor;->remove
+  [148] Call: Landroid/os/Bundle;-><init>
+  [150] String: "dolike_password"
+  [151] Call: Lcom/hoanguyen/gomax/platforms/tiktok/floating/TikTokFloatingService;->onStartCommand
+  [152] Call: Landroid/content/SharedPreferences$Editor;->remove
+  [154] Call: Landroid/os/Bundle;-><init>
+  [156] Call: Landroid/content/SharedPreferences$Editor;->apply
+  [165] Call: Landroid/content/SharedPreferences;->edit
+  [169] String: "dolike_telegram_uid"
+  [170] Call: Landroid/view/MenuItem;->getOrder
+  [173] Call: Ljava/lang/String;->trim
+  [179] Call: Landroid/content/SharedPreferences$Editor;->putString
+  [183] Call: Landroid/content/SharedPreferences$Editor;->apply
+  [192] Call: Ljava/math/BigDecimal;->valueOf
+  [198] Call: Ljava/math/BigDecimal;->setScale
+  [202] Call: Ljava/math/BigDecimal;->signum
+  [212] Call: Ljava/math/BigDecimal;-><init>
+  [216] Call: Ljava/math/BigDecimal;->stripTrailingZeros
+  [220] Call: Ljava/math/BigDecimal;->toPlainString
+  [226] Call: Lx/hw;->x
+  [233] Call: Landroid/widget/TextView;->setText
+  [236] Call: Lx/h50;->V
+  [239] Call: Lx/u10;->F
+  [243] String: "Kết nối DoLike thành công!"
+  [245] Call: Lx/v51;->a
+  [251] Call: Landroid/text/TextUtils;->isEmpty
+  [258] String: "Authorization Token DoLike không hợp lệ!"
+  [260] Call: Lx/u10;->F
+  [264] Call: Lx/v51;->a
+  [269] Call: Landroid/animation/Animator;->isRunning
+  [276] Call: Lx/u10;->m
+  [284] Call: Landroid/app/Notification$Builder;->setProgress
+  [289] Call: Landroid/text/TextUtils;->isEmpty
+  [296] Call: Landroid/content/Intent;->resolveTypeIfNeeded
+  [299] String: "TÀI KHOẢN XSMM ("
+  [301] Call: Ljava/lang/StringBuilder;-><init>
+  [306] Call: Ljava/lang/String;->trim
+  [310] Call: Ljava/lang/StringBuilder;->append
+  [313] String: ")"
+  [315] Call: Ljava/lang/StringBuilder;->append
+  [318] Call: Ljava/lang/StringBuilder;->toString
+  [322] Call: Landroid/widget/TextView;->setText
+  [331] String: "���� "
+  [333] Call: Ljava/lang/StringBuilder;-><init>
+  [338] Call: Ljava/lang/Long;->valueOf
+  [342] Call: Lx/h50;->Q
+  [346] Call: Ljava/lang/StringBuilder;->append
+  [349] String: " Xu"
+  [351] Call: Ljava/lang/StringBuilder;->append
+  [354] Call: Ljava/lang/StringBuilder;->toString
+  [358] Call: Landroid/widget/TextView;->setText
+  [363] Call: Landroid/animation/Animator;->isRunning
+  [370] Call: Lx/u10;->m
+  [381] String: "bumx_username"
+  [383] String: ""
+  [385] Call: Landroid/content/SharedPreferences;->getString
+  [393] Call: Landroid/text/TextUtils;->isEmpty
+  [403] String: "TÀI KHOẢN BUMX ("
+  [405] Call: Ljava/lang/StringBuilder;-><init>
+  [408] Call: Ljava/lang/String;->trim
+  [412] Call: Ljava/lang/StringBuilder;->append
+  [415] String: ")"
+  [417] Call: Ljava/lang/StringBuilder;->append
+  [420] Call: Ljava/lang/StringBuilder;->toString
+  [424] Call: Landroid/widget/TextView;->setText
+  [443] String: "���� "
+  [445] Call: Ljava/lang/StringBuilder;-><init>
+  [450] Call: Ljava/lang/Long;->valueOf
+  [454] Call: Lx/h50;->Q
+  [458] Call: Ljava/lang/StringBuilder;->append
+  [461] String: " Coin"
+  [463] Call: Ljava/lang/StringBuilder;->append
+  [466] Call: Ljava/lang/StringBuilder;->toString
+  [470] Call: Landroid/widget/TextView;->setText
+  [484] Call: Landroid/widget/TextView;->setTextColor
+  [489] Call: Landroid/animation/Animator;->isRunning
+  [491] Call: 
+  [506] String: "Network Error: "
+  [508] Call: Ljava/lang/StringBuilder;-><init>
+  [511] Call: Ljava/lang/Throwable;->getMessage
+  [515] Call: Ljava/lang/StringBuilder;->append
+  [518] Call: Ljava/lang/StringBuilder;->toString
+  [522] Call: Landroid/widget/TextView;->setText
+  [540] Call: Landroid/os/Handler;->removeCallbacks
+  [545] Call: Landroid/os/Handler;->post
+  [550] Call: Landroid/animation/Animator;->isRunning
+  [561] Call: Landroid/view/View;->setEnabled
+  [564] Call: Lx/u10;->m
+  [570] Call: Lx/u10;->F
+  [574] Call: Landroid/widget/Toast;->makeText
+  [578] Call: Landroid/widget/Toast;->show
+  [583] Call: Landroid/animation/Animator;->isRunning
+  [592] Call: Ljava/lang/String;->trim
+  [596] Call: Lx/z50;->d
+  [597] Call: Landroid/app/Dialog;->setOnKeyListener
+  [601] Call: Landroid/animation/Animator;->isRunning
+  [608] Call: Lcom/google/firebase/messaging/FirebaseMessaging;->a
+  [612] Call: Lx/f21;->b
+  [617] Call: Lx/f21;->a
+  [622] Call: Landroid/animation/Animator;->isRunning
+  [633] Call: Lx/bz;->c
+  [638] Call: Landroid/animation/Animator;->isRunning
+  [647] Call: Ljava/util/List;->size
+  [653] Call: Ljava/util/List;->get
+  [663] Call: Ljava/lang/String;->equals
+  [669] Call: Lx/kr0;->d
+  [670] Call: Landroid/animation/ValueAnimator;->getInterpolator
+  [678] Call: Landroid/animation/Animator;->isRunning
+  [687] Call: Ljava/util/List;->size
+  [693] Call: Ljava/util/List;->get
+  [701] Call: Lx/cy;->i
+  [705] Call: Ljava/lang/String;->equals
+  [711] Call: Lx/kr0;->d
+  [712] Call: Landroid/animation/ValueAnimator;->getInterpolator
+  [720] Call: Landroid/animation/Animator;->isRunning
+  [735] Call: Lx/vx;->Y
+  [736] Call: Landroid/app/Dialog;->setOnKeyListener
+  [740] Call: Landroid/animation/Animator;->isRunning
+  [747] Call: Lx/u10;->F
+  [753] String: "❌ Lỗi: "
+  [755] Call: Ljava/lang/StringBuilder;-><init>
+  [758] Call: Ljava/lang/Throwable;->getMessage
+  [762] Call: Ljava/lang/StringBuilder;->append
+  [765] Call: Ljava/lang/StringBuilder;->toString
+  [769] Call: Lx/v51;->a
+  [774] Call: Landroid/animation/Animator;->isRunning
+  [781] Call: Lx/u10;->F
+  [787] String: "❌ Liên kết thất bại: "
+  [789] Call: Ljava/lang/StringBuilder;-><init>
+  [792] Call: Ljava/lang/StringBuilder;->append
+  [795] Call: Ljava/lang/StringBuilder;->toString
+  [799] Call: Lx/v51;->a
+  [804] Call: Landroid/animation/Animator;->isRunning
+  [811] Call: Lx/vx;->W
+  [814] Call: Lx/u10;->F
+  [820] String: "✓ "
+  [822] Call: Ljava/lang/StringBuilder;-><init>
+  [827] Call: Ljava/lang/StringBuilder;->append
+  [830] Call: Ljava/lang/StringBuilder;->toString
+  [834] Call: Lx/v51;->a
+  [839] Call: Landroid/animation/Animator;->isRunning
+  [845] Call: 
+  [847] Call: Landroidx/appcompat/widget/AppCompatToggleButton;->setBackgroundDrawable
+  [850] Call: Lx/v51;->a
+  [855] Call: Landroid/animation/Animator;->isRunning
+  [864] String: "Lỗi tải ảnh: "
+  [866] Call: Ljava/lang/StringBuilder;-><init>
+  [869] Call: Ljava/lang/Throwable;->getMessage
+  [873] Call: Ljava/lang/StringBuilder;->append
+  [876] Call: Ljava/lang/StringBuilder;->toString
+  [880] Call: Lx/v51;->a
+  [885] Call: Landroid/animation/Animator;->isRunning
+  [892] Call: Lx/vx;->W
+  [895] String: "❌ Thao tác thất bại. Kiểm tra phiên hoặc quyền Facebook của tài khoản."
+  [897] Call: Lx/v51;->a
+  [901] String: "/api/users.php"
+  [902] Call: 
+  [904] Call: Lx/oo1;->S0
+  [917] Call: Landroid/content/Context;->getApplicationContext
+  [921] Call: Lx/hw;-><init>
+  [924] Call: Lx/hw;->k
+  [930] Call: Lx/iq;-><init>
+  [933] String: ""
+  [935] Call: Landroid/text/TextUtils;->isEmpty
+  [941] Call: Lx/iq;->n
+  [945] Call: Landroid/text/TextUtils;->isEmpty
+  [951] Call: Lx/iq;->t
+  [957] Call: Lx/iq;->w
+  [959] Call: Landroid/view/KeyEvent;->isCtrlPressed
+  [962] String: "/api/account-auth.php"
+  [964] Call: Lx/iq;->w
+  [971] Call: Landroid/text/TextUtils;->isEmpty
+  [977] Call: Lx/iq;->n
+  [981] Call: Landroid/text/TextUtils;->isEmpty
+  [990] Call: Lx/iq;->x
+  [995] String: "/api/wallet.php"
+  [997] Call: Lx/iq;->x
+  [1022] Call: Lx/ir;-><init>
+  [1025] Call: Landroid/app/Activity;->runOnUiThread
+  [1027] Call: Landroid/accessibilityservice/GestureDescription$Builder;->build
+  [1030] Call: Landroid/animation/Animator;->isRunning
+  [1039] Call: Lx/u10;->m
+  [1050] Call: Landroid/view/View;->setVisibility
+  [1061] Call: Ljava/util/ArrayList;->clear
+  [1064] Call: Ljava/util/ArrayList;->addAll
+  [1067] Call: Ljava/util/ArrayList;->size
+  [1073] Call: Ljava/util/ArrayList;->get
+  [1083] Call: Lcom/hoanguyen/gomax/model/Account;-><init>
+  [1088] Call: Ljava/lang/String;->valueOf
+  [1096] Call: Ljava/lang/String;->valueOf
+  [1108] Call: Landroid/text/TextUtils;->isEmpty
+  [1123] Call: Landroid/text/TextUtils;->isEmpty
+  [1132] String: "11111"
+  [1136] String: "dolike_tiktok"
+  [1140] String: "live"
+  [1141] Call: Lx/fa1;->m
+  [1150] Call: Lcom/hoanguyen/gomax/manager/a;->a
+  [1156] Call: Landroid/animation/Animator;->isRunning
+  [1165] Call: Lx/u10;->m
+  [1176] Call: Landroid/view/View;->setVisibility
+  [1179] Call: Ljava/util/ArrayList;->clear
+  [1182] Call: Ljava/util/ArrayList;->addAll
+  [1189] Call: Lx/kr0;->c
+  [1190] Call: Landroid/accessibilityservice/GestureDescription$StrokeDescription;-><init>
+  [1196] String: "DANH SÁCH TIKTOK APPS"
+  [1198] Call: Landroid/widget/TextView;->setText
+  [1205] Call: Ljava/util/ArrayList;->isEmpty
+  [1212] Call: Landroid/view/View;->setVisibility
+  [1217] Call: Landroid/animation/Animator;->isRunning
+  [1228] Call: Lx/lw;-><init>
+  [1233] Call: Lcom/hoanguyen/gomax/model/Account;->getUsername
+  [1234] Call: Landroid/accessibilityservice/GestureDescription$StrokeDescription;-><init>
+  [1237] Call: Lx/lw;->e
+  [1241] Call: Lx/u10;->g
+  [1247] Call: Lx/u10;->m
+  [1257] Call: Lx/m2;-><init>
+  [1260] Call: Landroid/app/Activity;->runOnUiThread
+  [1265] Call: Landroid/animation/Animator;->isRunning
+  [1276] Call: Ljava/util/concurrent/Callable;->call
+  [1280] Call: Lx/z;->j
+  [1285] Call: Lx/z;->k
+  [1290] Call: Landroid/animation/Animator;->isRunning
+  [1292] Call: 
+  [1299] Call: Landroid/os/Process;->setThreadPriority
+  [1306] Call: Landroid/os/StrictMode;->setThreadPolicy
+  [1309] Call: Ljava/lang/Runnable;->run
+  [1314] Call: Landroid/app/LocaleManager;->setApplicationLocales
+  [1329] Call: Ljava/util/Set;->add
+  [1338] Call: Lx/sp0;->get
+  [1342] Call: Ljava/util/Set;->add
+  [1350] Call: Landroid/app/LocaleManager;->setApplicationLocales
+  [1373] Call: Ljava/lang/Object;->getClass
+  [1381] String: "provide() can be called only once."
+  [1383] Call: Lx/sb;->l
+  [1388] Call: Landroid/animation/Animator;->isRunning
+  [1397] Call: Lx/u10;->m
+  [1408] Call: Landroid/view/View;->setVisibility
+  [1411] Call: Ljava/util/ArrayList;->clear
+  [1414] Call: Ljava/util/ArrayList;->addAll
+  [1420] String: " no such constraintSetEnd "
+  [1423] Call: Ljava/lang/StringBuilder;-><init>
+  [1426] Call: Ljava/util/ArrayList;->size
+  [1430] Call: Ljava/lang/StringBuilder;->append
+  [1433] String: " ứng dụng"
+  [1435] Call: Ljava/lang/StringBuilder;->append
+  [1438] Call: Ljava/lang/StringBuilder;->toString
+  [1442] Call: Landroid/widget/TextView;->setText
+  [1445] Call: Lx/ee;->M
+  [1455] Call: Landroid/view/View;->setVisibility
+  [1462] Call: Landroid/view/View;->setVisibility
+  [1466] Call: Ljava/util/ArrayList;->isEmpty
+  [1476] Call: Landroid/view/View;->setVisibility
+  [1483] Call: Landroid/view/View;->setVisibility
+  [1489] Call: Landroid/view/View;->setVisibility
+  [1496] Call: Landroid/view/View;->setVisibility
+  [1498] Call: Landroidx/appcompat/widget/LinearLayoutCompat;->getDividerDrawable
+  [1503] Call: Lx/ce;-><init>
+  [1506] Call: Landroidx/recyclerview/widget/RecyclerView;->setAdapter
+  [1511] Call: Landroid/animation/Animator;->isRunning
+  [1520] Call: Landroid/widget/Toast;->makeText
+  [1524] Call: Landroid/widget/Toast;->show
+  [1529] Call: Landroid/app/LocaleManager;->setApplicationLocales
+  [1537] Call: Ljava/lang/Runnable;->run
+  [1540] Call: Lx/e8;->a
+  [1546] Call: Lx/e8;->a
+  [1551] Call: Landroid/animation/Animator;->isRunning
+  [1560] Call: Lcom/hoanguyen/gomax/ui/activation/ActivationActivity;->u
+  [1563] Call: Lcom/hoanguyen/gomax/ui/activation/ActivationActivity;->w
+  [1602] String: ""
+  [1612] Call: Landroid/accessibilityservice/AccessibilityService$GestureResultCallback;-><init>

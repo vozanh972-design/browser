@@ -290,6 +290,58 @@ export async function verifyDolikeToken(token: string): Promise<{
   };
 }
 
+/**
+ * Đăng xuất DoLike chuẩn GoMax:
+ * Xóa sạch dolike_auth_token, dolike_email, dolike_display_name, dolike_balance,
+ * và dọn sạch các key cũ (dolike_cookies, dolike_password).
+ */
+export function logoutDolike(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem("dolike_auth_token");
+    localStorage.removeItem("dolike_bearer_token");
+    localStorage.removeItem("dolike_email");
+    localStorage.removeItem("dolike_display_name");
+    localStorage.removeItem("dolike_balance");
+    localStorage.removeItem("dolike_user_id");
+    localStorage.removeItem("dolike_telegram_uid");
+    localStorage.removeItem("dolike_cookies");
+    localStorage.removeItem("dolike_session_cookie");
+    localStorage.removeItem("dolike_password");
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Lấy thông tin tài khoản DoLike đã lưu trong localStorage chuẩn GoMax
+ */
+export function getStoredDolikeAuth(): {
+  token: string | null;
+  email: string | null;
+  displayName: string | null;
+  balance: string | null;
+  userId: string | null;
+} {
+  if (typeof window === "undefined") {
+    return { token: null, email: null, displayName: null, balance: null, userId: null };
+  }
+  try {
+    const token =
+      localStorage.getItem("dolike_auth_token") ||
+      localStorage.getItem("dolike_bearer_token");
+    const email = localStorage.getItem("dolike_email");
+    const displayName =
+      localStorage.getItem("dolike_display_name") ||
+      (email ? email.split("@")[0] : null);
+    const balance = localStorage.getItem("dolike_balance");
+    const userId = localStorage.getItem("dolike_user_id");
+    return { token, email, displayName, balance, userId };
+  } catch {
+    return { token: null, email: null, displayName: null, balance: null, userId: null };
+  }
+}
+
 
 /**
  * Sinh x-api-token chuẩn GoMax Lx/iq;->l
