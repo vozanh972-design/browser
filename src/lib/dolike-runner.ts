@@ -352,14 +352,18 @@ class DolikeRunnerManager {
         if (jobType.includes("like")) {
           let mediaId = postId;
           if (!mediaId && link) {
-            mediaId = resolveMediaId(link) || "";
+            mediaId = resolveMediaId(link) || link;
             if (!mediaId) {
               const sc = extractShortcode(link);
-              if (sc) mediaId = shortcodeToMediaId(sc) || "";
+              if (sc) mediaId = shortcodeToMediaId(sc) || link;
             }
           }
           if (mediaId) {
-            actRes = await doLike({ mediaId, cookie: igCookie });
+            actRes = await doLike({
+              mediaIdOrUrl: mediaId,
+              linkJob: link,
+              cookie: igCookie,
+            });
           } else {
             actRes = {
               isSuccess: false,
@@ -371,10 +375,14 @@ class DolikeRunnerManager {
         } else if (jobType.includes("follow") || jobType.includes("sub")) {
           let targetUserId = postId;
           if (!targetUserId && link) {
-            targetUserId = (await resolveTargetUserId(link, igCookie)) || "";
+            targetUserId = (await resolveTargetUserId(link)) || "";
           }
           if (targetUserId) {
-            actRes = await doFollow({ targetUserId, cookie: igCookie });
+            actRes = await doFollow({
+              targetNumericId: targetUserId,
+              targetUrl: link,
+              cookie: igCookie,
+            });
           } else {
             actRes = {
               isSuccess: false,
@@ -386,16 +394,17 @@ class DolikeRunnerManager {
         } else if (jobType.includes("comment")) {
           let mediaId = postId;
           if (!mediaId && link) {
-            mediaId = resolveMediaId(link) || "";
+            mediaId = resolveMediaId(link) || link;
             if (!mediaId) {
               const sc = extractShortcode(link);
-              if (sc) mediaId = shortcodeToMediaId(sc) || "";
+              if (sc) mediaId = shortcodeToMediaId(sc) || link;
             }
           }
           if (mediaId) {
             actRes = await doComment({
-              mediaId,
-              commentText,
+              mediaIdOrUrl: mediaId,
+              text: commentText,
+              linkJob: link,
               cookie: igCookie,
             });
           } else {
