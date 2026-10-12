@@ -22,6 +22,7 @@ interface DolikeLoginDialogProps {
   onClose: () => void;
   onLoginSuccess: (user: {
     email: string;
+    displayName?: string;
     balance: string;
     bearerToken?: string;
   }) => void;
@@ -70,19 +71,18 @@ export function DolikeLoginDialog({
       const result = await verifyDolikeToken(cleanToken);
 
       if (result.success) {
-        const userEmail = result.email || "dolike_user";
+        const userEmail = result.email || "DoLike User";
+        const userDisplay = result.displayName || userEmail;
         const balance = result.balance || "0 đ";
 
         try {
           localStorage.setItem("dolike_auth_token", cleanToken);
           localStorage.setItem("dolike_bearer_token", cleanToken);
           localStorage.setItem("dolike_email", userEmail);
+          localStorage.setItem("dolike_display_name", userDisplay);
           localStorage.setItem("dolike_balance", balance);
           if (result.userId) {
             localStorage.setItem("dolike_user_id", String(result.userId));
-          }
-          if (result.displayName) {
-            localStorage.setItem("dolike_display_name", result.displayName);
           }
         } catch {
           // ignore
@@ -93,6 +93,7 @@ export function DolikeLoginDialog({
 
         onLoginSuccess({
           email: userEmail,
+          displayName: userDisplay,
           balance,
           bearerToken: cleanToken,
         });

@@ -152,6 +152,8 @@ export function parseDolikeJwt(token: string): {
   isValid: boolean;
   userId?: string | number;
   email?: string;
+  username?: string;
+  displayName?: string;
   exp?: number;
   iss?: string;
 } {
@@ -159,30 +161,80 @@ export function parseDolikeJwt(token: string): {
     const parts = token.trim().replace(/^Bearer\s+/i, "").split(".");
     if (parts.length < 2) return { isValid: false };
     let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const pad = b64.length % 4;
-    if (pad === 2) b64 += "==";
-    else if (pad === 3) b64 += "=";
+    while (b64.length % 4) {
+      b64 += "=";
+    }
 
-    const jsonStr = decodeURIComponent(
-      atob(b64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(""),
-    );
-    const payload = JSON.parse(jsonStr);
+    let payload: Record<string, unknown> | null = null;
+    try {
+      const binary = atob(b64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      payload = JSON.parse(new TextDecoder().decode(bytes));
+    } catch {
+      try {
+        payload = JSON.parse(atob(b64));
+      } catch {
+        const jsonStr = decodeURIComponent(
+          atob(b64)
+            .split("")
+            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join(""),
+        );
+        payload = JSON.parse(jsonStr);
+      }
+    }
+
+    if (!payload) return { isValid: false };
 
     const isDolike =
       payload.iss === "mgauto" ||
       payload.iss === "dolike" ||
+      payload.iss === "gomax" ||
       !!payload.user_id ||
-      !!payload.email;
+      !!payload.userId ||
+      !!payload.id ||
+      !!payload.email ||
+      !!payload.sub;
+
+    const email =
+      (payload.email as string) ||
+      (payload.user_email as string) ||
+      (payload.mail as string) ||
+      (typeof payload.sub === "string" && payload.sub.includes("@")
+        ? payload.sub
+        : undefined);
+
+    const username =
+      (payload.username as string) ||
+      (payload.user_name as string) ||
+      (payload.display_name as string) ||
+      (payload.name as string) ||
+      (typeof payload.sub === "string" && !payload.sub.includes("@")
+        ? payload.sub
+        : undefined);
+
+    const userId =
+      (payload.user_id as string | number) ||
+      (payload.id as string | number) ||
+      (payload.uid as string | number) ||
+      (payload.userId as string | number);
+
+    const displayName =
+      username ||
+      (email ? email.split("@")[0] : undefined) ||
+      (userId ? `user_${userId}` : undefined);
 
     return {
       isValid: isDolike,
-      userId: payload.user_id || payload.id || payload.uid,
-      email: payload.email,
-      exp: payload.exp,
-      iss: payload.iss,
+      userId,
+      email,
+      username,
+      displayName,
+      exp: payload.exp as number | undefined,
+      iss: payload.iss as string | undefined,
     };
   } catch {
     return { isValid: false };
@@ -212,8 +264,9 @@ export async function verifyDolikeToken(token: string): Promise<{
   // 1. Phân tích token JWT DoLike chuẩn
   const jwtInfo = parseDolikeJwt(cleanToken);
 
-  let userEmail = jwtInfo.email || "dolike_user";
-  let userDisplay = jwtInfo.email ? jwtInfo.email.split("@")[0] : "DoLike User";
+  let userEmail = jwtInfo.email || "";
+  let userDisplay = jwtInfo.displayName || (jwtInfo.email ? jwtInfo.email.split("@")[0] : "");
+  let userId = jwtInfo.userId;
   let balance = "0 đ";
   let isServerVerified = false;
 
@@ -237,13 +290,18 @@ export async function verifyDolikeToken(token: string): Promise<{
     try {
       const parsedWallet = JSON.parse(rawWallet);
       if (parsedWallet && !parsedWallet.error && parsedWallet.status !== "error") {
+        const wData = parsedWallet?.data || parsedWallet;
         const balanceNum =
-          parsedWallet?.data?.balance ??
-          parsedWallet?.data?.coins ??
+          wData?.balance ??
+          wData?.coins ??
           parsedWallet?.balance ??
           parsedWallet?.coins ??
           0;
         balance = `${Number(balanceNum).toLocaleString("vi-VN")} đ`;
+        if (wData.email && !userEmail) userEmail = String(wData.email);
+        if (wData.username && !userDisplay) userDisplay = String(wData.username);
+        if (wData.display_name && !userDisplay) userDisplay = String(wData.display_name);
+        if (wData.user_id && !userId) userId = wData.user_id;
         isServerVerified = true;
       }
     } catch {
@@ -264,6 +322,7 @@ export async function verifyDolikeToken(token: string): Promise<{
         if (uData.username || uData.name || uData.display_name) {
           userDisplay = String(uData.username || uData.name || uData.display_name);
         }
+        if (uData.id || uData.user_id) userId = uData.id || uData.user_id;
         isServerVerified = true;
       }
     } catch {
@@ -275,11 +334,17 @@ export async function verifyDolikeToken(token: string): Promise<{
 
   // 3. Nếu server xác nhận HOẶC token là JWT DoLike hợp lệ -> Chấp thuận kết nối thành công!
   if (isServerVerified || jwtInfo.isValid) {
+    if (!userDisplay) {
+      userDisplay = userEmail ? userEmail.split("@")[0] : (userId ? `ID: ${userId}` : "DoLike User");
+    }
+    if (!userEmail) {
+      userEmail = userDisplay || (userId ? `user_${userId}` : "DoLike User");
+    }
     return {
       success: true,
       email: userEmail,
       displayName: userDisplay,
-      userId: jwtInfo.userId,
+      userId,
       balance,
     };
   }
