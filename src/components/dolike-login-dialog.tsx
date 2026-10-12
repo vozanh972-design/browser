@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { DOLIKE_BASE_URL, verifyDolikeToken } from "@/lib/dolike-api";
 import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 
@@ -40,10 +41,14 @@ export function DolikeLoginDialog({
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  const handleOpenWebLogin = () => {
+  const handleOpenWebLogin = async () => {
     // Mở trang chính chủ DoLike theo chuẩn GoMax DolikeWebLoginActivity
-    if (typeof window !== "undefined") {
-      window.open(DOLIKE_BASE_URL, "_blank");
+    try {
+      await openUrl(DOLIKE_BASE_URL);
+    } catch {
+      if (typeof window !== "undefined") {
+        window.open(DOLIKE_BASE_URL, "_blank");
+      }
     }
   };
 
@@ -73,6 +78,9 @@ export function DolikeLoginDialog({
           localStorage.setItem("dolike_bearer_token", cleanToken);
           localStorage.setItem("dolike_email", userEmail);
           localStorage.setItem("dolike_balance", balance);
+          if (result.userId) {
+            localStorage.setItem("dolike_user_id", String(result.userId));
+          }
           if (result.displayName) {
             localStorage.setItem("dolike_display_name", result.displayName);
           }
