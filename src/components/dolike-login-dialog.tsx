@@ -83,17 +83,9 @@ export function DolikeLoginDialog({
 
         if (!verifyRes.success && verifyRes.error) {
           const err = verifyRes.error;
-          if (
-            err.includes("thiết bị") ||
-            err.includes("Telegram") ||
-            err.includes("gắn với thiết bị")
-          ) {
-            setErrorMsg(
-              "Phiên này chưa được gắn với thiết bị hoặc đã hết hạn trên DoLike. Vui lòng mở Telegram DoLike để lấy Authorization Token mới.",
-            );
-            setLoading(false);
-            return;
-          }
+          setErrorMsg(err);
+          setLoading(false);
+          return;
         }
 
         let balance = "0 đ";

@@ -1006,11 +1006,22 @@ export default function HomePage() {
 
     setDolikeLinkingIds((prev) => [...prev, targetAccount.id]);
     try {
+      const dlCookie =
+        dolikeAccount.sessionCookie ||
+        (typeof window !== "undefined"
+          ? localStorage.getItem("dolike_session_cookie") || undefined
+          : undefined);
+      const dlBearer =
+        dolikeAccount.bearerToken ||
+        (typeof window !== "undefined"
+          ? localStorage.getItem("dolike_bearer_token") || undefined
+          : undefined);
+
       const res = await linkDolikeAccountFull({
         accountUrl: cleanUsername,
         platform: "instagram",
-        cookie: dolikeAccount.sessionCookie,
-        bearerToken: dolikeAccount.bearerToken,
+        cookie: dlCookie,
+        bearerToken: dlBearer,
       });
 
       if (res.success) {
@@ -1104,6 +1115,17 @@ export default function HomePage() {
     let successCount = 0;
     const newLinked: string[] = [];
 
+    const dlCookie =
+      dolikeAccount.sessionCookie ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("dolike_session_cookie") || undefined
+        : undefined);
+    const dlBearer =
+      dolikeAccount.bearerToken ||
+      (typeof window !== "undefined"
+        ? localStorage.getItem("dolike_bearer_token") || undefined
+        : undefined);
+
     for (const acc of selectedAccounts) {
       const cleanUser = (acc.name || acc.uid || "")
         .replace(/^@/, "")
@@ -1113,8 +1135,8 @@ export default function HomePage() {
         const res = await linkDolikeAccountFull({
           accountUrl: cleanUser,
           platform: "instagram",
-          cookie: dolikeAccount.sessionCookie,
-          bearerToken: dolikeAccount.bearerToken,
+          cookie: dlCookie,
+          bearerToken: dlBearer,
         });
         if (res.success) {
           successCount++;
