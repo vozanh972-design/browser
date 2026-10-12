@@ -702,12 +702,16 @@ export default function HomePage() {
     email: string;
     balance: string;
     sessionCookie?: string;
+    bearerToken?: string;
   }) => {
     try {
       localStorage.setItem("dolike_email", user.email);
       localStorage.setItem("dolike_balance", user.balance);
       if (user.sessionCookie) {
         localStorage.setItem("dolike_session_cookie", user.sessionCookie);
+      }
+      if (user.bearerToken) {
+        localStorage.setItem("dolike_bearer_token", user.bearerToken);
       }
     } catch {
       // ignore
