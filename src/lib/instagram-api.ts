@@ -266,6 +266,7 @@ export async function checkCookieIg(
     let username = "";
     let isCheckpoint = false;
     let fullName = "";
+    let avatarUrl = "";
 
     try {
       const configdata = JSON.parse(raw);
@@ -349,7 +350,6 @@ export async function checkCookieIg(
     }
 
     // Nếu Live, lấy thêm avatar từ API /api/v1/users/{userId}/info/ nếu có userId và chưa có avatar
-    let avatarUrl = "";
     if (userId && userId !== "0" && !avatarUrl) {
       try {
         const userRes = await executeCurlRequest({
