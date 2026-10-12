@@ -38,7 +38,11 @@ import { XsmmJobConfigDialog } from "@/components/xsmm-job-config-dialog";
 import { XsmmLoginDialog } from "@/components/xsmm-login-dialog";
 import { NvcLoginDialog } from "@/components/nvc-login-dialog";
 import { DolikeLoginDialog } from "@/components/dolike-login-dialog";
-import { getDolikeWallet } from "@/lib/dolike-api";
+import {
+  getDolikeWallet,
+  getDolikePlatformAccounts,
+  linkDolikeAccountFull,
+} from "@/lib/dolike-api";
 import {
   getNvcMe,
   getNvcFacebookAccounts,
@@ -83,6 +87,7 @@ export interface FacebookAccount {
   pages?: FacebookPageItem[];
   dolikeEmail?: string;
   dolikeBalance?: string;
+  dolikeLinked?: boolean;
 }
 
 export const isDoLikeAccount = (a: FacebookAccount) =>
@@ -206,21 +211,43 @@ export default function HomePage() {
     email: string;
     balance: string;
     sessionCookie: string;
+    bearerToken?: string;
     isLoggedIn: boolean;
   }>(() => {
     if (typeof window === "undefined") {
-      return { email: "", balance: "", sessionCookie: "", isLoggedIn: false };
+      return {
+        email: "",
+        balance: "",
+        sessionCookie: "",
+        bearerToken: "",
+        isLoggedIn: false,
+      };
     }
     const email = localStorage.getItem("dolike_email") || "";
     const balance = localStorage.getItem("dolike_balance") || "";
     const sessionCookie = localStorage.getItem("dolike_session_cookie") || "";
+    const bearerToken = localStorage.getItem("dolike_bearer_token") || "";
     return {
       email,
       balance,
       sessionCookie,
-      isLoggedIn: !!email,
+      bearerToken,
+      isLoggedIn: !!(email || sessionCookie || bearerToken),
     };
   });
+  const [dolikeLinkedUsernames, setDolikeLinkedUsernames] = useState<string[]>(
+    () => {
+      if (typeof window === "undefined") return [];
+      try {
+        const saved = localStorage.getItem("dolike_linked_usernames");
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    },
+  );
+  const [dolikeLinkingIds, setDolikeLinkingIds] = useState<string[]>([]);
+  const hasCheckedDolikeAccountsRef = useRef(false);
   const [nvcLinkedUids, setNvcLinkedUids] = useState<string[]>([]);
   const [nvcLinkingIds, setNvcLinkingIds] = useState<string[]>([]);
   const hasCheckedNvcAccountsRef = useRef(false);
@@ -690,8 +717,46 @@ export default function HomePage() {
       email: user.email,
       balance: user.balance,
       sessionCookie: user.sessionCookie || "",
+      bearerToken: user.bearerToken || "",
       isLoggedIn: true,
     });
+
+    if (user.sessionCookie || user.bearerToken) {
+      void (async () => {
+        try {
+          const res = await getDolikePlatformAccounts({
+            cookie: user.sessionCookie,
+            bearerToken: user.bearerToken,
+          });
+          if (res.success && Array.isArray(res.accounts)) {
+            const ulist = res.accounts
+              .map((a) =>
+                (a.username || a.account_url || a.account_name || "")
+                  .replace(/^@/, "")
+                  .trim()
+                  .toLowerCase(),
+              )
+              .filter(Boolean);
+            if (ulist.length > 0) {
+              setDolikeLinkedUsernames((prev) => {
+                const merged = Array.from(new Set([...prev, ...ulist]));
+                try {
+                  localStorage.setItem(
+                    "dolike_linked_usernames",
+                    JSON.stringify(merged),
+                  );
+                } catch {
+                  // ignore
+                }
+                return merged;
+              });
+            }
+          }
+        } catch {
+          // ignore
+        }
+      })();
+    }
 
     setAccounts((prev) => {
       const dlAccounts = prev.filter(
@@ -789,11 +854,56 @@ export default function HomePage() {
     );
   };
 
+  // Tự động kiểm tra và đồng bộ danh sách tài khoản đã liên kết từ DoLike
+  useEffect(() => {
+    if (currentPage !== "dolike") return;
+    if (!dolikeAccount.sessionCookie && !dolikeAccount.bearerToken) return;
+    if (hasCheckedDolikeAccountsRef.current) return;
+    hasCheckedDolikeAccountsRef.current = true;
+
+    void (async () => {
+      try {
+        const res = await getDolikePlatformAccounts({
+          cookie: dolikeAccount.sessionCookie,
+          bearerToken: dolikeAccount.bearerToken,
+        });
+        if (res.success && Array.isArray(res.accounts)) {
+          const ulist = res.accounts
+            .map((a) =>
+              (a.username || a.account_url || a.account_name || "")
+                .replace(/^@/, "")
+                .trim()
+                .toLowerCase(),
+            )
+            .filter(Boolean);
+          if (ulist.length > 0) {
+            setDolikeLinkedUsernames((prev) => {
+              const merged = Array.from(new Set([...prev, ...ulist]));
+              try {
+                localStorage.setItem(
+                  "dolike_linked_usernames",
+                  JSON.stringify(merged),
+                );
+              } catch {
+                // ignore
+              }
+              return merged;
+            });
+          }
+        }
+      } catch {
+        // ignore
+      }
+    })();
+  }, [currentPage, dolikeAccount]);
+
   const handleDolikeLogout = () => {
     try {
       localStorage.removeItem("dolike_email");
       localStorage.removeItem("dolike_balance");
       localStorage.removeItem("dolike_session_cookie");
+      localStorage.removeItem("dolike_bearer_token");
+      localStorage.removeItem("dolike_linked_usernames");
     } catch {
       // ignore
     }
@@ -801,14 +911,21 @@ export default function HomePage() {
       email: "",
       balance: "",
       sessionCookie: "",
+      bearerToken: "",
       isLoggedIn: false,
     });
+    setDolikeLinkedUsernames([]);
     setAccounts((prev) => {
       const updated = prev
         .filter((a) => a.uid || a.name)
         .map((a) => {
           if (a.dolikeEmail) {
-            return { ...a, dolikeEmail: undefined, dolikeBalance: undefined };
+            return {
+              ...a,
+              dolikeEmail: undefined,
+              dolikeBalance: undefined,
+              dolikeLinked: undefined,
+            };
           }
           return a;
         });
@@ -823,6 +940,211 @@ export default function HomePage() {
       return updated;
     });
     showSuccessToast("Đã đăng xuất tài khoản DoLike");
+  };
+
+  const handleLinkDolikeAccount = async (targetAccount: FacebookAccount) => {
+    if (
+      !dolikeAccount.isLoggedIn &&
+      !dolikeAccount.sessionCookie &&
+      !dolikeAccount.bearerToken
+    ) {
+      showErrorToast(
+        tr(
+          "Vui lòng đăng nhập tài khoản DoLike trước!",
+          "Please log in to DoLike first!",
+        ),
+      );
+      setIsDolikeLoginOpen(true);
+      return;
+    }
+
+    const cleanUsername = (targetAccount.name || targetAccount.uid || "")
+      .replace(/^@/, "")
+      .trim();
+
+    if (!cleanUsername) {
+      showErrorToast(
+        tr(
+          "Tài khoản chưa có Username Instagram để liên kết!",
+          "Account missing Instagram username to link!",
+        ),
+      );
+      return;
+    }
+
+    setDolikeLinkingIds((prev) => [...prev, targetAccount.id]);
+    try {
+      const res = await linkDolikeAccountFull({
+        accountUrl: cleanUsername,
+        platform: "instagram",
+        cookie: dolikeAccount.sessionCookie,
+        bearerToken: dolikeAccount.bearerToken,
+      });
+
+      if (res.success) {
+        const normUser = cleanUsername.toLowerCase();
+        setDolikeLinkedUsernames((prev) => {
+          const updated = Array.from(new Set([...prev, normUser]));
+          try {
+            localStorage.setItem(
+              "dolike_linked_usernames",
+              JSON.stringify(updated),
+            );
+          } catch {
+            // ignore
+          }
+          return updated;
+        });
+
+        setAccounts((prev) => {
+          const updatedList = prev.map((item) =>
+            item.id === targetAccount.id
+              ? { ...item, dolikeLinked: true }
+              : item,
+          );
+          try {
+            localStorage.setItem(
+              "autolunex_facebook_accounts_v1",
+              JSON.stringify(updatedList),
+            );
+          } catch {
+            // ignore
+          }
+          return updatedList;
+        });
+
+        showSuccessToast(
+          tr(
+            `Đã liên kết tài khoản @${cleanUsername} vào DoLike thành công!`,
+            `Successfully linked account @${cleanUsername} to DoLike!`,
+          ),
+        );
+      } else {
+        showErrorToast(
+          res.error ||
+            tr(
+              "Lỗi liên kết tài khoản vào DoLike (acc không hợp lệ)",
+              "Failed to link account to DoLike",
+            ),
+        );
+      }
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : tr("Lỗi kết nối DoLike", "DoLike connection error");
+      showErrorToast(msg);
+    } finally {
+      setDolikeLinkingIds((prev) =>
+        prev.filter((id) => id !== targetAccount.id),
+      );
+    }
+  };
+
+  const handleBulkLinkDolike = async () => {
+    if (
+      !dolikeAccount.isLoggedIn &&
+      !dolikeAccount.sessionCookie &&
+      !dolikeAccount.bearerToken
+    ) {
+      showErrorToast(
+        tr(
+          "Vui lòng đăng nhập tài khoản DoLike trước!",
+          "Please log in to DoLike first!",
+        ),
+      );
+      setIsDolikeLoginOpen(true);
+      return;
+    }
+
+    const selectedAccounts = filteredAccounts.filter((a) =>
+      selectedIds.includes(a.id),
+    );
+    if (selectedAccounts.length === 0) return;
+
+    setDolikeLinkingIds((prev) =>
+      Array.from(new Set([...prev, ...selectedIds])),
+    );
+    let successCount = 0;
+    const newLinked: string[] = [];
+
+    for (const acc of selectedAccounts) {
+      const cleanUser = (acc.name || acc.uid || "")
+        .replace(/^@/, "")
+        .trim();
+      if (!cleanUser) continue;
+      try {
+        const res = await linkDolikeAccountFull({
+          accountUrl: cleanUser,
+          platform: "instagram",
+          cookie: dolikeAccount.sessionCookie,
+          bearerToken: dolikeAccount.bearerToken,
+        });
+        if (res.success) {
+          successCount++;
+          newLinked.push(cleanUser.toLowerCase());
+        }
+      } catch {
+        // ignore
+      }
+      await new Promise((r) => setTimeout(r, 600));
+    }
+
+    if (newLinked.length > 0) {
+      setDolikeLinkedUsernames((prev) => {
+        const merged = Array.from(new Set([...prev, ...newLinked]));
+        try {
+          localStorage.setItem(
+            "dolike_linked_usernames",
+            JSON.stringify(merged),
+          );
+        } catch {
+          // ignore
+        }
+        return merged;
+      });
+      setAccounts((prev) => {
+        const updatedList = prev.map((item) => {
+          const u = (item.name || item.uid || "")
+            .replace(/^@/, "")
+            .trim()
+            .toLowerCase();
+          if (newLinked.includes(u)) {
+            return { ...item, dolikeLinked: true };
+          }
+          return item;
+        });
+        try {
+          localStorage.setItem(
+            "autolunex_facebook_accounts_v1",
+            JSON.stringify(updatedList),
+          );
+        } catch {
+          // ignore
+        }
+        return updatedList;
+      });
+    }
+
+    setDolikeLinkingIds((prev) =>
+      prev.filter((id) => !selectedIds.includes(id)),
+    );
+
+    if (successCount > 0) {
+      showSuccessToast(
+        tr(
+          `Đã liên kết ${successCount} tài khoản vào DoLike thành công!`,
+          `Successfully linked ${successCount} accounts to DoLike!`,
+        ),
+      );
+    } else {
+      showErrorToast(
+        tr(
+          "Không có tài khoản nào được liên kết vào DoLike",
+          "No accounts linked to DoLike",
+        ),
+      );
+    }
   };
 
   const handleLinkNvcAccount = async (targetAccount: FacebookAccount) => {
@@ -3210,6 +3532,28 @@ export default function HomePage() {
                     </Button>
                     <Button
                       size="sm"
+                      variant="outline"
+                      onClick={handleBulkLinkDolike}
+                      disabled={dolikeLinkingIds.length > 0}
+                      className="h-7 text-[11px] gap-1 cursor-pointer text-fuchsia-400 border-fuchsia-500/30 hover:bg-fuchsia-500/10 font-medium"
+                      title={tr(
+                        "Kiểm tra và liên kết các tài khoản Instagram đã chọn vào DoLike",
+                        "Check and link selected Instagram accounts to DoLike",
+                      )}
+                    >
+                      {dolikeLinkingIds.length > 0 ? (
+                        <RefreshCw className="size-3 animate-spin" />
+                      ) : (
+                        <Link2 className="size-3" />
+                      )}
+                      <span>
+                        {dolikeLinkingIds.length > 0
+                          ? tr("Đang liên kết...", "Linking...")
+                          : `${tr("Liên kết DoLike", "Link DoLike")} (${selectedIds.length})`}
+                      </span>
+                    </Button>
+                    <Button
+                      size="sm"
                       onClick={handleRunSelected}
                       className="h-7 text-[11px] gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
                     >
@@ -3415,7 +3759,7 @@ export default function HomePage() {
                             </div>
 
                             {/* TK DoLike */}
-                            <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5">
+                            <div className="text-muted-foreground truncate pr-2 flex items-center gap-1.5 flex-wrap">
                               {acc.dolikeEmail || (dolikeAccount.isLoggedIn && dolikeAccount.email) ? (
                                 (() => {
                                   const isEmailRevealed = !!revealedEmails[acc.id];
@@ -3519,7 +3863,62 @@ export default function HomePage() {
                                   <span>{tr("Đăng nhập DoLike", "Login DoLike")}</span>
                                 </button>
                               )}
-                              {acc.twoFactor ? (
+
+                              {/* Xác định và hiển thị trạng thái liên kết nick Instagram với DoLike */}
+                              {(() => {
+                                const cleanUser = (acc.name || acc.uid || "")
+                                  .replace(/^@/, "")
+                                  .trim()
+                                  .toLowerCase();
+                                const isLinked =
+                                  acc.dolikeLinked === true ||
+                                  (cleanUser ? dolikeLinkedUsernames.includes(cleanUser) : false);
+                                const isLinking = dolikeLinkingIds.includes(acc.id);
+
+                                if (isLinked) {
+                                  return (
+                                    <span
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 whitespace-nowrap shadow-xs"
+                                      title={tr(
+                                        "Tài khoản Instagram này đã được liên kết trên DoLike",
+                                        "This Instagram account is linked to DoLike",
+                                      )}
+                                    >
+                                      <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                      <Link2 className="size-2.5 shrink-0" />
+                                      <span>{tr("Đã liên kết", "Linked")}</span>
+                                    </span>
+                                  );
+                                }
+
+                                return (
+                                  <button
+                                    type="button"
+                                    disabled={isLinking}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void handleLinkDolikeAccount(acc);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25 transition-colors cursor-pointer whitespace-nowrap shadow-xs"
+                                    title={tr(
+                                      "Nhấn để kiểm tra và liên kết tài khoản Instagram này vào DoLike",
+                                      "Click to check and link this Instagram account to DoLike",
+                                    )}
+                                  >
+                                    {isLinking ? (
+                                      <RefreshCw className="size-2.5 animate-spin shrink-0" />
+                                    ) : (
+                                      <Link2 className="size-2.5 shrink-0" />
+                                    )}
+                                    <span>
+                                      {isLinking
+                                        ? tr("Đang liên kết...", "Linking...")
+                                        : tr("Chưa liên kết", "Unlinked")}
+                                    </span>
+                                  </button>
+                                );
+                              })()}
+                            </div>  {acc.twoFactor ? (
                                 <span className="text-[10px] font-mono text-muted-foreground/80 px-1 py-0.5 rounded bg-muted/40 border border-border/30">
                                   2FA
                                 </span>
