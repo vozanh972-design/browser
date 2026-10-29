@@ -7,7 +7,9 @@ import {
   executeFacebookShare,
   type FbTaskResult,
 } from "./facebook-task-engine";
+import { executeCurlRequest } from "./facebook-api";
 import {
+  BROWSER_UA,
   checkCookieIg,
   doComment,
   doFollow,
