@@ -388,6 +388,8 @@ class XsmmRunnerManager {
 
     const waitSec = Math.max(2, config.delayWaitJob || 8);
     const maxConsecutive = Math.max(2, config.maxConsecutiveErrors || 5);
+    const batchSize = Math.max(3, Math.min(12, config.batchSubCount || 10));
+    const targetCkCheck = config.cookieCheck?.trim() || cookie;
 
     let consecutiveErrors = 0;
     let completedCount = 0;
@@ -441,9 +443,6 @@ class XsmmRunnerManager {
         const targetUrl = task.target_url || "";
         const taskId = task.id;
         let targetId = task.target_id || task.idorlink || "";
-
-        const batchSize = Math.max(3, Math.min(12, config.batchSubCount || 10));
-        const targetCkCheck = config.cookieCheck?.trim() || cookie;
 
         let actRes: IgActionResult = {
           isSuccess: false,
