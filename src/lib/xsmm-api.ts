@@ -213,8 +213,8 @@ export async function getXsmmTasks(
     const query = new URLSearchParams({
       type: params.type,
       uid: params.uid,
+      typejob: params.typejob || "normal,better,best",
     });
-    if (params.typejob) query.append("typejob", params.typejob);
 
     const data = await xsmmFetch<XsmmTaskItem[] | { error?: string }>(
       `${XSMM_BASE_URL}/tasks2?${query.toString()}`,

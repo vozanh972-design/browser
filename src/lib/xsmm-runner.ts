@@ -48,6 +48,8 @@ export interface XsmmJobConfig {
   maxJobsPerAccount: number;
   maxConsecutiveErrors: number;
   commentList: string;
+  cookieCheck?: string;
+  batchSubCount?: number;
 }
 
 export const DEFAULT_XSMM_JOB_CONFIG: XsmmJobConfig = {
@@ -61,6 +63,8 @@ export const DEFAULT_XSMM_JOB_CONFIG: XsmmJobConfig = {
   maxJobsPerAccount: 150,
   maxConsecutiveErrors: 50,
   commentList: "Tuyệt vời quá\nQuá đỉnh\nFollow chéo nhé bạn\nThả tym nè",
+  cookieCheck: "",
+  batchSubCount: 10,
 };
 
 const XSMM_JOB_CONFIG_KEY = "autolunex_xsmm_ig_job_config_v1";
@@ -432,9 +436,12 @@ class XsmmRunnerManager {
           break;
         }
 
-        const targetId = task.target_id || task.idorlink || "";
         const targetUrl = task.target_url || "";
         const taskId = task.id;
+        let targetId = task.target_id || task.idorlink || "";
+
+        const batchSize = Math.max(3, Math.min(12, config.batchSubCount || 10));
+        const targetCkCheck = config.cookieCheck?.trim() || cookie;
 
         let actRes: IgActionResult = {
           isSuccess: false,
@@ -448,10 +455,31 @@ class XsmmRunnerManager {
         const delaySec = Math.floor(Math.random() * (maxD - minD + 1)) + minD;
 
         if (jobType === "instagram_follow") {
+          // Trích xuất numeric target_id nếu chưa có (chuẩn TA Tool)
+          if (!targetId || !/^\d+$/.test(targetId)) {
+            try {
+              const resHtml = await executeCurlRequest({
+                url: targetUrl,
+                method: "GET",
+                cookie,
+                proxy,
+                headers: [`User-Agent: ${BROWSER_UA}`],
+                timeoutSecs: 10,
+              });
+              const m =
+                resHtml.match(/"profile_id":"(\d+)"/) ||
+                resHtml.match(/"user_id":"(\d+)"/) ||
+                resHtml.match(/profilePage_(\d+)/);
+              if (m?.[1]) targetId = m[1];
+            } catch {
+              // ignore
+            }
+          }
+
           const userFollow =
             targetUrl.replace(/\/+$/, "").split("/").pop() || targetId;
           this.updateAccountState(accountId, {
-            status: `Đang Follow @${userFollow}...`,
+            status: `Đang Follow @${userFollow} (ID: ${targetId || "?"})...`,
           });
           actRes = await doFollow({
             cookie,
@@ -463,8 +491,29 @@ class XsmmRunnerManager {
             userId: realUid,
           });
         } else if (jobType === "instagram_like") {
+          // Trích xuất media_id nếu chưa có (chuẩn TA Tool)
+          if (!targetId || !/^\d+$/.test(targetId)) {
+            try {
+              const resHtml = await executeCurlRequest({
+                url: targetUrl,
+                method: "GET",
+                cookie,
+                proxy,
+                headers: [`User-Agent: ${BROWSER_UA}`],
+                timeoutSecs: 10,
+              });
+              const m =
+                resHtml.match(/instagram:\/\/media\?id=(\d+)/) ||
+                resHtml.match(/"media_id":"(\d+)"/) ||
+                resHtml.match(/media\?id=(\d+)/);
+              if (m?.[1]) targetId = m[1];
+            } catch {
+              // ignore
+            }
+          }
+
           this.updateAccountState(accountId, {
-            status: `Đang thả tym bài viết ${targetId.substring(0, 15)}...`,
+            status: `Đang thả tym bài viết (ID: ${targetId ? targetId.substring(0, 15) : "?"})...`,
           });
           actRes = await doLike({
             cookie,
@@ -475,6 +524,26 @@ class XsmmRunnerManager {
             userId: realUid,
           });
         } else if (jobType === "instagram_comment") {
+          if (!targetId || !/^\d+$/.test(targetId)) {
+            try {
+              const resHtml = await executeCurlRequest({
+                url: targetUrl,
+                method: "GET",
+                cookie,
+                proxy,
+                headers: [`User-Agent: ${BROWSER_UA}`],
+                timeoutSecs: 10,
+              });
+              const m =
+                resHtml.match(/instagram:\/\/media\?id=(\d+)/) ||
+                resHtml.match(/"media_id":"(\d+)"/) ||
+                resHtml.match(/media\?id=(\d+)/);
+              if (m?.[1]) targetId = m[1];
+            } catch {
+              // ignore
+            }
+          }
+
           const customComments = config.commentList
             ? config.commentList
                 .split("\n")
@@ -529,19 +598,19 @@ class XsmmRunnerManager {
             pendingFollowIds.push(taskId);
             this.updateAccountState(accountId, {
               successCount: completedCount,
-              status: `Follow xong (Đã gom ${pendingFollowIds.length}/10)`,
+              status: `Follow xong (Đã gom ${pendingFollowIds.length}/${batchSize})`,
             });
 
-            // Đủ 10 follow gửi xác nhận nhận xu kèm cookie_check (chuẩn TA Tool)
-            if (pendingFollowIds.length >= 10) {
+            // Đủ số lượng follow gom (mặc định 10): gửi nhận xu bằng targetCkCheck
+            if (pendingFollowIds.length >= batchSize) {
               this.updateAccountState(accountId, {
-                status: "Gửi xác nhận 10 follow...",
+                status: `Gửi xác nhận ${pendingFollowIds.length} follow...`,
               });
               const compRes = await completeXsmmTask(xsmmToken, {
                 type: "instagram_follow",
                 task_id: [...pendingFollowIds],
                 uid: realUid,
-                cookie_check: cookie,
+                cookie_check: targetCkCheck,
               });
 
               if (compRes.success && compRes.result) {
@@ -549,7 +618,7 @@ class XsmmRunnerManager {
                 earnedPoints += pts;
                 this.updateAccountState(accountId, {
                   earnedPoints,
-                  status: `+${pts} xu (10 follow)`,
+                  status: `+${pts} xu (${pendingFollowIds.length} follow)`,
                 });
                 this.onPointsEarnedCallback?.(pts);
                 if (compRes.result.countdown && compRes.result.countdown > 0) {
@@ -559,11 +628,11 @@ class XsmmRunnerManager {
                 }
               }
               pendingFollowIds.length = 0;
-              // Break ra để refresh danh sách task mới như trong script TA Tool
+              // Break ra để refresh lấy danh sách task mới như trong script TA Tool
               break;
             }
           } else {
-            // Like hoặc comment: hoàn thành ngay kèm cookie_check
+            // Like hoặc comment: hoàn thành ngay kèm targetCkCheck
             this.updateAccountState(accountId, {
               status: "Xác nhận nhận xu...",
             });
@@ -571,7 +640,7 @@ class XsmmRunnerManager {
               type: jobType,
               task_id: [taskId],
               uid: realUid,
-              cookie_check: cookie,
+              cookie_check: targetCkCheck,
             });
 
             if (compRes.success && compRes.result) {
@@ -602,7 +671,7 @@ class XsmmRunnerManager {
         }
       }
 
-      // Gửi nhận số task follow còn dư lại nếu kết thúc danh sách mà chưa đủ 10
+      // Gửi nốt các task follow còn dư nếu có (chuẩn TA Tool)
       if (pendingFollowIds.length > 0) {
         this.updateAccountState(accountId, {
           status: `Gửi xác nhận ${pendingFollowIds.length} follow còn lại...`,
@@ -611,14 +680,14 @@ class XsmmRunnerManager {
           type: "instagram_follow",
           task_id: [...pendingFollowIds],
           uid: realUid,
-          cookie_check: cookie,
+          cookie_check: targetCkCheck,
         });
         if (compRes.success && compRes.result) {
           const pts = compRes.result.points || pendingFollowIds.length * 35;
           earnedPoints += pts;
           this.updateAccountState(accountId, {
             earnedPoints,
-            status: `+${pts} xu (${pendingFollowIds.length} follow)`,
+            status: `+${pts} xu (${pendingFollowIds.length} follow dư)`,
           });
           this.onPointsEarnedCallback?.(pts);
         }

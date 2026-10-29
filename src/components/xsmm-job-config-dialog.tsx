@@ -336,7 +336,70 @@ export function XsmmJobConfigDialog({
                     lần
                   </span>
                 </div>
+            </div>
+          </div>
+
+          {/* Section: Cơ chế Gom Job & Cookie Check (XSMM V2) */}
+          <div className="space-y-1.5">
+            <span className="text-[11px] font-medium tracking-wide uppercase text-muted-foreground/60 px-0.5">
+              Cơ chế XSMM V2 (Gom Job & Cookie Check)
+            </span>
+            <div className="rounded-xl border border-border/40 bg-muted/20 dark:bg-white/[0.02] divide-y divide-border/30 overflow-hidden">
+              {/* Số job Follow gom */}
+              <div className="flex items-center justify-between px-3.5 py-2.5">
+                <div className="space-y-0.5">
+                  <span className="font-medium text-foreground block">
+                    Gom job Follow nhận xu
+                  </span>
+                  <span className="text-[11px] text-muted-foreground/75 block">
+                    Làm đủ số follow rồi mới gửi duyệt nhận xu một lần
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 font-mono text-xs">
+                  <Input
+                    type="number"
+                    min={3}
+                    max={12}
+                    value={config.batchSubCount ?? 10}
+                    onChange={(e) =>
+                      setConfig((prev) => ({
+                        ...prev,
+                        batchSubCount: Math.max(
+                          3,
+                          Math.min(12, Number(e.target.value) || 10),
+                        ),
+                      }))
+                    }
+                    className="h-6.5 w-16 text-center text-xs px-1 rounded-md [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-background/80"
+                  />
+                  <span className="text-muted-foreground text-[11px] ml-0.5">
+                    job
+                  </span>
+                </div>
               </div>
+            </div>
+
+            {/* Cookie Check Jobs riêng */}
+            <div className="space-y-1 pt-1">
+              <div className="flex items-center justify-between px-0.5">
+                <span className="text-[11px] font-medium text-foreground">
+                  Cookie Check Jobs riêng (Tùy chọn)
+                </span>
+                <span className="text-[10px] text-muted-foreground/70">
+                  Tránh checkpoint nick chạy
+                </span>
+              </div>
+              <Input
+                placeholder="Để trống sẽ dùng trực tiếp Cookie nick đang làm"
+                value={config.cookieCheck || ""}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    cookieCheck: e.target.value,
+                  }))
+                }
+                className="text-xs font-mono h-8 rounded-xl bg-muted/20 border-border/40 focus:border-border/60"
+              />
             </div>
           </div>
 
