@@ -336,6 +336,7 @@ export function XsmmJobConfigDialog({
                     lần
                   </span>
                 </div>
+              </div>
             </div>
           </div>
 
