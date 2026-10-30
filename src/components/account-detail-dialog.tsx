@@ -1067,7 +1067,8 @@ export function AccountDetailDialog({
               </div>
             </div>
           </div>
-        </ScrollArea>
+        )}
+      </ScrollArea>
 
         <DialogFooter className="px-6 py-3 border-t border-border bg-muted/20">
           <Button
