@@ -28,7 +28,7 @@ import { AboutDialog } from "@/components/about-dialog";
 import { AccountDetailDialog } from "@/components/account-detail-dialog";
 import { AccountGridView } from "@/components/account-grid-view";
 import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dialog";
-import { AppHeader } from "@/components/app-header";
+import { AppHeader, TiktokIcon } from "@/components/app-header";
 import { AppSettingsDialog } from "@/components/app-settings-dialog";
 import { ForceUpdateModal } from "@/components/force-update-modal";
 import { KeyLoginScreen } from "@/components/key-login-screen";
@@ -85,7 +85,7 @@ export interface FacebookAccount {
   tag?: string;
   note?: string;
   proxy?: string;
-  platform?: "facebook" | "instagram";
+  platform?: "tiktok" | "facebook" | "instagram";
   isDolike?: boolean;
   status: "live" | "checkpoint" | "die" | "unverified";
   isLive?: boolean;
@@ -409,7 +409,7 @@ export default function HomePage() {
     setRevealedEmails((prev) => ({ ...prev, [id]: !prev[id] }));
   };
   const [currentPlatform, setCurrentPlatform] = useState<
-    "facebook" | "instagram"
+    "tiktok" | "facebook" | "instagram"
   >("facebook");
 
   // Tự động lưu danh sách tài khoản vào localStorage
@@ -1838,6 +1838,40 @@ export default function HomePage() {
   const handleAddAccounts = (lines: string[], format: string) => {
     const formatKeys = format.split("|").map((f) => f.trim().toLowerCase());
     const newAccounts: FacebookAccount[] = lines.map((line, idx) => {
+      // 0. Nhận diện tài khoản TikTok
+      const isTikTok = currentPlatform === "tiktok";
+      if (isTikTok) {
+        const parts = line.split("|").map((p) => p.trim());
+        const uid = parts[0] || `acc_tt_${Date.now()}_${idx + 1}`;
+        const pass = parts.length > 1 && !parts[1].includes(":") ? parts[1] : undefined;
+        let cookie: string | undefined;
+        let proxyStr = "Chưa chọn";
+
+        for (let i = 1; i < parts.length; i++) {
+          const part = parts[i];
+          if (part.includes("sessionid=") || part.includes("ttwid=") || part.includes(";")) {
+            cookie = part;
+          } else if (part.includes(":") && !part.includes(" ") && !/^\d{4}[-/]\d{2}[-/]\d{2}/.test(part)) {
+            proxyStr = part;
+          }
+        }
+
+        const account: FacebookAccount = {
+          id: `${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+          uid,
+          name: uid.startsWith("@") ? uid : `@${uid}`,
+          pass,
+          cookie,
+          tag: "Không có thẻ",
+          note: "Sẵn sàng",
+          proxy: proxyStr,
+          platform: "tiktok",
+          status: "unverified",
+          rawText: line,
+        };
+        return account;
+      }
+
       // 1. Tự động nhận diện tài khoản Instagram (từ tab DoLike, tab Instagram hoặc chuỗi cookie có ds_user_id/sessionid/csrftoken)
       const isIg =
         currentPage === "dolike" ||
@@ -2023,7 +2057,13 @@ export default function HomePage() {
       return merged;
     });
     showSuccessToast(
-      `Đã thêm ${newAccounts.length} tài khoản ${currentPlatform === "instagram" ? "Instagram" : "Facebook"}!`,
+      `Đã thêm ${newAccounts.length} tài khoản ${
+        currentPlatform === "tiktok"
+          ? "TikTok"
+          : currentPlatform === "instagram"
+            ? "Instagram"
+            : "Facebook"
+      }!`,
     );
 
     // Tự động kiểm tra tài khoản ngầm tuần tự cho cả Facebook và Instagram
@@ -2526,6 +2566,7 @@ export default function HomePage() {
         }}
         onDolikeLoginClick={() => setIsDolikeLoginOpen(true)}
         onDolikeLogoutClick={handleDolikeLogout}
+        hideTiktok={currentPage !== "profiles"}
         hideInstagram={currentPage === "nvc"}
         hideFacebook={currentPage === "dolike"}
         onNewClick={() => setIsAddFacebookOpen(true)}
@@ -2912,32 +2953,53 @@ export default function HomePage() {
                         <div
                           className={cn(
                             "flex size-12 items-center justify-center rounded-xl",
-                            currentPlatform === "instagram"
-                              ? "bg-[#E1306C]/10 text-[#E1306C]"
-                              : "bg-[#1877F2]/10 text-[#1877F2]",
+                            currentPlatform === "tiktok"
+                              ? "bg-foreground/10 text-foreground border border-border/40"
+                              : currentPlatform === "instagram"
+                                ? "bg-[#E1306C]/10 text-[#E1306C]"
+                                : "bg-[#1877F2]/10 text-[#1877F2]",
                           )}
                         >
-                          {currentPlatform === "instagram" ? (
+                          {currentPlatform === "tiktok" ? (
+                            <TiktokIcon className="size-6 text-foreground" />
+                          ) : currentPlatform === "instagram" ? (
                             <FaInstagram className="size-6" />
                           ) : (
                             <FaFacebook className="size-6" />
                           )}
                         </div>
                         <p className="text-xs font-semibold text-foreground">
-                          {currentPlatform === "instagram"
+                          {currentPlatform === "tiktok"
                             ? tr(
-                                "Chưa có tài khoản Instagram nào",
-                                "No Instagram accounts yet",
+                                "Chưa có tài khoản TikTok nào",
+                                "No TikTok accounts yet",
                               )
-                            : tr(
-                                "Chưa có tài khoản Facebook nào",
-                                "No Facebook accounts yet",
-                              )}
+                            : currentPlatform === "instagram"
+                              ? tr(
+                                  "Chưa có tài khoản Instagram nào",
+                                  "No Instagram accounts yet",
+                                )
+                              : tr(
+                                  "Chưa có tài khoản Facebook nào",
+                                  "No Facebook accounts yet",
+                                )}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
                           {tr(
-                            `Bấm nút "+ Mới" ở góc trên bên phải để thêm tài khoản ${currentPlatform === "instagram" ? "Instagram" : "Facebook"}.`,
-                            `Click "+ New" button at top right to add a ${currentPlatform === "instagram" ? "Instagram" : "Facebook"} account.`,
+                            `Bấm nút "+ Mới" ở góc trên bên phải để thêm tài khoản ${
+                              currentPlatform === "tiktok"
+                                ? "TikTok"
+                                : currentPlatform === "instagram"
+                                  ? "Instagram"
+                                  : "Facebook"
+                            }.`,
+                            `Click "+ New" button at top right to add a ${
+                              currentPlatform === "tiktok"
+                                ? "TikTok"
+                                : currentPlatform === "instagram"
+                                  ? "Instagram"
+                                  : "Facebook"
+                            } account.`,
                           )}
                         </p>
                         <Button
@@ -2947,15 +3009,20 @@ export default function HomePage() {
                         >
                           <Plus className="size-3.5" />
                           <span>
-                            {currentPlatform === "instagram"
+                            {currentPlatform === "tiktok"
                               ? tr(
-                                  "Thêm tài khoản Instagram",
-                                  "Add Instagram Account",
+                                  "Thêm tài khoản TikTok",
+                                  "Add TikTok Account",
                                 )
-                              : tr(
-                                  "Thêm tài khoản Facebook",
-                                  "Add Facebook Account",
-                                )}
+                              : currentPlatform === "instagram"
+                                ? tr(
+                                    "Thêm tài khoản Instagram",
+                                    "Add Instagram Account",
+                                  )
+                                : tr(
+                                    "Thêm tài khoản Facebook",
+                                    "Add Facebook Account",
+                                  )}
                           </span>
                         </Button>
                       </div>

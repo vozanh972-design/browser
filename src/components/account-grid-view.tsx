@@ -17,6 +17,7 @@ import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 import { type FacebookAccount } from "@/app/page";
+import { TiktokIcon } from "@/components/app-header";
 import { type FacebookPageItem } from "@/lib/facebook-api";
 import { cn } from "@/lib/utils";
 import { type AccountRunState } from "@/lib/xsmm-runner";
@@ -88,6 +89,7 @@ export function AccountGridView({
         const runState = runnerStates.get(acc.id);
         const isRunning = runState?.isRunning ?? false;
         const isInstagram = acc.platform === "instagram";
+        const isTikTok = acc.platform === "tiktok";
         const hasPages = acc.pages && acc.pages.length > 0;
 
         return (
@@ -113,17 +115,21 @@ export function AccountGridView({
                 <div
                   className={cn(
                     "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold border shrink-0",
-                    isInstagram
-                      ? "bg-[#E1306C]/10 text-[#E1306C] border-[#E1306C]/25"
-                      : "bg-[#1877F2]/10 text-[#1877F2] border-[#1877F2]/25",
+                    isTikTok
+                      ? "bg-foreground/10 text-foreground border-border/50"
+                      : isInstagram
+                        ? "bg-[#E1306C]/10 text-[#E1306C] border-[#E1306C]/25"
+                        : "bg-[#1877F2]/10 text-[#1877F2] border-[#1877F2]/25",
                   )}
                 >
-                  {isInstagram ? (
+                  {isTikTok ? (
+                    <TiktokIcon className="size-2.5" />
+                  ) : isInstagram ? (
                     <FaInstagram className="size-2.5" />
                   ) : (
                     <FaFacebook className="size-2.5" />
                   )}
-                  <span>{isInstagram ? "IG" : "FB"}</span>
+                  <span>{isTikTok ? "TT" : isInstagram ? "IG" : "FB"}</span>
                 </div>
 
                 {/* Tên hiển thị */}
@@ -136,7 +142,7 @@ export function AccountGridView({
                   )}
                   title={acc.name || acc.uid}
                 >
-                  {acc.name || (isInstagram ? `@${acc.uid}` : acc.uid)}
+                  {acc.name || (isInstagram || isTikTok ? `@${acc.uid}` : acc.uid)}
                 </span>
               </div>
 
@@ -199,6 +205,8 @@ export function AccountGridView({
                     className="size-full object-cover"
                     referrerPolicy="no-referrer"
                   />
+                ) : isTikTok ? (
+                  <TiktokIcon className="size-3 text-foreground" />
                 ) : isInstagram ? (
                   <FaInstagram className="size-3.5 text-[#E1306C]" />
                 ) : (

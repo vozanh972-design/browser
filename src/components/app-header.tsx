@@ -29,10 +29,24 @@ export interface DolikeAccountInfo {
   email?: string;
 }
 
+export function TiktokIcon({ className = "size-3.5" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+    >
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 3 15.69 6.34 6.34 0 0 0 9.35 22a6.33 6.33 0 0 0 6.34-6.31V9.22a8.16 8.16 0 0 0 4.9 1.62V7.4a4.85 4.85 0 0 1-1-.71z" />
+    </svg>
+  );
+}
+
+export type SocialPlatform = "tiktok" | "facebook" | "instagram";
+
 interface AppHeaderProps {
   pageTitle?: string;
-  activePlatform?: "facebook" | "instagram";
-  onPlatformChange?: (platform: "facebook" | "instagram") => void;
+  activePlatform?: SocialPlatform;
+  onPlatformChange?: (platform: SocialPlatform) => void;
   xsmmAccount?: XsmmAccountInfo;
   onXsmmLoginClick?: () => void;
   onXsmmLogoutClick?: () => void;
@@ -46,6 +60,7 @@ interface AppHeaderProps {
   showXsmm?: boolean;
   showNvc?: boolean;
   showDolike?: boolean;
+  hideTiktok?: boolean;
   hideInstagram?: boolean;
   hideFacebook?: boolean;
 }
@@ -67,6 +82,7 @@ export function AppHeader({
   showXsmm = true,
   showNvc = false,
   showDolike = false,
+  hideTiktok = false,
   hideInstagram = false,
   hideFacebook = false,
 }: AppHeaderProps) {
@@ -88,7 +104,7 @@ export function AppHeader({
         isMacOS ? "pl-20" : "pr-[136px]",
       )}
     >
-      {/* Left: App Logo + Platform Tabs (Facebook & Instagram) */}
+      {/* Left: App Logo + Platform Tabs (TikTok, Facebook & Instagram) */}
       <div
         data-tauri-drag-region
         className="flex items-center gap-2 pointer-events-auto"
@@ -102,6 +118,22 @@ export function AppHeader({
             <span>AutoLunex</span>
           </div>
         )}
+        {!hideTiktok && (
+          <button
+            type="button"
+            onClick={() => onPlatformChange?.("tiktok")}
+            className={cn(
+              "flex items-center gap-1.5 rounded-lg border px-3 py-1 text-xs font-medium transition-all cursor-pointer",
+              activePlatform === "tiktok"
+                ? "border-foreground/35 bg-foreground/15 text-foreground font-semibold shadow-xs"
+                : "border-border/60 bg-muted/30 text-muted-foreground hover:bg-muted/60 hover:text-foreground",
+            )}
+          >
+            <TiktokIcon className="size-3.5 text-foreground" />
+            <span>TikTok</span>
+          </button>
+        )}
+
         {!hideFacebook && (
           <button
             type="button"

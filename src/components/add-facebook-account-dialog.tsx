@@ -4,6 +4,7 @@ import { Check, Key, RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
+import { TiktokIcon } from "./app-header";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +24,7 @@ interface AddFacebookAccountDialogProps {
   onClose: () => void;
   onAddAccounts?: (accounts: string[], format: string) => void;
   isXsmmLoggedIn?: boolean;
-  platform?: "facebook" | "instagram";
+  platform?: "tiktok" | "facebook" | "instagram";
   hideXsmmAuth?: boolean;
   onXsmmLoginSuccess?: (user: {
     username: string;
@@ -46,6 +47,13 @@ const INSTAGRAM_FORMAT_OPTIONS = [
   { id: "proxy", label: "Proxy" },
 ];
 
+const TIKTOK_FORMAT_OPTIONS = [
+  { id: "uid", label: "Username / UID" },
+  { id: "pass", label: "Mật khẩu" },
+  { id: "cookie", label: "Cookie" },
+  { id: "proxy", label: "Proxy" },
+];
+
 export function AddFacebookAccountDialog({
   isOpen,
   onClose,
@@ -56,9 +64,12 @@ export function AddFacebookAccountDialog({
   onXsmmLoginSuccess,
 }: AddFacebookAccountDialogProps) {
   const isInstagram = platform === "instagram";
-  const formatOptions = isInstagram
-    ? INSTAGRAM_FORMAT_OPTIONS
-    : FACEBOOK_FORMAT_OPTIONS;
+  const isTikTok = platform === "tiktok";
+  const formatOptions = isTikTok
+    ? TIKTOK_FORMAT_OPTIONS
+    : isInstagram
+      ? INSTAGRAM_FORMAT_OPTIONS
+      : FACEBOOK_FORMAT_OPTIONS;
 
   // Nút định dạng: mặc định KHÔNG chọn sẵn nút nào
   const [selectedFormat, setSelectedFormat] = useState<string[]>([]);
@@ -145,21 +156,27 @@ export function AddFacebookAccountDialog({
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-2">
-            {isInstagram ? (
+            {isTikTok ? (
+              <TiktokIcon className="size-5 text-foreground" />
+            ) : isInstagram ? (
               <FaInstagram className="size-5 text-[#E1306C]" />
             ) : (
               <FaFacebook className="size-5 text-[#1877F2]" />
             )}
             <DialogTitle>
-              {isInstagram
-                ? "Thêm tài khoản Instagram"
-                : "Thêm tài khoản Facebook"}
+              {isTikTok
+                ? "Thêm tài khoản TikTok"
+                : isInstagram
+                  ? "Thêm tài khoản Instagram"
+                  : "Thêm tài khoản Facebook"}
             </DialogTitle>
           </div>
           <DialogDescription>
-            {isInstagram
-              ? "Nhập danh sách tài khoản Instagram theo định dạng tự chọn bên dưới."
-              : "Nhập danh sách tài khoản Facebook theo định dạng tự chọn bên dưới."}
+            {isTikTok
+              ? "Nhập danh sách tài khoản TikTok theo định dạng tự chọn bên dưới."
+              : isInstagram
+                ? "Nhập danh sách tài khoản Instagram theo định dạng tự chọn bên dưới."
+                : "Nhập danh sách tài khoản Facebook theo định dạng tự chọn bên dưới."}
           </DialogDescription>
         </DialogHeader>
 
