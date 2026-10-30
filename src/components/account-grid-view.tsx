@@ -31,6 +31,11 @@ interface AccountGridViewProps {
   nvcLinkedUids: string[];
   nvcLinkingIds: string[];
   onLinkNvcAccount: (acc: FacebookAccount) => void;
+  dolikeLinkedUsernames?: string[];
+  dolikeLinkingIds?: string[];
+  onLinkDolikeAccount?: (acc: FacebookAccount) => void;
+  xsmmLinkingIds?: string[];
+  onLinkXsmmAccount?: (acc: FacebookAccount) => void;
   onCheckAccount: (acc: FacebookAccount) => void;
   onRunAccount: (acc: FacebookAccount) => void;
   onDeleteAccount: (id: string) => void;
@@ -50,6 +55,11 @@ export function AccountGridView({
   nvcLinkedUids,
   nvcLinkingIds,
   onLinkNvcAccount,
+  dolikeLinkedUsernames = [],
+  dolikeLinkingIds = [],
+  onLinkDolikeAccount,
+  xsmmLinkingIds = [],
+  onLinkXsmmAccount,
   onCheckAccount,
   onRunAccount,
   onDeleteAccount,
@@ -83,18 +93,8 @@ export function AccountGridView({
         return (
           <div
             key={acc.id}
-            onClick={(e) => {
-              const target = e.target as HTMLElement;
-              if (
-                target.closest("button") ||
-                target.closest("[role='checkbox']")
-              ) {
-                return;
-              }
-              onToggleSelectOne(acc.id);
-            }}
             className={cn(
-              "group relative flex flex-col rounded-2xl border p-3.5 transition-all duration-200 cursor-pointer shadow-xs h-fit w-full",
+              "group relative flex flex-col rounded-2xl border p-3.5 transition-all duration-200 shadow-xs h-fit w-full",
               isSelected
                 ? "bg-primary/10 border-primary ring-1 ring-primary/40 shadow-md"
                 : isCheckpointOrDie
@@ -259,11 +259,55 @@ export function AccountGridView({
                             e.stopPropagation();
                             onLinkNvcAccount(acc);
                           }}
-                          className="text-[10px] font-medium text-blue-400 hover:underline cursor-pointer"
+                          className="text-[10px] font-medium text-blue-400 hover:underline cursor-pointer inline-flex items-center gap-1"
+                          title={tr("Bấm để liên kết NVC", "Click to link NVC")}
                         >
-                          {isLinking
-                            ? tr("Đang link...", "Linking...")
-                            : tr("Link NVC", "Link NVC")}
+                          {isLinking && (
+                            <RefreshCw className="size-2.5 animate-spin" />
+                          )}
+                          <span>
+                            {isLinking
+                              ? tr("Đang link...", "Linking...")
+                              : tr("Link NVC", "Link NVC")}
+                          </span>
+                        </button>
+                      );
+                    })()
+                  ) : currentPage === "dolike" ? (
+                    (() => {
+                      const cleanUser = (acc.name || acc.uid || "")
+                        .replace(/^@/, "")
+                        .trim()
+                        .toLowerCase();
+                      const isLinked = dolikeLinkedUsernames.includes(cleanUser);
+                      const isLinking = dolikeLinkingIds.includes(acc.id);
+
+                      if (isLinked) {
+                        return (
+                          <span className="text-emerald-500 font-medium">
+                            {tr("Đã liên kết", "Linked")}
+                          </span>
+                        );
+                      }
+                      return (
+                        <button
+                          type="button"
+                          disabled={isLinking}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onLinkDolikeAccount?.(acc);
+                          }}
+                          className="text-[10px] font-medium text-amber-500 hover:underline cursor-pointer inline-flex items-center gap-1"
+                          title={tr("Bấm để liên kết DoLike", "Click to link DoLike")}
+                        >
+                          {isLinking && (
+                            <RefreshCw className="size-2.5 animate-spin" />
+                          )}
+                          <span>
+                            {isLinking
+                              ? tr("Đang link...", "Linking...")
+                              : tr("Link DoLike", "Link DoLike")}
+                          </span>
                         </button>
                       );
                     })()
@@ -272,9 +316,30 @@ export function AccountGridView({
                       {tr("Đã liên kết", "Linked")}
                     </span>
                   ) : (
-                    <span className="text-muted-foreground/60">
-                      {tr("Chưa link", "Unlinked")}
-                    </span>
+                    (() => {
+                      const isLinking = xsmmLinkingIds.includes(acc.id);
+                      return (
+                        <button
+                          type="button"
+                          disabled={isLinking}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onLinkXsmmAccount?.(acc);
+                          }}
+                          className="text-[10px] font-medium text-blue-400 hover:underline cursor-pointer inline-flex items-center gap-1"
+                          title={tr("Bấm để liên kết XSMM", "Click to link XSMM")}
+                        >
+                          {isLinking && (
+                            <RefreshCw className="size-2.5 animate-spin" />
+                          )}
+                          <span>
+                            {isLinking
+                              ? tr("Đang link...", "Linking...")
+                              : tr("Link XSMM", "Link XSMM")}
+                          </span>
+                        </button>
+                      );
+                    })()
                   )}
                 </div>
               </div>

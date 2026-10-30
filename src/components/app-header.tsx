@@ -43,8 +43,6 @@ interface AppHeaderProps {
   onDolikeLoginClick?: () => void;
   onDolikeLogoutClick?: () => void;
   onNewClick?: () => void;
-  viewMode?: "table" | "grid";
-  onViewModeChange?: (mode: "table" | "grid") => void;
   showXsmm?: boolean;
   showNvc?: boolean;
   showDolike?: boolean;
@@ -66,8 +64,6 @@ export function AppHeader({
   onDolikeLoginClick,
   onDolikeLogoutClick,
   onNewClick,
-  viewMode,
-  onViewModeChange,
   showXsmm = true,
   showNvc = false,
   showDolike = false,
@@ -282,37 +278,6 @@ export function AppHeader({
               </button>
             )
           ))}
-
-        {onViewModeChange && viewMode && (
-          <div className="flex items-center gap-0.5 bg-muted/50 p-0.5 rounded-lg border border-border/50">
-            <button
-              type="button"
-              onClick={() => onViewModeChange("table")}
-              title={isVi ? "Dạng dài (Bảng chi tiết)" : "Table / List view"}
-              className={cn(
-                "flex items-center justify-center size-6.5 rounded-md transition-all cursor-pointer",
-                viewMode === "table"
-                  ? "bg-background text-foreground shadow-2xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/80",
-              )}
-            >
-              <LayoutList className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => onViewModeChange("grid")}
-              title={isVi ? "Dạng thẻ (Card lưới)" : "Card / Grid view"}
-              className={cn(
-                "flex items-center justify-center size-6.5 rounded-md transition-all cursor-pointer",
-                viewMode === "grid"
-                  ? "bg-background text-foreground shadow-2xs font-semibold"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/80",
-              )}
-            >
-              <LayoutGrid className="size-3.5" />
-            </button>
-          </div>
-        )}
 
         {onNewClick && (
           <Button

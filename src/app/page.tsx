@@ -67,7 +67,7 @@ import {
   type AppVersionCheckResult,
   checkAppVersion,
 } from "@/lib/version-checker";
-import { getXsmmUser } from "@/lib/xsmm-api";
+import { addXsmmAccount, getXsmmUser } from "@/lib/xsmm-api";
 import { type AccountRunState, xsmmRunner } from "@/lib/xsmm-runner";
 import { dolikeRunner } from "@/lib/dolike-runner";
 
@@ -141,12 +141,12 @@ export default function HomePage() {
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
   const tr = (vi: string, en: string) => (isVi ? vi : en);
 
-  // Chế độ xem danh sách tài khoản: "table" (dạng dài/bảng) hoặc "grid" (dạng thẻ)
+  // Chế độ xem danh sách tài khoản: mặc định là "grid" (dạng thẻ)
   const [accountViewMode, setAccountViewMode] = useState<"table" | "grid">(() => {
-    if (typeof window === "undefined") return "table";
+    if (typeof window === "undefined") return "grid";
     return (
       (localStorage.getItem("autolunex_account_view_mode") as "table" | "grid") ||
-      "table"
+      "grid"
     );
   });
 
@@ -306,6 +306,7 @@ export default function HomePage() {
   const hasCheckedDolikeAccountsRef = useRef(false);
   const [nvcLinkedUids, setNvcLinkedUids] = useState<string[]>([]);
   const [nvcLinkingIds, setNvcLinkingIds] = useState<string[]>([]);
+  const [xsmmLinkingIds, setXsmmLinkingIds] = useState<string[]>([]);
   const hasCheckedNvcAccountsRef = useRef(false);
   const [accounts, setAccounts] = useState<FacebookAccount[]>(() => {
     if (typeof window === "undefined") return [];
@@ -1064,13 +1065,15 @@ export default function HomePage() {
       return;
     }
 
-    const selectedAccounts = filteredAccounts.filter((a) =>
-      selectedIds.includes(a.id),
-    );
-    if (selectedAccounts.length === 0) return;
+    const targetAccounts =
+      selectedIds.length > 0
+        ? filteredAccounts.filter((a) => selectedIds.includes(a.id))
+        : filteredAccounts;
+    if (targetAccounts.length === 0) return;
 
+    const targetAccountIds = targetAccounts.map((a) => a.id);
     setDolikeLinkingIds((prev) =>
-      Array.from(new Set([...prev, ...selectedIds])),
+      Array.from(new Set([...prev, ...targetAccountIds])),
     );
     let successCount = 0;
     const newLinked: string[] = [];
@@ -1086,7 +1089,7 @@ export default function HomePage() {
         ? localStorage.getItem("dolike_bearer_token") || undefined
         : undefined);
 
-    for (const acc of selectedAccounts) {
+    for (const acc of targetAccounts) {
       const cleanUser = (acc.name || acc.uid || "")
         .replace(/^@/, "")
         .trim();
@@ -1145,7 +1148,7 @@ export default function HomePage() {
     }
 
     setDolikeLinkingIds((prev) =>
-      prev.filter((id) => !selectedIds.includes(id)),
+      prev.filter((id) => !targetAccountIds.includes(id)),
     );
 
     if (successCount > 0) {
@@ -1216,6 +1219,56 @@ export default function HomePage() {
       showErrorToast(msg);
     } finally {
       setNvcLinkingIds((prev) => prev.filter((id) => id !== targetAccount.id));
+    }
+  };
+
+  const handleLinkXsmmAccount = async (targetAccount: FacebookAccount) => {
+    const savedToken =
+      xsmmAccount.token || localStorage.getItem("xsmm_token") || "";
+    if (!savedToken) {
+      setIsXsmmLoginOpen(true);
+      showErrorToast(
+        tr(
+          "Vui lòng đăng nhập tài khoản XSMM trước!",
+          "Please log in to XSMM account first!",
+        ),
+      );
+      return;
+    }
+    setXsmmLinkingIds((prev) => [...prev, targetAccount.id]);
+    try {
+      const isIg = targetAccount.platform === "instagram";
+      const targetUser = isIg
+        ? (targetAccount.name || targetAccount.uid || "")
+            .replace(/^@/, "")
+            .trim()
+        : targetAccount.uid;
+      const res = await addXsmmAccount(savedToken, {
+        type: isIg ? "instagram" : "facebook",
+        link_account: targetUser,
+      });
+      if (res.success) {
+        showSuccessToast(
+          tr(
+            `Đã liên kết [${targetUser}] vào XSMM thành công!`,
+            `Successfully linked [${targetUser}] to XSMM!`,
+          ),
+        );
+      } else {
+        showErrorToast(
+          res.error ||
+            tr(
+              "Không thể liên kết tài khoản vào XSMM",
+              "Failed to link account to XSMM",
+            ),
+        );
+      }
+    } catch (err: unknown) {
+      showErrorToast(err instanceof Error ? err.message : String(err));
+    } finally {
+      setXsmmLinkingIds((prev) =>
+        prev.filter((id) => id !== targetAccount.id),
+      );
     }
   };
 
@@ -1983,7 +2036,7 @@ export default function HomePage() {
     })();
   };
 
-  const handleRunAccount = (acc: FacebookAccount) => {
+  const handleRunAccount = async (acc: FacebookAccount) => {
     if (acc.status === "checkpoint" || acc.status === "die") {
       showSuccessToast(
         tr(
@@ -2023,6 +2076,21 @@ export default function HomePage() {
           ),
         );
       } else {
+        // Tự động liên kết DoLike nếu chưa liên kết
+        const cleanUser = (acc.name || acc.uid || "")
+          .replace(/^@/, "")
+          .trim()
+          .toLowerCase();
+        if (cleanUser && !dolikeLinkedUsernames.includes(cleanUser)) {
+          showSuccessToast(
+            tr(
+              `Đang tự động liên kết tài khoản @${cleanUser} vào DoLike...`,
+              `Auto-linking @${cleanUser} to DoLike...`,
+            ),
+          );
+          await handleLinkDolikeAccount(acc);
+        }
+
         const dlCookie =
           dolikeAccount.sessionCookie ||
           (typeof window !== "undefined"
@@ -2046,6 +2114,29 @@ export default function HomePage() {
         );
       }
       return;
+    }
+
+    if (currentPage === "nvc") {
+      if (!nvcAccount.isLoggedIn) {
+        setIsNvcLoginOpen(true);
+        showSuccessToast(
+          tr(
+            "Vui lòng đăng nhập Nhiệm Vụ Chéo trước khi chạy!",
+            "Please log in to NVC before running!",
+          ),
+        );
+        return;
+      }
+      // Tự động liên kết NVC nếu chưa liên kết
+      if (acc.uid && !nvcLinkedUids.includes(acc.uid)) {
+        showSuccessToast(
+          tr(
+            `Đang tự động liên kết nick [${acc.uid}] vào NVC...`,
+            `Auto-linking account [${acc.uid}] to NVC...`,
+          ),
+        );
+        await handleLinkNvcAccount(acc);
+      }
     }
 
     const savedToken =
@@ -2129,7 +2220,7 @@ export default function HomePage() {
     );
   };
 
-  const handleRunSelected = () => {
+  const handleRunSelected = async () => {
     if (selectedIds.length === 0) return;
     const runnableAccounts = accounts.filter(
       (a) =>
@@ -2172,6 +2263,27 @@ export default function HomePage() {
         );
         return;
       }
+
+      // Tự động liên kết các tài khoản chưa liên kết trước khi chạy
+      const unlinked = runnableAccounts.filter((a) => {
+        const cleanUser = (a.name || a.uid || "")
+          .replace(/^@/, "")
+          .trim()
+          .toLowerCase();
+        return cleanUser && !dolikeLinkedUsernames.includes(cleanUser);
+      });
+      if (unlinked.length > 0) {
+        showSuccessToast(
+          tr(
+            `Tự động liên kết ${unlinked.length} tài khoản vào DoLike trước khi chạy...`,
+            `Auto-linking ${unlinked.length} accounts to DoLike before running...`,
+          ),
+        );
+        for (const acc of unlinked) {
+          await handleLinkDolikeAccount(acc);
+        }
+      }
+
       const dlCookie =
         dolikeAccount.sessionCookie ||
         (typeof window !== "undefined"
@@ -2194,6 +2306,33 @@ export default function HomePage() {
         ),
       );
       return;
+    }
+
+    if (currentPage === "nvc") {
+      if (!nvcAccount.isLoggedIn) {
+        setIsNvcLoginOpen(true);
+        showSuccessToast(
+          tr(
+            "Vui lòng đăng nhập Nhiệm Vụ Chéo trước khi chạy!",
+            "Please log in to NVC before running!",
+          ),
+        );
+        return;
+      }
+      const unlinkedNvc = runnableAccounts.filter(
+        (a) => a.uid && !nvcLinkedUids.includes(a.uid),
+      );
+      if (unlinkedNvc.length > 0) {
+        showSuccessToast(
+          tr(
+            `Tự động liên kết ${unlinkedNvc.length} tài khoản vào NVC trước khi chạy...`,
+            `Auto-linking ${unlinkedNvc.length} accounts to NVC before running...`,
+          ),
+        );
+        for (const acc of unlinkedNvc) {
+          await handleLinkNvcAccount(acc);
+        }
+      }
     }
 
     const savedToken =
@@ -2389,8 +2528,6 @@ export default function HomePage() {
         onDolikeLogoutClick={handleDolikeLogout}
         hideInstagram={currentPage === "nvc"}
         hideFacebook={currentPage === "dolike"}
-        viewMode={accountViewMode}
-        onViewModeChange={handleSetViewMode}
         onNewClick={() => setIsAddFacebookOpen(true)}
       />
 
@@ -2432,91 +2569,123 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Toolbar thao tác hàng loạt khi có tài khoản được chọn */}
-              {selectedIds.length > 0 && (
-                <div className="mb-2.5 flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs">
-                  <div className="font-medium text-foreground">
-                    {tr("Đã chọn ", "Selected ")}
-                    <span className="font-bold text-primary">
-                      {selectedIds.length}
-                    </span>{" "}
-                    {tr("tài khoản", "accounts")}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* Nút Cài đặt / Setup Job */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsJobConfigOpen(true)}
-                      className="h-7 text-[11px] gap-1.5 cursor-pointer bg-background hover:bg-muted font-medium border-border/80 shadow-xs text-foreground"
-                      title={tr(
-                        "Cài đặt loại job, thời gian delay làm job, chờ nhận job...",
-                        "Setup job types, action delay, wait delay...",
-                      )}
-                    >
-                      <SlidersHorizontal className="size-3 text-primary" />
-                      <span>{tr("Cài đặt Job", "Job Settings")}</span>
-                    </Button>
+              {/* Toolbar thao tác luôn luôn hiển thị cố định */}
+              <div className="mb-2.5 flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-muted/40 border border-border/60 text-xs">
+                <div className="font-medium text-foreground flex items-center gap-2">
+                  {selectedIds.length > 0 ? (
+                    <>
+                      <span>{tr("Đã chọn", "Selected")}:</span>
+                      <span className="font-bold text-primary px-1.5 py-0.5 rounded-md bg-primary/10 border border-primary/20">
+                        {selectedIds.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedIds([])}
+                        className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer ml-1"
+                      >
+                        {tr("Bỏ chọn", "Deselect")}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {tr("Tất cả:", "Total:")}{" "}
+                      <strong className="text-foreground">
+                        {filteredAccounts.length}
+                      </strong>{" "}
+                      {tr("tài khoản", "accounts")}
+                    </span>
+                  )}
+                </div>
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const toCheckAccounts = filteredAccounts.filter((a) =>
-                          selectedIds.includes(a.id),
-                        );
-                        const toCheckPages: {
-                          acc: FacebookAccount;
-                          page: FacebookPageItem;
-                        }[] = [];
-                        for (const a of filteredAccounts) {
-                          for (const p of a.pages || []) {
-                            if (
-                              selectedIds.includes(`page_${a.id}_${p.pageId}`)
-                            ) {
-                              toCheckPages.push({ acc: a, page: p });
-                            }
+                <div className="flex items-center gap-2">
+                  {/* Nút Cài đặt / Setup Job: Luôn luôn bấm được */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsJobConfigOpen(true)}
+                    className="h-7 text-[11px] gap-1.5 cursor-pointer bg-background hover:bg-muted font-medium border-border/80 shadow-xs text-foreground"
+                    title={tr(
+                      "Cài đặt loại job, thời gian delay làm job, chờ nhận job...",
+                      "Setup job types, action delay, wait delay...",
+                    )}
+                  >
+                    <SlidersHorizontal className="size-3 text-primary" />
+                    <span>{tr("Cài đặt Job", "Job Settings")}</span>
+                  </Button>
+
+                  {/* Nút Kiểm tra lại: nếu có chọn thì check đã chọn, nếu không chọn thì check tất cả */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const toCheckAccounts =
+                        selectedIds.length > 0
+                          ? filteredAccounts.filter((a) =>
+                              selectedIds.includes(a.id),
+                            )
+                          : filteredAccounts;
+                      const toCheckPages: {
+                        acc: FacebookAccount;
+                        page: FacebookPageItem;
+                      }[] = [];
+                      for (const a of filteredAccounts) {
+                        for (const p of a.pages || []) {
+                          if (
+                            selectedIds.length === 0 ||
+                            selectedIds.includes(`page_${a.id}_${p.pageId}`)
+                          ) {
+                            toCheckPages.push({ acc: a, page: p });
                           }
                         }
-                        void (async () => {
-                          for (const acc of toCheckAccounts) {
-                            await handleCheckAccount(acc);
-                            const safeDelay =
-                              1200 + Math.floor(Math.random() * 800);
-                            await new Promise((r) => setTimeout(r, safeDelay));
-                          }
-                          for (const { acc, page } of toCheckPages) {
-                            await handleCheckPage(acc, page);
-                            const safeDelay =
-                              1200 + Math.floor(Math.random() * 800);
-                            await new Promise((r) => setTimeout(r, safeDelay));
-                          }
-                        })();
-                      }}
-                      className="h-7 text-[11px] gap-1 cursor-pointer"
+                      }
+                      void (async () => {
+                        for (const acc of toCheckAccounts) {
+                          await handleCheckAccount(acc);
+                          const safeDelay =
+                            1200 + Math.floor(Math.random() * 800);
+                          await new Promise((r) => setTimeout(r, safeDelay));
+                        }
+                        for (const { acc, page } of toCheckPages) {
+                          await handleCheckPage(acc, page);
+                          const safeDelay =
+                            1200 + Math.floor(Math.random() * 800);
+                          await new Promise((r) => setTimeout(r, safeDelay));
+                        }
+                      })();
+                    }}
+                    className="h-7 text-[11px] gap-1 cursor-pointer bg-background hover:bg-muted"
+                  >
+                    <RefreshCw className="size-3" />
+                    <span>
+                      {selectedIds.length > 0
+                        ? `${tr("Kiểm tra lại", "Re-check")} (${selectedIds.length})`
+                        : tr("Kiểm tra tất cả", "Re-check all")}
+                    </span>
+                  </Button>
+
+                  {/* Nút Liên kết NVC (nếu ở tab NVC) */}
+                  {currentPage === "nvc" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => void handleBulkLinkNvc()}
+                      className="h-7 text-[11px] gap-1 cursor-pointer bg-blue-500/10 text-blue-500 border-blue-500/30 hover:bg-blue-500/20"
+                      title={tr(
+                        "Liên kết các tài khoản vào Nhiệm Vụ Chéo",
+                        "Link accounts to NVC",
+                      )}
                     >
-                      <RefreshCw className="size-3" />
+                      <Link2 className="size-3" />
                       <span>
-                        {tr("Kiểm tra lại", "Re-check")} ({selectedIds.length})
+                        {selectedIds.length > 0
+                          ? `${tr("Liên kết NVC", "Link NVC")} (${selectedIds.length})`
+                          : tr("Liên kết tất cả", "Link all")}
                       </span>
                     </Button>
-                    {currentPage === "nvc" && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void handleBulkLinkNvc()}
-                        className="h-7 text-[11px] gap-1 cursor-pointer bg-blue-500/10 text-blue-500 border-blue-500/30 hover:bg-blue-500/20"
-                        title={tr(
-                          "Liên kết các tài khoản đã chọn vào Nhiệm Vụ Chéo",
-                          "Link selected accounts to NVC",
-                        )}
-                      >
-                        <Link2 className="size-3" />
-                        <span>
-                          {tr("Liên kết NVC", "Link NVC")} ({selectedIds.length})
-                        </span>
-                      </Button>
-                    )}
+                  )}
+
+                  {/* Nút Xóa vĩnh viễn (chỉ sáng khi có chọn) */}
+                  {selectedIds.length > 0 && (
                     <Button
                       size="sm"
                       variant="destructive"
@@ -2560,19 +2729,32 @@ export default function HomePage() {
                       <Trash2 className="size-3" />
                       <span>{tr("Xóa vĩnh viễn", "Delete permanently")}</span>
                     </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleRunSelected}
-                      className="h-7 text-[11px] gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
-                    >
-                      <Play className="size-3 fill-current" />
-                      <span>
-                        {tr("Chạy", "Run")} ({selectedIds.length})
-                      </span>
-                    </Button>
-                  </div>
+                  )}
+
+                  {/* Nút Chạy: Chạy đã chọn hoặc Chạy tất cả */}
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (selectedIds.length > 0) {
+                        handleRunSelected();
+                      } else {
+                        // Chạy tất cả các tài khoản đang hiển thị
+                        for (const acc of filteredAccounts) {
+                          handleRunAccount(acc);
+                        }
+                      }
+                    }}
+                    className="h-7 text-[11px] gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
+                  >
+                    <Play className="size-3 fill-current" />
+                    <span>
+                      {selectedIds.length > 0
+                        ? `${tr("Chạy", "Run")} (${selectedIds.length})`
+                        : `${tr("Chạy tất cả", "Run all")} (${filteredAccounts.length})`}
+                    </span>
+                  </Button>
                 </div>
-              )}
+              </div>
 
               {/* Table / Grid View Container */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
@@ -2790,8 +2972,13 @@ export default function HomePage() {
                     nvcLinkedUids={nvcLinkedUids}
                     nvcLinkingIds={nvcLinkingIds}
                     onLinkNvcAccount={(acc) => void handleLinkNvcAccount(acc)}
+                    dolikeLinkedUsernames={dolikeLinkedUsernames}
+                    dolikeLinkingIds={dolikeLinkingIds}
+                    onLinkDolikeAccount={(acc) => void handleLinkDolikeAccount(acc)}
+                    xsmmLinkingIds={xsmmLinkingIds}
+                    onLinkXsmmAccount={(acc) => void handleLinkXsmmAccount(acc)}
                     onCheckAccount={(acc) => void handleCheckAccount(acc)}
-                    onRunAccount={handleRunAccount}
+                    onRunAccount={(acc) => void handleRunAccount(acc)}
                     onDeleteAccount={handleDeleteAccount}
                     onDetailAccount={(acc) => {
                       setDetailAccount(acc);
@@ -3555,55 +3742,110 @@ export default function HomePage() {
               transition={{ duration: 0.25, ease: MOTION_EASE_OUT }}
               className="flex w-full flex-1 flex-col"
             >
-              {/* Toolbar thao tác hàng loạt khi có tài khoản được chọn */}
-              {selectedIds.length > 0 && (
-                <div className="mb-2.5 flex items-center justify-between px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 text-xs">
-                  <div className="font-medium text-foreground">
-                    {tr("Đã chọn ", "Selected ")}
-                    <span className="font-bold text-primary">
-                      {selectedIds.length}
-                    </span>{" "}
-                    {tr("tài khoản", "accounts")}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* Nút Cài đặt / Setup Job */}
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setIsJobConfigOpen(true)}
-                      className="h-7 text-[11px] gap-1.5 cursor-pointer bg-background hover:bg-muted font-medium border-border/80 shadow-xs text-foreground"
-                      title={tr(
-                        "Cài đặt loại job, thời gian delay làm job, chờ nhận job...",
-                        "Setup job types, action delay, wait delay...",
-                      )}
-                    >
-                      <SlidersHorizontal className="size-3 text-primary" />
-                      <span>{tr("Cài đặt Job", "Job Settings")}</span>
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        const toCheckAccounts = filteredAccounts.filter((a) =>
-                          selectedIds.includes(a.id),
-                        );
-                        void (async () => {
-                          for (const acc of toCheckAccounts) {
-                            await handleCheckAccount(acc);
-                            const safeDelay =
-                              1200 + Math.floor(Math.random() * 800);
-                            await new Promise((r) => setTimeout(r, safeDelay));
-                          }
-                        })();
-                      }}
-                      className="h-7 text-[11px] gap-1 cursor-pointer"
-                    >
-                      <RefreshCw className="size-3" />
-                      <span>
-                        {tr("Kiểm tra lại", "Re-check")} ({selectedIds.length})
+              {/* Actions Toolbar DoLike: Luôn luôn hiển thị */}
+              <div className="mb-2.5 flex items-center justify-between px-3.5 py-1.5 rounded-xl bg-muted/40 border border-border/60 shadow-xs">
+                <div className="flex items-center gap-2 text-xs">
+                  {selectedIds.length > 0 ? (
+                    <>
+                      <span className="font-medium text-foreground">
+                        {tr("Đã chọn:", "Selected:")}
                       </span>
-                    </Button>
+                      <span className="rounded bg-primary/20 px-1.5 py-0.5 font-bold text-primary text-[11px]">
+                        {selectedIds.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedIds([])}
+                        className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer ml-1"
+                      >
+                        {tr("Bỏ chọn", "Deselect")}
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">
+                      {tr("Tất cả:", "Total:")}{" "}
+                      <strong className="text-foreground">
+                        {filteredAccounts.length}
+                      </strong>{" "}
+                      {tr("tài khoản", "accounts")}
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Nút Cài đặt / Setup Job */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsJobConfigOpen(true)}
+                    className="h-7 text-[11px] gap-1.5 cursor-pointer bg-background hover:bg-muted font-medium border-border/80 shadow-xs text-foreground"
+                    title={tr(
+                      "Cài đặt loại job, thời gian delay làm job, chờ nhận job...",
+                      "Setup job types, action delay, wait delay...",
+                    )}
+                  >
+                    <SlidersHorizontal className="size-3 text-primary" />
+                    <span>{tr("Cài đặt Job", "Job Settings")}</span>
+                  </Button>
+
+                  {/* Nút Kiểm tra lại */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const toCheckAccounts =
+                        selectedIds.length > 0
+                          ? filteredAccounts.filter((a) =>
+                              selectedIds.includes(a.id),
+                            )
+                          : filteredAccounts;
+                      void (async () => {
+                        for (const acc of toCheckAccounts) {
+                          await handleCheckAccount(acc);
+                          const safeDelay =
+                            1200 + Math.floor(Math.random() * 800);
+                          await new Promise((r) => setTimeout(r, safeDelay));
+                        }
+                      })();
+                    }}
+                    className="h-7 text-[11px] gap-1 cursor-pointer bg-background hover:bg-muted"
+                  >
+                    <RefreshCw className="size-3" />
+                    <span>
+                      {selectedIds.length > 0
+                        ? `${tr("Kiểm tra lại", "Re-check")} (${selectedIds.length})`
+                        : tr("Kiểm tra tất cả", "Re-check all")}
+                    </span>
+                  </Button>
+
+                  {/* Nút Liên kết DoLike */}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleBulkLinkDolike()}
+                    disabled={dolikeLinkingIds.length > 0}
+                    className="h-7 text-[11px] gap-1 cursor-pointer text-fuchsia-400 border-fuchsia-500/30 hover:bg-fuchsia-500/10 font-medium"
+                    title={tr(
+                      "Kiểm tra và liên kết các tài khoản Instagram vào DoLike",
+                      "Check and link Instagram accounts to DoLike",
+                    )}
+                  >
+                    {dolikeLinkingIds.length > 0 ? (
+                      <RefreshCw className="size-3 animate-spin" />
+                    ) : (
+                      <Link2 className="size-3" />
+                    )}
+                    <span>
+                      {dolikeLinkingIds.length > 0
+                        ? tr("Đang liên kết...", "Linking...")
+                        : selectedIds.length > 0
+                          ? `${tr("Liên kết DoLike", "Link DoLike")} (${selectedIds.length})`
+                          : tr("Liên kết tất cả", "Link all")}
+                    </span>
+                  </Button>
+
+                  {/* Nút Xóa vĩnh viễn (chỉ sáng khi có chọn) */}
+                  {selectedIds.length > 0 && (
                     <Button
                       size="sm"
                       variant="destructive"
@@ -3659,41 +3901,32 @@ export default function HomePage() {
                       <Trash2 className="size-3" />
                       <span>{tr("Xóa vĩnh viễn", "Delete permanently")}</span>
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleBulkLinkDolike}
-                      disabled={dolikeLinkingIds.length > 0}
-                      className="h-7 text-[11px] gap-1 cursor-pointer text-fuchsia-400 border-fuchsia-500/30 hover:bg-fuchsia-500/10 font-medium"
-                      title={tr(
-                        "Kiểm tra và liên kết các tài khoản Instagram đã chọn vào DoLike",
-                        "Check and link selected Instagram accounts to DoLike",
-                      )}
-                    >
-                      {dolikeLinkingIds.length > 0 ? (
-                        <RefreshCw className="size-3 animate-spin" />
-                      ) : (
-                        <Link2 className="size-3" />
-                      )}
-                      <span>
-                        {dolikeLinkingIds.length > 0
-                          ? tr("Đang liên kết...", "Linking...")
-                          : `${tr("Liên kết DoLike", "Link DoLike")} (${selectedIds.length})`}
-                      </span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={handleRunSelected}
-                      className="h-7 text-[11px] gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
-                    >
-                      <Play className="size-3 fill-current" />
-                      <span>
-                        {tr("Chạy", "Run")} ({selectedIds.length})
-                      </span>
-                    </Button>
-                  </div>
+                  )}
+
+                  {/* Nút Chạy: Chạy đã chọn hoặc Chạy tất cả */}
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      if (selectedIds.length > 0) {
+                        void handleRunSelected();
+                      } else {
+                        // Chạy tất cả các tài khoản đang hiển thị
+                        for (const acc of filteredAccounts) {
+                          void handleRunAccount(acc);
+                        }
+                      }
+                    }}
+                    className="h-7 text-[11px] gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-medium shadow-xs"
+                  >
+                    <Play className="size-3 fill-current" />
+                    <span>
+                      {selectedIds.length > 0
+                        ? `${tr("Chạy", "Run")} (${selectedIds.length})`
+                        : `${tr("Chạy tất cả", "Run all")} (${filteredAccounts.length})`}
+                    </span>
+                  </Button>
                 </div>
-              )}
+              </div>
 
               {/* Table / Grid View Container matching XSMM */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
@@ -3859,8 +4092,13 @@ export default function HomePage() {
                     nvcLinkedUids={nvcLinkedUids}
                     nvcLinkingIds={nvcLinkingIds}
                     onLinkNvcAccount={(acc) => void handleLinkNvcAccount(acc)}
+                    dolikeLinkedUsernames={dolikeLinkedUsernames}
+                    dolikeLinkingIds={dolikeLinkingIds}
+                    onLinkDolikeAccount={(acc) => void handleLinkDolikeAccount(acc)}
+                    xsmmLinkingIds={xsmmLinkingIds}
+                    onLinkXsmmAccount={(acc) => void handleLinkXsmmAccount(acc)}
                     onCheckAccount={(acc) => void handleCheckAccount(acc)}
-                    onRunAccount={handleRunAccount}
+                    onRunAccount={(acc) => void handleRunAccount(acc)}
                     onDeleteAccount={handleDeleteAccount}
                     onDetailAccount={(acc) => {
                       setDetailAccount(acc);
