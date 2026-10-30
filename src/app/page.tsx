@@ -540,7 +540,7 @@ export default function HomePage() {
             name: devName,
             note: devNote,
             tag: devTag,
-            status: "live",
+            status: "live" as const,
             isLive: true,
             platform: "tiktok",
           };
@@ -552,7 +552,7 @@ export default function HomePage() {
             note: devNote,
             tag: devTag,
             platform: "tiktok",
-            status: "live",
+            status: "live" as const,
             isLive: true,
             rawText: `${dev.serial} | ${devName} | USB_ADB`,
           };
@@ -582,11 +582,11 @@ export default function HomePage() {
       setAccounts((prev) => {
         const existingIdx = prev.findIndex((a) => a.uid === serial);
         if (existingIdx < 0) return prev;
-        const updated = [...prev];
+        const updated: FacebookAccount[] = [...prev];
         const oldNote = updated[existingIdx].note || "";
         updated[existingIdx] = {
           ...updated[existingIdx],
-          status: "die",
+          status: "die" as const,
           isLive: false,
           note: oldNote.includes("Đã ngắt") ? oldNote : `${oldNote} (Đã ngắt USB)`,
         };
@@ -1632,13 +1632,13 @@ export default function HomePage() {
           const devName = found.display_name || found.market_name || found.model || targetAccount.name;
           const devNote = `Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"} | Android ${found.android_version || "10+"} | Mã máy: ${found.model || "USB"}`;
           setAccounts((prev) => {
-            const updated = prev.map((a) =>
+            const updated: FacebookAccount[] = prev.map((a) =>
               a.id === targetAccount.id
                 ? {
                     ...a,
                     name: devName,
                     note: devNote,
-                    status: "live",
+                    status: "live" as const,
                     isLive: true,
                   }
                 : a,
@@ -1659,11 +1659,11 @@ export default function HomePage() {
           );
         } else {
           setAccounts((prev) => {
-            const updated = prev.map((a) =>
+            const updated: FacebookAccount[] = prev.map((a) =>
               a.id === targetAccount.id
                 ? {
                     ...a,
-                    status: "die",
+                    status: "die" as const,
                     isLive: false,
                     note: `${a.note || ""} (Đã ngắt USB)`.replace(
                       " (Đã ngắt USB) (Đã ngắt USB)",
