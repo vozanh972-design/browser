@@ -310,3 +310,87 @@ pub fn notify_phone_connected(serial: String, title: String, message: String) ->
     let _ = cmd.output();
     Ok(true)
 }
+
+#[tauri::command]
+pub fn launch_tiktok_app(serial: String) -> Result<bool, String> {
+    let adb_bin = match find_adb_path() {
+        Some(p) => p,
+        None => return Err("Chưa tìm thấy adb.exe trên máy tính".to_string()),
+    };
+
+    // 1. Đánh thức màn hình thiết bị (nếu đang sleep/tắt)
+    let mut cmd_wake = std::process::Command::new(&adb_bin);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd_wake.creation_flags(0x0800_0000);
+    }
+    cmd_wake.args(["-s", &serial, "shell", "input keyevent 224"]);
+    let _ = cmd_wake.output();
+
+    // 2. Mở ứng dụng TikTok VN theo package và activity yêu cầu:
+    // com.ss.android.ugc.trill / com.ss.android.ugc.aweme.splash.SplashActivity
+    let mut cmd_start = std::process::Command::new(&adb_bin);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd_start.creation_flags(0x0800_0000);
+    }
+    cmd_start.args([
+        "-s",
+        &serial,
+        "shell",
+        "am start -n com.ss.android.ugc.trill/com.ss.android.ugc.aweme.splash.SplashActivity",
+    ]);
+
+    if let Ok(output) = cmd_start.output() {
+        let err_str = String::from_utf8_lossy(&output.stderr);
+        let out_str = String::from_utf8_lossy(&output.stdout);
+
+        // Nếu báo lỗi hoặc chưa mở được activity, thử bằng monkey launcher cho com.ss.android.ugc.trill
+        if err_str.contains("Error")
+            || out_str.contains("Error")
+            || err_str.contains("does not exist")
+            || out_str.contains("does not exist")
+        {
+            let mut cmd_fallback = std::process::Command::new(&adb_bin);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd_fallback.creation_flags(0x0800_0000);
+            }
+            if let Ok(out_fb) = cmd_fallback
+                .args([
+                    "-s",
+                    &serial,
+                    "shell",
+                    "monkey -p com.ss.android.ugc.trill -c android.intent.category.LAUNCHER 1",
+                ])
+                .output()
+            {
+                let fb_err = String::from_utf8_lossy(&out_fb.stderr);
+                let fb_out = String::from_utf8_lossy(&out_fb.stdout);
+                // Nếu máy dùng bản quốc tế com.zhiliaoapp.musically
+                if fb_err.contains("No activities found") || fb_out.contains("No activities found") {
+                    let mut cmd_intl = std::process::Command::new(&adb_bin);
+                    #[cfg(windows)]
+                    {
+                        use std::os::windows::process::CommandExt;
+                        cmd_intl.creation_flags(0x0800_0000);
+                    }
+                    let _ = cmd_intl
+                        .args([
+                            "-s",
+                            &serial,
+                            "shell",
+                            "monkey -p com.zhiliaoapp.musically -c android.intent.category.LAUNCHER 1",
+                        ])
+                        .output();
+                }
+            }
+        }
+    }
+
+    Ok(true)
+}
+

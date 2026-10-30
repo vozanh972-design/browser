@@ -67,6 +67,19 @@ export async function notifyPhoneConnected(
   }
 }
 
+/**
+ * Điều khiển thiết bị Android mở ứng dụng TikTok VN
+ * Package: com.ss.android.ugc.trill
+ * Activity: com.ss.android.ugc.aweme.splash.SplashActivity
+ */
+export async function launchTiktokApp(serial: string): Promise<boolean> {
+  try {
+    return await invoke<boolean>("launch_tiktok_app", { serial });
+  } catch {
+    return false;
+  }
+}
+
 export interface DeviceWatcherHandlers {
   onDeviceConnected?: (device: AdbDeviceInfo) => void;
   onDeviceDisconnected?: (serial: string) => void;

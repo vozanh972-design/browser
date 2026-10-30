@@ -70,7 +70,11 @@ import {
 import { addXsmmAccount, getXsmmUser } from "@/lib/xsmm-api";
 import { type AccountRunState, xsmmRunner } from "@/lib/xsmm-runner";
 import { dolikeRunner } from "@/lib/dolike-runner";
-import { type AdbDeviceInfo, getAdbDevices } from "@/lib/adb-service";
+import {
+  type AdbDeviceInfo,
+  getAdbDevices,
+  launchTiktokApp,
+} from "@/lib/adb-service";
 
 export interface FacebookAccount {
   id: string;
@@ -1624,12 +1628,23 @@ export default function HomePage() {
     setCheckingIds((prev) => [...prev, targetAccount.id]);
 
     // Xử lý kiểm tra thiết bị Android cắm qua cáp USB
-    if (targetAccount.tag?.includes("USB") || targetAccount.id.startsWith("adb_")) {
+    if (
+      targetAccount.tag?.includes("USB") ||
+      targetAccount.id.startsWith("adb_") ||
+      targetAccount.platform === "tiktok"
+    ) {
       try {
         const devices = await getAdbDevices();
         const found = devices.find((d) => d.serial === targetAccount.uid);
         if (found && found.state === "device") {
-          const devName = found.display_name || found.market_name || found.model || targetAccount.name;
+          // Tự động đánh thức màn hình & mở ứng dụng TikTok VN trên điện thoại
+          void launchTiktokApp(targetAccount.uid);
+
+          const devName =
+            found.display_name ||
+            found.market_name ||
+            found.model ||
+            targetAccount.name;
           const devNote = `Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"} | Android ${found.android_version || "10+"} | Mã máy: ${found.model || "USB"}`;
           setAccounts((prev) => {
             const updated: FacebookAccount[] = prev.map((a) =>
@@ -1651,7 +1666,7 @@ export default function HomePage() {
             return updated;
           });
           showSuccessToast(
-            `Thiết bị ${devName} đang kết nối ổn định! Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"}`,
+            `Thiết bị ${devName} kết nối tốt! Đang mở TikTok VN trên máy. (Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"})`,
           );
         } else if (found && found.state === "unauthorized") {
           showErrorToast(

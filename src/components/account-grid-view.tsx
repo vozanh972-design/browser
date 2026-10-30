@@ -24,6 +24,7 @@ import { TiktokIcon } from "@/components/app-header";
 import { type FacebookPageItem } from "@/lib/facebook-api";
 import { cn } from "@/lib/utils";
 import { type AccountRunState } from "@/lib/xsmm-runner";
+import { launchTiktokApp } from "@/lib/adb-service";
 
 interface AccountGridViewProps {
   accounts: FacebookAccount[];
@@ -85,6 +86,9 @@ export function AccountGridView({
       );
     } else {
       setNurturingIds((prev) => [...prev, acc.id]);
+      if (acc.tag?.includes("USB") || acc.id.startsWith("adb_") || acc.platform === "tiktok") {
+        void launchTiktokApp(acc.uid);
+      }
       toast.success(
         tr(
           `Đang chạy kịch bản nuôi tài khoản TikTok trên thiết bị ${acc.name || acc.uid}...`,

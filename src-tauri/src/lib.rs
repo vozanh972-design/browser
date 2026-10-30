@@ -1675,6 +1675,7 @@ pub fn run() {
       adb::check_adb_status,
       adb::get_adb_devices,
       adb::notify_phone_connected,
+      adb::launch_tiktok_app,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");
