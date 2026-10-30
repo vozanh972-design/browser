@@ -34,6 +34,7 @@ import { ForceUpdateModal } from "@/components/force-update-modal";
 import { KeyLoginScreen } from "@/components/key-login-screen";
 import { type AppPage, RailNav } from "@/components/rail-nav";
 import { RegPageView } from "@/components/reg-page-view";
+import { OverviewView } from "@/components/overview-view";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UtilitiesDialog } from "@/components/utilities-dialog";
@@ -2760,6 +2761,8 @@ export default function HomePage() {
       case "nvc":
       case "dolike":
         return "";
+      case "overview":
+        return tr("Tổng quan", "Overview");
       case "ttc":
         return "TTC";
       case "account":
@@ -2829,9 +2832,13 @@ export default function HomePage() {
         onDolikeLoginClick={() => setIsDolikeLoginOpen(true)}
         onDolikeLogoutClick={handleDolikeLogout}
         hideTiktok={currentPage !== "profiles"}
-        hideInstagram={currentPage === "nvc"}
-        hideFacebook={currentPage === "dolike"}
-        onNewClick={() => setIsAddFacebookOpen(true)}
+        hideInstagram={currentPage === "nvc" || currentPage === "overview"}
+        hideFacebook={currentPage === "dolike" || currentPage === "overview"}
+        onNewClick={
+          currentPage === "overview"
+            ? undefined
+            : () => setIsAddFacebookOpen(true)
+        }
       />
 
       {/* Main content area */}
@@ -4790,6 +4797,26 @@ export default function HomePage() {
               }
               accounts={accounts}
               onUpdateAccountPages={handleUpdateAccountPages}
+            />
+          )}
+
+          {currentPage === "overview" && (
+            <OverviewView
+              accounts={accounts}
+              xsmmAccount={xsmmAccount}
+              nvcAccount={nvcAccount}
+              dolikeAccount={{
+                email: dolikeAccount.email,
+                balance: dolikeAccount.balance,
+                isLoggedIn: dolikeAccount.isLoggedIn,
+              }}
+              licenseInfo={licenseInfo}
+              onNavigate={(page) => setCurrentPage(page)}
+              onSelectPlatform={(plat) => setCurrentPlatform(plat)}
+              onOpenJobConfig={() => setIsJobConfigOpen(true)}
+              onOpenXsmmLogin={() => setIsXsmmLoginOpen(true)}
+              onOpenNvcLogin={() => setIsNvcLoginOpen(true)}
+              onOpenDolikeLogin={() => setIsDolikeLoginOpen(true)}
             />
           )}
         </main>
