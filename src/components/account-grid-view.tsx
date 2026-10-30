@@ -93,6 +93,12 @@ export function AccountGridView({
         const isInstagram = acc.platform === "instagram";
         const isTikTok = acc.platform === "tiktok";
         const isUsbDevice = acc.tag?.includes("USB") || acc.id.startsWith("adb_");
+        const androidVerMatch = acc.note?.match(/Android\s*([0-9.]+)/i);
+        const androidVerText = androidVerMatch
+          ? `Android ${androidVerMatch[1]}`
+          : acc.note?.includes("Android")
+            ? "Android"
+            : "Android";
         const hasPages = acc.pages && acc.pages.length > 0;
 
         return (
@@ -169,6 +175,19 @@ export function AccountGridView({
                       </span>
                     )}
                   </span>
+                ) : isUsbDevice ? (
+                  /* Với thiết bị Android USB: Hiển thị Android version, bỏ chữ Live */
+                  isCheckpointOrDie ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/25">
+                      <span className="size-1.5 rounded-full bg-rose-500" />
+                      <span>Đã ngắt</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
+                      <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>{androidVerText}</span>
+                    </span>
+                  )
                 ) : acc.isLive === true || acc.status === "live" ? (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
                     <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -412,7 +431,7 @@ export function AccountGridView({
                   ) : isUsbDevice ? (
                     <span className="text-emerald-500 text-[10px] font-medium flex items-center justify-end gap-1">
                       <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span className="truncate">{acc.note?.split("|")[1]?.trim() || "Sẵn sàng"}</span>
+                      <span>{tr("Sẵn sàng", "Ready")}</span>
                     </span>
                   ) : (
                     <span className="text-muted-foreground text-[10px]">
@@ -423,38 +442,20 @@ export function AccountGridView({
               </div>
             </div>
 
-            {/* Hàng 4: Footer Buttons gọn gàng chuẩn ảnh 2 */}
+            {/* Hàng 4: Footer Buttons */}
             <div className="flex items-center justify-between pt-2 border-t border-border/30">
               <div className="flex items-center gap-1">
-                {/* Nút Xem chi tiết */}
+                {/* Nút Xem chi tiết (dấu chấm than) */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onDetailAccount(acc);
                   }}
-                  title={tr("Xem toàn bộ thông tin", "View full details")}
+                  title={tr("Xem thông tin chi tiết máy & tài khoản", "View device & account details")}
                   className="p-1 rounded-md text-muted-foreground hover:text-primary hover:bg-muted/80 transition-colors cursor-pointer"
                 >
                   <CircleAlert className="size-3.5" />
-                </button>
-
-                {/* Nút Kiểm tra lại */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onCheckAccount(acc);
-                  }}
-                  title={tr("Kiểm tra lại Live/Die", "Re-check status")}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
-                >
-                  <RefreshCw
-                    className={cn(
-                      "size-3.5",
-                      isChecking && "animate-spin text-primary",
-                    )}
-                  />
                 </button>
 
                 {/* Nút Xóa */}
@@ -464,50 +465,132 @@ export function AccountGridView({
                     e.stopPropagation();
                     onDeleteAccount(acc.id);
                   }}
-                  title={tr("Xóa tài khoản", "Delete account")}
+                  title={tr("Xóa khỏi danh sách", "Delete from list")}
                   className="p-1 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
                 >
                   <Trash2 className="size-3.5" />
                 </button>
               </div>
 
-              {/* Nút Chạy / Dừng (gọn gàng, vừa khít) */}
-              <button
-                type="button"
-                disabled={isCheckpointOrDie}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isCheckpointOrDie) return;
-                  onRunAccount(acc);
-                }}
-                title={
-                  isCheckpointOrDie
-                    ? tr("Tài khoản lỗi", "Account error")
-                    : isRunning
-                      ? tr("Dừng chạy", "Stop account")
-                      : tr("Chạy tài khoản", "Run account")
-                }
-                className={cn(
-                  "flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer shadow-xs",
-                  isCheckpointOrDie
-                    ? "opacity-30 cursor-not-allowed bg-muted text-muted-foreground"
-                    : isRunning
-                      ? "bg-rose-500/15 text-rose-500 border border-rose-500/30 hover:bg-rose-500/25"
-                      : "bg-emerald-600 hover:bg-emerald-700 text-white",
-                )}
-              >
-                {isRunning ? (
-                  <>
-                    <Square className="size-2.5 fill-current" />
-                    <span>{tr("Dừng", "Stop")}</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="size-2.5 fill-current" />
-                    <span>{tr("Chạy", "Run")}</span>
-                  </>
-                )}
-              </button>
+              {/* Nút hành động */}
+              {isUsbDevice ? (
+                <div className="flex items-center gap-1.5">
+                  {/* Nút 1: Kiểm tra acc */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCheckAccount(acc);
+                    }}
+                    title={tr("Kiểm tra kết nối và thông số máy", "Check device")}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted/70 text-foreground text-[10.5px] font-medium transition-colors cursor-pointer shadow-2xs"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "size-2.5",
+                        isChecking && "animate-spin text-primary",
+                      )}
+                    />
+                    <span>{tr("Kiểm tra acc", "Check acc")}</span>
+                  </button>
+
+                  {/* Nút 2: Nuôi acc */}
+                  <button
+                    type="button"
+                    disabled={isCheckpointOrDie}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isCheckpointOrDie) return;
+                      onRunAccount(acc);
+                    }}
+                    title={
+                      isCheckpointOrDie
+                        ? tr("Thiết bị đã ngắt kết nối", "Device disconnected")
+                        : isRunning
+                          ? tr("Dừng chạy", "Stop")
+                          : tr("Chạy nuôi tài khoản trên máy", "Run automation")
+                    }
+                    className={cn(
+                      "flex items-center gap-1 px-3 py-1 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer shadow-xs",
+                      isCheckpointOrDie
+                        ? "opacity-30 cursor-not-allowed bg-muted text-muted-foreground"
+                        : isRunning
+                          ? "bg-rose-500/15 text-rose-500 border border-rose-500/30 hover:bg-rose-500/25"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white active:scale-95",
+                    )}
+                  >
+                    {isRunning ? (
+                      <>
+                        <Square className="size-2.5 fill-current" />
+                        <span>{tr("Dừng", "Stop")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="size-2.5 fill-current" />
+                        <span>{tr("Nuôi acc", "Nuôi acc")}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  {/* Nút Kiểm tra lại FB/IG */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCheckAccount(acc);
+                    }}
+                    title={tr("Kiểm tra lại Live/Die", "Re-check status")}
+                    className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors cursor-pointer"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "size-3.5",
+                        isChecking && "animate-spin text-primary",
+                      )}
+                    />
+                  </button>
+
+                  {/* Nút Chạy FB/IG */}
+                  <button
+                    type="button"
+                    disabled={isCheckpointOrDie}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isCheckpointOrDie) return;
+                      onRunAccount(acc);
+                    }}
+                    title={
+                      isCheckpointOrDie
+                        ? tr("Tài khoản lỗi", "Account error")
+                        : isRunning
+                          ? tr("Dừng chạy", "Stop account")
+                          : tr("Chạy tài khoản", "Run account")
+                    }
+                    className={cn(
+                      "flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer shadow-xs",
+                      isCheckpointOrDie
+                        ? "opacity-30 cursor-not-allowed bg-muted text-muted-foreground"
+                        : isRunning
+                          ? "bg-rose-500/15 text-rose-500 border border-rose-500/30 hover:bg-rose-500/25"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white",
+                    )}
+                  >
+                    {isRunning ? (
+                      <>
+                        <Square className="size-2.5 fill-current" />
+                        <span>{tr("Dừng", "Stop")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="size-2.5 fill-current" />
+                        <span>{tr("Chạy", "Run")}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         );

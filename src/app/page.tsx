@@ -413,6 +413,9 @@ export default function HomePage() {
     "tiktok" | "facebook" | "instagram"
   >("facebook");
 
+  // Đối với TikTok: luôn cố định dạng thẻ ("grid"), không cho phép xem dạng dài
+  const effectiveViewMode = currentPlatform === "tiktok" ? "grid" : accountViewMode;
+
   // Tự động lưu danh sách tài khoản vào localStorage
   useEffect(() => {
     try {
@@ -1619,6 +1622,76 @@ export default function HomePage() {
   const handleCheckAccount = async (targetAccount: FacebookAccount) => {
     if (checkingIds.includes(targetAccount.id)) return;
     setCheckingIds((prev) => [...prev, targetAccount.id]);
+
+    // Xử lý kiểm tra thiết bị Android cắm qua cáp USB
+    if (targetAccount.tag?.includes("USB") || targetAccount.id.startsWith("adb_")) {
+      try {
+        const devices = await getAdbDevices();
+        const found = devices.find((d) => d.serial === targetAccount.uid);
+        if (found && found.state === "device") {
+          const devName = found.display_name || found.market_name || found.model || targetAccount.name;
+          const devNote = `Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"} | Android ${found.android_version || "10+"} | Mã máy: ${found.model || "USB"}`;
+          setAccounts((prev) => {
+            const updated = prev.map((a) =>
+              a.id === targetAccount.id
+                ? {
+                    ...a,
+                    name: devName,
+                    note: devNote,
+                    status: "live",
+                    isLive: true,
+                  }
+                : a,
+            );
+            try {
+              localStorage.setItem("autolunex_facebook_accounts_v1", JSON.stringify(updated));
+            } catch {
+              // ignore
+            }
+            return updated;
+          });
+          showSuccessToast(
+            `Thiết bị ${devName} đang kết nối ổn định! Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"}`,
+          );
+        } else if (found && found.state === "unauthorized") {
+          showErrorToast(
+            `Thiết bị ${found.model || targetAccount.name} chưa được cấp quyền Gỡ lỗi USB trên điện thoại.`,
+          );
+        } else {
+          setAccounts((prev) => {
+            const updated = prev.map((a) =>
+              a.id === targetAccount.id
+                ? {
+                    ...a,
+                    status: "die",
+                    isLive: false,
+                    note: `${a.note || ""} (Đã ngắt USB)`.replace(
+                      " (Đã ngắt USB) (Đã ngắt USB)",
+                      " (Đã ngắt USB)",
+                    ),
+                  }
+                : a,
+            );
+            try {
+              localStorage.setItem("autolunex_facebook_accounts_v1", JSON.stringify(updated));
+            } catch {
+              // ignore
+            }
+            return updated;
+          });
+          showErrorToast(
+            `Không tìm thấy thiết bị ${targetAccount.name}. Vui lòng cắm lại cáp USB.`,
+          );
+        }
+      } catch (err: unknown) {
+        showErrorToast(
+          `Lỗi kiểm tra thiết bị: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      } finally {
+        setCheckingIds((prev) => prev.filter((id) => id !== targetAccount.id));
+      }
+      return;
+    }
 
     if (targetAccount.platform === "instagram" || isDoLikeAccount(targetAccount)) {
       try {
@@ -2899,7 +2972,7 @@ export default function HomePage() {
               {/* Table / Grid View Container */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Header thanh điều hướng chế độ xem */}
-                {accountViewMode === "grid" && filteredAccounts.length > 0 ? (
+                {effectiveViewMode === "grid" && filteredAccounts.length > 0 ? (
                   <div className="flex items-center justify-between px-3.5 py-2 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/20 select-none shrink-0">
                     <div className="flex items-center gap-2.5">
                       <Checkbox
@@ -2914,29 +2987,31 @@ export default function HomePage() {
                         {tr("tài khoản", "accounts")})
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-muted-foreground font-medium">
-                        {tr("Chế độ xem:", "View:")}
-                      </span>
-                      <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/50">
-                        <button
-                          type="button"
-                          onClick={() => handleSetViewMode("table")}
-                          title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
-                          className="p-1 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
-                        >
-                          <LayoutList className="size-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetViewMode("grid")}
-                          title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
-                          className="p-1 rounded transition-colors cursor-pointer bg-background text-foreground shadow-2xs font-semibold"
-                        >
-                          <LayoutGrid className="size-3" />
-                        </button>
+                    {currentPlatform !== "tiktok" && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-muted-foreground font-medium">
+                          {tr("Chế độ xem:", "View:")}
+                        </span>
+                        <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/50">
+                          <button
+                            type="button"
+                            onClick={() => handleSetViewMode("table")}
+                            title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
+                            className="p-1 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
+                          >
+                            <LayoutList className="size-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetViewMode("grid")}
+                            title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
+                            className="p-1 rounded transition-colors cursor-pointer bg-background text-foreground shadow-2xs font-semibold"
+                          >
+                            <LayoutGrid className="size-3" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ) : (
                   /* Table Header */
@@ -3127,7 +3202,7 @@ export default function HomePage() {
                       </div>
                     )}
                   </div>
-                ) : accountViewMode === "grid" ? (
+                ) : effectiveViewMode === "grid" ? (
                   <AccountGridView
                     accounts={filteredAccounts}
                     selectedIds={selectedIds}
@@ -4097,7 +4172,7 @@ export default function HomePage() {
               {/* Table / Grid View Container matching XSMM */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
                 {/* Header thanh điều hướng chế độ xem */}
-                {accountViewMode === "grid" && filteredAccounts.length > 0 ? (
+                {effectiveViewMode === "grid" && filteredAccounts.length > 0 ? (
                   <div className="flex items-center justify-between px-3.5 py-2 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/20 select-none shrink-0">
                     <div className="flex items-center gap-2.5">
                       <Checkbox
@@ -4112,29 +4187,31 @@ export default function HomePage() {
                         {tr("tài khoản", "accounts")})
                       </span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] text-muted-foreground font-medium">
-                        {tr("Chế độ xem:", "View:")}
-                      </span>
-                      <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/50">
-                        <button
-                          type="button"
-                          onClick={() => handleSetViewMode("table")}
-                          title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
-                          className="p-1 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
-                        >
-                          <LayoutList className="size-3" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSetViewMode("grid")}
-                          title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
-                          className="p-1 rounded transition-colors cursor-pointer bg-background text-foreground shadow-2xs font-semibold"
-                        >
-                          <LayoutGrid className="size-3" />
-                        </button>
+                    {currentPlatform !== "tiktok" && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-muted-foreground font-medium">
+                          {tr("Chế độ xem:", "View:")}
+                        </span>
+                        <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/50">
+                          <button
+                            type="button"
+                            onClick={() => handleSetViewMode("table")}
+                            title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
+                            className="p-1 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
+                          >
+                            <LayoutList className="size-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSetViewMode("grid")}
+                            title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
+                            className="p-1 rounded transition-colors cursor-pointer bg-background text-foreground shadow-2xs font-semibold"
+                          >
+                            <LayoutGrid className="size-3" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ) : (
                   /* Table Header đồng bộ chuẩn NVC và XSMM */
@@ -4247,7 +4324,7 @@ export default function HomePage() {
                       </div>
                     )}
                   </div>
-                ) : accountViewMode === "grid" ? (
+                ) : effectiveViewMode === "grid" ? (
                   <AccountGridView
                     accounts={filteredAccounts}
                     selectedIds={selectedIds}

@@ -2,19 +2,24 @@
 
 import { open as openFileDialog } from "@tauri-apps/plugin-dialog";
 import {
+  BatteryCharging,
   Camera,
   Check,
   Copy,
+  Cpu,
   Eye,
   EyeOff,
   Flag,
   Key,
   RefreshCw,
   ShieldCheck,
+  Smartphone,
+  Usb,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
+import { TiktokIcon } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -75,15 +80,33 @@ function DialogAvatar({
   url,
   name,
   isInstagram,
+  isTikTok,
+  isUsbDevice,
 }: {
   url?: string;
   name?: string;
   isInstagram?: boolean;
+  isTikTok?: boolean;
+  isUsbDevice?: boolean;
 }) {
   const [errorUrl, setErrorUrl] = useState<string | null>(null);
   const hasError = !url || errorUrl === url;
 
   if (hasError) {
+    if (isUsbDevice) {
+      return (
+        <div className="size-full flex items-center justify-center bg-emerald-500/15 text-emerald-400">
+          <Smartphone className="size-10" />
+        </div>
+      );
+    }
+    if (isTikTok) {
+      return (
+        <div className="size-full flex items-center justify-center bg-foreground/10 text-foreground">
+          <TiktokIcon className="size-8" />
+        </div>
+      );
+    }
     return isInstagram ? (
       <div className="size-full flex items-center justify-center bg-[#E1306C]/10 text-[#E1306C]">
         <FaInstagram className="size-9" />
@@ -409,6 +432,23 @@ export function AccountDetailDialog({
   };
 
   const isInstagram = account.platform === "instagram";
+  const isTikTok = account.platform === "tiktok";
+  const isUsbDevice = account.tag?.includes("USB") || account.id?.startsWith("adb_");
+  const androidVerMatch = account.note?.match(/Android\s*([0-9.]+)/i);
+  const androidVer = androidVerMatch
+    ? `Android ${androidVerMatch[1]}`
+    : account.note?.includes("Android")
+      ? "Android"
+      : "Android";
+  const batteryMatch = account.note?.match(/Pin:\s*([0-9%]+)/i);
+  const batteryLevel = batteryMatch
+    ? batteryMatch[1]
+    : account.note?.split("|")[0]?.replace("Pin:", "")?.trim() || "100%";
+  const modelMatch =
+    account.note?.match(/Mã máy:\s*([^|]+)/i) ||
+    account.note?.match(/Model:\s*([^|]+)/i);
+  const modelCode = modelMatch ? modelMatch[1].trim() : account.uid;
+
   const activeTok = currentToken || account.token;
   const displayName = currentName || account.name || account.uid;
   const avatarUrl =
@@ -426,13 +466,22 @@ export function AccountDetailDialog({
       <DialogContent className="max-w-2xl p-0 overflow-hidden bg-background border-border">
         <DialogHeader className="sr-only">
           <DialogTitle>
-            Chi tiết tài khoản {displayName}
+            {isUsbDevice
+              ? `Thông tin thiết bị ${displayName}`
+              : `Chi tiết tài khoản ${displayName}`}
           </DialogTitle>
         </DialogHeader>
 
         {/* Banner Cover Photo */}
-        <div className="relative h-32 w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 overflow-hidden group">
-          {coverUrl && (
+        <div
+          className={cn(
+            "relative h-32 w-full overflow-hidden group",
+            isUsbDevice
+              ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700"
+              : "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600",
+          )}
+        >
+          {coverUrl && !isUsbDevice && (
             // biome-ignore lint/performance/noImgElement: dynamic external cover URL
             <img
               src={coverUrl}
@@ -444,8 +493,8 @@ export function AccountDetailDialog({
             />
           )}
           <div className="absolute inset-0 bg-black/20" />
-          {/* Nút đổi ảnh bìa khi có token */}
-          {activeTok && (
+          {/* Nút đổi ảnh bìa khi có token (chỉ cho FB/IG) */}
+          {activeTok && !isUsbDevice && (
             <button
               type="button"
               disabled={isUploadingCover}
@@ -477,9 +526,11 @@ export function AccountDetailDialog({
                   url={avatarUrl}
                   name={displayName}
                   isInstagram={isInstagram}
+                  isTikTok={isTikTok}
+                  isUsbDevice={isUsbDevice}
                 />
-                {/* Nút đổi Avatar khi có token */}
-                {activeTok && (
+                {/* Nút đổi Avatar khi có token (chỉ cho FB/IG) */}
+                {activeTok && !isUsbDevice && (
                   <button
                     type="button"
                     disabled={isUploadingAvatar}
@@ -505,12 +556,19 @@ export function AccountDetailDialog({
                   <h3 className="text-base sm:text-lg font-bold text-foreground truncate max-w-xs sm:max-w-sm">
                     {displayName}
                   </h3>
-                  {account.isLive === true ? (
+                  {isUsbDevice ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>{androidVer}</span>
+                    </span>
+                  ) : account.isLive === true ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                       <ShieldCheck className="size-3" />
                       Live
                     </span>
-                  ) : account.isLive === false || account.status === "die" || account.status === "checkpoint" ? (
+                  ) : account.isLive === false ||
+                    account.status === "die" ||
+                    account.status === "checkpoint" ? (
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/10 text-rose-500 border border-rose-500/20">
                       Die
                     </span>
@@ -521,12 +579,15 @@ export function AccountDetailDialog({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
-                  <span>UID: {account.uid}</span>
+                  <span>
+                    {isUsbDevice ? "Serial ID: " : "UID: "}
+                    {account.uid}
+                  </span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(account.uid, "uid", "UID")}
+                    onClick={() => handleCopy(account.uid, "uid", isUsbDevice ? "Serial ID" : "UID")}
                     className="p-1 hover:text-foreground cursor-pointer rounded transition-colors"
-                    title={tr("Sao chép UID", "Copy UID")}
+                    title={tr("Sao chép", "Copy")}
                   >
                     {copiedKey === "uid" ? (
                       <Check className="size-3 text-emerald-500" />
@@ -553,7 +614,7 @@ export function AccountDetailDialog({
                 />
                 <span>
                   {isChecking
-                    ? tr("Đang check...", "Checking...")
+                    ? tr("Đang kiểm tra...", "Checking...")
                     : tr("Kiểm tra lại", "Re-check")}
                 </span>
               </Button>
@@ -563,7 +624,104 @@ export function AccountDetailDialog({
 
         {/* Scrollable Details */}
         <ScrollArea className="max-h-[380px] px-6 py-2">
-          <div className="flex flex-col gap-3 pb-4">
+          {isUsbDevice ? (
+            <div className="flex flex-col gap-3 pb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Mã máy / Model */}
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Cpu className="size-3.5 text-blue-400" />
+                    <span>Mã máy / Model</span>
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {modelCode}
+                  </span>
+                </div>
+
+                {/* Mức Pin */}
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <BatteryCharging className="size-3.5 text-amber-400" />
+                    <span>Mức Pin thiết bị</span>
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {batteryLevel} (Đang sạc qua USB)
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Hệ điều hành */}
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Smartphone className="size-3.5 text-purple-400" />
+                    <span>Hệ điều hành Android</span>
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    {androidVer}
+                  </span>
+                </div>
+
+                {/* Cổng kết nối */}
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Usb className="size-3.5 text-emerald-400" />
+                    <span>Phương thức kết nối</span>
+                  </span>
+                  <span className="text-xs font-semibold text-emerald-400">
+                    Cáp USB ADB (Đã bật gỡ lỗi)
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Trạng thái cấp quyền */}
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Trạng thái cấp quyền
+                  </span>
+                  <span className="text-xs font-semibold text-emerald-400">
+                    Authorized • Đã cho phép từ máy tính
+                  </span>
+                </div>
+
+                {/* Nền tảng mục tiêu */}
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Nền tảng mục tiêu
+                  </span>
+                  <span className="text-xs font-semibold text-foreground">
+                    TikTok (Nuôi tài khoản, Follow & Like)
+                  </span>
+                </div>
+              </div>
+
+              {/* Chuỗi dữ liệu gốc (Raw Text) */}
+              <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Chuỗi định danh thiết bị
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCopy(account.rawText || account.uid, "raw", "Raw")}
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer"
+                  >
+                    {copiedKey === "raw" ? (
+                      <Check className="size-3 text-emerald-500" />
+                    ) : (
+                      <Copy className="size-3" />
+                    )}
+                    <span>{tr("Sao chép", "Copy")}</span>
+                  </button>
+                </div>
+                <div className="font-mono text-xs select-all break-all text-muted-foreground bg-background/50 p-2 rounded-lg border border-border/40">
+                  {account.rawText || account.uid}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 pb-4">
             {/* Mật khẩu & 2FA */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               {/* Password */}

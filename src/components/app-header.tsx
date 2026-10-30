@@ -315,7 +315,7 @@ export function AppHeader({
         {/* Quản lý thiết bị Android USB (ADB) */}
         <UsbDeviceHub />
 
-        {onNewClick && (
+        {onNewClick && activePlatform !== "tiktok" && (
           <Button
             size="sm"
             onClick={onNewClick}
