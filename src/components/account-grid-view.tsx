@@ -9,8 +9,10 @@ import {
   Link2,
   Play,
   RefreshCw,
+  Smartphone,
   Square,
   Trash2,
+  Usb,
 } from "lucide-react";
 import { useState } from "react";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
@@ -90,6 +92,7 @@ export function AccountGridView({
         const isRunning = runState?.isRunning ?? false;
         const isInstagram = acc.platform === "instagram";
         const isTikTok = acc.platform === "tiktok";
+        const isUsbDevice = acc.tag?.includes("USB") || acc.id.startsWith("adb_");
         const hasPages = acc.pages && acc.pages.length > 0;
 
         return (
@@ -206,7 +209,11 @@ export function AccountGridView({
                     referrerPolicy="no-referrer"
                   />
                 ) : isTikTok ? (
-                  <TiktokIcon className="size-3 text-foreground" />
+                  isUsbDevice ? (
+                    <Smartphone className="size-3.5 text-emerald-400" />
+                  ) : (
+                    <TiktokIcon className="size-3 text-foreground" />
+                  )
                 ) : isInstagram ? (
                   <FaInstagram className="size-3.5 text-[#E1306C]" />
                 ) : (
@@ -247,7 +254,12 @@ export function AccountGridView({
                   {tr("Liên kết", "Link")}
                 </span>
                 <div className="truncate text-right">
-                  {currentPage === "nvc" ? (
+                  {isUsbDevice ? (
+                    <span className="text-emerald-500 font-semibold flex items-center justify-end gap-1 text-[10.5px]">
+                      <Usb className="size-2.5" />
+                      <span>USB ADB</span>
+                    </span>
+                  ) : currentPage === "nvc" ? (
                     (() => {
                       const isLinked = nvcLinkedUids.includes(acc.uid);
                       const isLinking = nvcLinkingIds.includes(acc.id);
@@ -355,13 +367,15 @@ export function AccountGridView({
               {/* Pill Proxy */}
               <div className="flex items-center justify-between px-2 py-1 rounded-lg bg-muted/30 border border-border/35">
                 <span className="text-[9.5px] text-muted-foreground/75 uppercase tracking-wide">
-                  Proxy
+                  {isUsbDevice ? "Cổng / Pin" : "Proxy"}
                 </span>
                 <span
-                  className="font-mono text-[10px] truncate max-w-[80px] text-muted-foreground text-right"
-                  title={acc.proxy || "Proxy mặc định"}
+                  className="font-mono text-[10px] truncate max-w-[85px] text-muted-foreground text-right"
+                  title={isUsbDevice ? acc.note : acc.proxy || "Proxy mặc định"}
                 >
-                  {acc.proxy ? acc.proxy.split(":")[0] : tr("Mặc định", "Default")}
+                  {isUsbDevice
+                    ? acc.note?.split("|")[0]?.replace("Pin:", "")?.trim() || "USB"
+                    : acc.proxy ? acc.proxy.split(":")[0] : tr("Mặc định", "Default")}
                 </span>
               </div>
 
@@ -373,7 +387,7 @@ export function AccountGridView({
                 <div className="truncate text-right font-medium max-w-[190px]">
                   {isCheckpointOrDie ? (
                     <span className="text-rose-500 text-[10px]">
-                      {acc.status === "checkpoint" ? "Checkpoint" : "Die"}
+                      {isUsbDevice ? "Đã ngắt USB" : acc.status === "checkpoint" ? "Checkpoint" : "Die"}
                     </span>
                   ) : isRunning ? (
                     <span
@@ -394,6 +408,11 @@ export function AccountGridView({
                       title={runState.lastError}
                     >
                       {runState.lastError}
+                    </span>
+                  ) : isUsbDevice ? (
+                    <span className="text-emerald-500 text-[10px] font-medium flex items-center justify-end gap-1">
+                      <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="truncate">{acc.note?.split("|")[1]?.trim() || "Sẵn sàng"}</span>
                     </span>
                   ) : (
                     <span className="text-muted-foreground text-[10px]">

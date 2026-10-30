@@ -172,66 +172,52 @@ pub fn get_adb_devices() -> Result<Vec<AdbDeviceInfo>, String> {
         let mut battery_level: Option<i32> = None;
 
         if state == "device" {
-            // Lấy brand
-            let mut c_brand = std::process::Command::new(&adb_bin);
+            // Đọc toàn bộ thuộc tính thiết bị bằng một lệnh shell getprop duy nhất (nhanh và đủ thông tin)
+            let mut c_prop = std::process::Command::new(&adb_bin);
             #[cfg(windows)]
             {
                 use std::os::windows::process::CommandExt;
-                c_brand.creation_flags(0x0800_0000);
+                c_prop.creation_flags(0x0800_0000);
             }
-            if let Ok(out) = c_brand
-                .args(["-s", &serial, "shell", "getprop", "ro.product.brand"])
-                .output()
-            {
-                brand = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            }
-
-            // Lấy model
-            let mut c_model = std::process::Command::new(&adb_bin);
-            #[cfg(windows)]
-            {
-                use std::os::windows::process::CommandExt;
-                c_model.creation_flags(0x0800_0000);
-            }
-            if let Ok(out) = c_model
-                .args(["-s", &serial, "shell", "getprop", "ro.product.model"])
-                .output()
-            {
-                model = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            }
-
-            // Lấy market name
-            let mut c_mkt = std::process::Command::new(&adb_bin);
-            #[cfg(windows)]
-            {
-                use std::os::windows::process::CommandExt;
-                c_mkt.creation_flags(0x0800_0000);
-            }
-            if let Ok(out) = c_mkt
-                .args(["-s", &serial, "shell", "getprop", "ro.product.marketname"])
-                .output()
-            {
-                let m = String::from_utf8_lossy(&out.stdout).trim().to_string();
-                if !m.is_empty() {
-                    market_name = m;
+            if let Ok(out) = c_prop.args(["-s", &serial, "shell", "getprop"]).output() {
+                let txt = String::from_utf8_lossy(&out.stdout);
+                let mut prop_map = std::collections::HashMap::new();
+                for l in txt.lines() {
+                    let trimmed = l.trim();
+                    if trimmed.starts_with('[') && trimmed.contains("]: [") {
+                        if let Some((k, v)) = trimmed.split_once("]: [") {
+                            let key = k.trim_start_matches('[').trim();
+                            let val = v.trim_end_matches(']').trim();
+                            prop_map.insert(key.to_string(), val.to_string());
+                        }
+                    }
                 }
+
+                brand = prop_map
+                    .get("ro.product.brand")
+                    .or_else(|| prop_map.get("ro.product.manufacturer"))
+                    .unwrap_or(&String::new())
+                    .clone();
+
+                model = prop_map
+                    .get("ro.product.model")
+                    .unwrap_or(&String::new())
+                    .clone();
+
+                market_name = prop_map
+                    .get("ro.product.marketname")
+                    .or_else(|| prop_map.get("ro.vendor.product.marketname"))
+                    .or_else(|| prop_map.get("ro.product.display"))
+                    .unwrap_or(&String::new())
+                    .clone();
+
+                android_ver = prop_map
+                    .get("ro.build.version.release")
+                    .unwrap_or(&String::new())
+                    .clone();
             }
 
-            // Lấy android version
-            let mut c_ver = std::process::Command::new(&adb_bin);
-            #[cfg(windows)]
-            {
-                use std::os::windows::process::CommandExt;
-                c_ver.creation_flags(0x0800_0000);
-            }
-            if let Ok(out) = c_ver
-                .args(["-s", &serial, "shell", "getprop", "ro.build.version.release"])
-                .output()
-            {
-                android_ver = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            }
-
-            // Lấy pin
+            // Lấy phần trăm pin
             let mut c_bat = std::process::Command::new(&adb_bin);
             #[cfg(windows)]
             {
@@ -263,11 +249,17 @@ pub fn get_adb_devices() -> Result<Vec<AdbDeviceInfo>, String> {
             }
         }
 
+        // Tạo tên máy hiển thị đầy đủ và chuyên nghiệp nhất
         let display_name = if !market_name.is_empty() {
-            if !brand.is_empty() && !market_name.to_lowercase().starts_with(&brand.to_lowercase()) {
-                format!("{} {}", brand, market_name)
+            let brand_clean = brand.trim();
+            let mut title = market_name.clone();
+            if !brand_clean.is_empty() && !market_name.to_lowercase().contains(&brand_clean.to_lowercase()) {
+                title = format!("{} {}", brand_clean, market_name);
+            }
+            if !model.is_empty() && !market_name.contains(&model) {
+                format!("{} ({})", title, model)
             } else {
-                market_name.clone()
+                title
             }
         } else if !brand.is_empty() && !model.is_empty() {
             format!("{} {}", brand, model)
@@ -305,20 +297,15 @@ pub fn notify_phone_connected(serial: String, title: String, message: String) ->
         use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x0800_0000);
     }
-    cmd.args([
-        "-s",
-        &serial,
-        "shell",
-        "cmd",
-        "notification",
-        "post",
-        "-S",
-        "bigtext",
-        "-t",
-        &title,
-        "AutoLunexNotice",
-        &message,
-    ]);
+    // Tránh lỗi ngắt từ khi gửi qua shell adb: bọc trong cặp nháy đơn và escape
+    let safe_title = title.replace('\'', "'\\''");
+    let safe_msg = message.replace('\'', "'\\''");
+    let shell_cmd = format!(
+        "cmd notification post -S bigtext -t '{}' 'AutoLunex' '{}'",
+        safe_title, safe_msg
+    );
+
+    cmd.args(["-s", &serial, "shell", &shell_cmd]);
 
     let _ = cmd.output();
     Ok(true)

@@ -22,15 +22,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  type AdbDeviceInfo,
-  checkAdbStatus,
-  getAdbDevices,
-  notifyPhoneConnected,
-  startAdbDeviceWatcher,
-} from "@/lib/adb-service";
+import { type AdbDeviceInfo, getAdbDevices, notifyPhoneConnected, startAdbDeviceWatcher } from "@/lib/adb-service";
 import { cn } from "@/lib/utils";
 import { AdbInstallDialog } from "./adb-install-dialog";
+import { UsbBottomSheet } from "./usb-bottom-sheet";
 
 export function UsbDeviceHub() {
   const [devices, setDevices] = useState<AdbDeviceInfo[]>([]);
@@ -38,18 +33,22 @@ export function UsbDeviceHub() {
   const [isInstallDialogOpen, setIsInstallDialogOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [testSendingSerial, setTestSendingSerial] = useState<string | null>(null);
+  const [connectedPopupDevice, setConnectedPopupDevice] = useState<AdbDeviceInfo | null>(null);
 
   // Khởi động tiến trình theo dõi cắm/rút thiết bị tự động thời gian thực
   useEffect(() => {
     const stopWatcher = startAdbDeviceWatcher({
       onDeviceConnected: (device) => {
-        toast.success(
-          `🎉 Đã kết nối điện thoại: ${device.display_name || device.model || device.serial}!`,
-          {
-            description: `Serial: ${device.serial} • Pin: ${device.battery_level ? `${device.battery_level}%` : "Sẵn sàng"}`,
-            duration: 4000,
-          },
-        );
+        // Kích hoạt Popup trượt từ đáy màn hình lên tự đóng sau vài giây
+        setConnectedPopupDevice(device);
+
+        // Phát sự kiện ra toàn bộ ứng dụng để tự đồng bộ thẻ TikTok
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("autolunex:adb-device-connected", { detail: device }),
+          );
+        }
+
         void refreshDevices();
       },
       onDeviceUnauthorized: (device) => {
@@ -63,12 +62,17 @@ export function UsbDeviceHub() {
         );
         void refreshDevices();
       },
-      onDeviceDisconnected: () => {
+      onDeviceDisconnected: (serial) => {
         toast.info("🔌 Đã ngắt kết nối một thiết bị USB.", { duration: 2500 });
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("autolunex:adb-device-disconnected", { detail: serial }),
+          );
+        }
         void refreshDevices();
       },
       onAdbMissing: () => {
-        // Chỉ hiện hộp thoại nếu người dùng chưa mở
+        // Chỉ hiện hộp thoại nếu chưa có ADB
         setIsInstallDialogOpen(true);
       },
     });
@@ -191,17 +195,29 @@ export function UsbDeviceHub() {
 
           <div className="flex flex-col gap-3 py-2 text-xs">
             {devices.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center rounded-xl border border-dashed border-border/70 bg-muted/20 p-4">
-                <div className="flex size-12 items-center justify-center rounded-2xl bg-muted/60 text-muted-foreground mb-2">
+              <div className="flex flex-col items-center justify-center py-6 text-center rounded-xl border border-dashed border-border/70 bg-muted/20 p-4">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500 border border-blue-500/20 mb-3">
                   <Smartphone className="size-6" />
                 </div>
-                <p className="font-semibold text-foreground text-xs">
+                <p className="font-semibold text-foreground text-sm">
                   Chưa có điện thoại nào kết nối
                 </p>
-                <p className="text-[11px] text-muted-foreground max-w-xs mt-1 leading-relaxed">
-                  Hãy cắm cáp USB nối điện thoại với máy tính và bật chế độ{" "}
-                  <strong className="text-foreground">"Gỡ lỗi USB" (USB Debugging)</strong> trên điện thoại.
+                <p className="text-xs text-muted-foreground max-w-sm mt-1 leading-relaxed">
+                  Chỉ cần cắm cáp USB nối điện thoại với máy tính. Hệ thống sẽ tự động nhận diện và hiển thị thông tin máy ngay tức thì.
                 </p>
+
+                {/* Hướng dẫn bật Gỡ lỗi USB 3 bước */}
+                <div className="mt-4 w-full rounded-xl border border-border/60 bg-muted/40 p-3 text-left space-y-1.5 text-[11.5px]">
+                  <div className="font-semibold text-foreground flex items-center gap-1.5 text-xs">
+                    <Info className="size-3.5 text-blue-500" />
+                    <span>Hướng dẫn bật Gỡ lỗi USB trên điện thoại:</span>
+                  </div>
+                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground pl-1 leading-relaxed">
+                    <li>Vào <strong className="text-foreground">Cài đặt</strong> &gt; <strong className="text-foreground">Thông tin điện thoại</strong> &gt; Nhấn liên tục 7 lần vào <strong className="text-foreground">Số bản dựng (Build Number)</strong> để mở chế độ Nhà phát triển.</li>
+                    <li>Vào mục <strong className="text-foreground">Tùy chọn nhà phát triển</strong> &gt; Bật <strong className="text-foreground">Gỡ lỗi USB (USB Debugging)</strong>.</li>
+                    <li>Cắm cáp USB vào máy tính, trên màn hình điện thoại tích chọn <strong className="text-foreground">"Luôn cho phép từ máy tính này"</strong> và nhấn <strong className="text-foreground">Cho phép / OK</strong>.</li>
+                  </ol>
+                </div>
 
                 <div className="flex items-center gap-2 mt-4">
                   <Button
@@ -212,10 +228,10 @@ export function UsbDeviceHub() {
                       setIsDialogOpen(false);
                       setIsInstallDialogOpen(true);
                     }}
-                    className="h-7 text-xs gap-1.5 cursor-pointer text-primary border-primary/30"
+                    className="h-7 text-xs gap-1.5 cursor-pointer text-primary border-primary/30 hover:bg-primary/10"
                   >
                     <HelpCircle className="size-3.5" />
-                    <span>Chưa có ADB? Xem hướng dẫn cài đặt</span>
+                    <span>Chưa có ADB? Xem hướng dẫn tải & cài đặt</span>
                   </Button>
                 </div>
               </div>
@@ -335,6 +351,12 @@ export function UsbDeviceHub() {
         onAdbDetected={() => {
           void refreshDevices();
         }}
+      />
+
+      {/* Popup trượt từ đáy màn hình lên tự đóng sau vài giây (như ảnh mẫu) */}
+      <UsbBottomSheet
+        device={connectedPopupDevice}
+        onClose={() => setConnectedPopupDevice(null)}
       />
     </>
   );

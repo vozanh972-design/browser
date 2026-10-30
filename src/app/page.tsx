@@ -70,6 +70,7 @@ import {
 import { addXsmmAccount, getXsmmUser } from "@/lib/xsmm-api";
 import { type AccountRunState, xsmmRunner } from "@/lib/xsmm-runner";
 import { dolikeRunner } from "@/lib/dolike-runner";
+import { type AdbDeviceInfo, getAdbDevices } from "@/lib/adb-service";
 
 export interface FacebookAccount {
   id: string;
@@ -513,6 +514,104 @@ export default function HomePage() {
       });
     });
     return () => unsub();
+  }, []);
+
+  // Tự động đồng bộ thiết bị Android cắm qua cáp USB thành thẻ tài khoản TikTok
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const syncAdbDeviceToAccount = (dev: AdbDeviceInfo) => {
+      if (!dev || !dev.serial) return;
+
+      const devName = dev.display_name || dev.market_name || dev.model || `Android ${dev.serial}`;
+      const devNote = `Pin: ${dev.battery_level !== null ? `${dev.battery_level}%` : "Sẵn sàng"} | Android ${dev.android_version || "10+"} | Mã máy: ${dev.model || "USB"}`;
+      const devTag = `USB • ${dev.brand ? dev.brand.toUpperCase() : "Android"}`;
+
+      setAccounts((prev) => {
+        const existingIdx = prev.findIndex((a) => a.uid === dev.serial);
+        let updated: FacebookAccount[];
+        if (existingIdx >= 0) {
+          updated = [...prev];
+          updated[existingIdx] = {
+            ...updated[existingIdx],
+            name: devName,
+            note: devNote,
+            tag: devTag,
+            status: "live",
+            isLive: true,
+            platform: "tiktok",
+          };
+        } else {
+          const newAcc: FacebookAccount = {
+            id: `adb_${dev.serial}`,
+            uid: dev.serial,
+            name: devName,
+            note: devNote,
+            tag: devTag,
+            platform: "tiktok",
+            status: "live",
+            isLive: true,
+            rawText: `${dev.serial} | ${devName} | USB_ADB`,
+          };
+          updated = [newAcc, ...prev];
+        }
+        try {
+          localStorage.setItem("autolunex_facebook_accounts_v1", JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+    };
+
+    const handleAdbConnected = (event: Event) => {
+      const customEvent = event as CustomEvent<AdbDeviceInfo>;
+      if (customEvent.detail) {
+        syncAdbDeviceToAccount(customEvent.detail);
+      }
+    };
+
+    const handleAdbDisconnected = (event: Event) => {
+      const customEvent = event as CustomEvent<string>;
+      const serial = customEvent.detail;
+      if (!serial) return;
+
+      setAccounts((prev) => {
+        const existingIdx = prev.findIndex((a) => a.uid === serial);
+        if (existingIdx < 0) return prev;
+        const updated = [...prev];
+        const oldNote = updated[existingIdx].note || "";
+        updated[existingIdx] = {
+          ...updated[existingIdx],
+          status: "die",
+          isLive: false,
+          note: oldNote.includes("Đã ngắt") ? oldNote : `${oldNote} (Đã ngắt USB)`,
+        };
+        try {
+          localStorage.setItem("autolunex_facebook_accounts_v1", JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+        return updated;
+      });
+    };
+
+    window.addEventListener("autolunex:adb-device-connected", handleAdbConnected);
+    window.addEventListener("autolunex:adb-device-disconnected", handleAdbDisconnected);
+
+    // Tự động quét và hiển thị ngay các thiết bị đã cắm sẵn từ trước
+    void getAdbDevices().then((devices) => {
+      devices
+        .filter((d) => d.state === "device")
+        .forEach((dev) => {
+          syncAdbDeviceToAccount(dev);
+        });
+    });
+
+    return () => {
+      window.removeEventListener("autolunex:adb-device-connected", handleAdbConnected);
+      window.removeEventListener("autolunex:adb-device-disconnected", handleAdbDisconnected);
+    };
   }, []);
 
   // Khôi phục phiên đăng nhập XSMM nếu đã lưu token
