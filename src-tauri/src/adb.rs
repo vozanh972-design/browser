@@ -1,0 +1,325 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AdbStatus {
+    pub installed: bool,
+    pub adb_path: Option<String>,
+    pub version: Option<String>,
+    pub error: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct AdbDeviceInfo {
+    pub serial: String,
+    pub state: String, // "device", "unauthorized", "offline", etc.
+    pub brand: String,
+    pub model: String,
+    pub market_name: String,
+    pub display_name: String,
+    pub battery_level: Option<i32>,
+    pub android_version: String,
+}
+
+pub fn find_adb_path() -> Option<std::path::PathBuf> {
+    // 1. Kiểm tra lệnh `adb` trong PATH
+    {
+        let mut cmd = std::process::Command::new("adb");
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x0800_0000);
+        }
+        cmd.arg("version");
+        if let Ok(output) = cmd.output() {
+            if output.status.success() {
+                return Some(std::path::PathBuf::from("adb"));
+            }
+        }
+    }
+
+    // 2. Tìm kiếm trong các thư mục chuẩn trên Windows
+    let mut candidates: Vec<std::path::PathBuf> = Vec::new();
+
+    if let Ok(local_appdata) = std::env::var("LOCALAPPDATA") {
+        candidates.push(
+            std::path::PathBuf::from(&local_appdata)
+                .join("Android")
+                .join("Sdk")
+                .join("platform-tools")
+                .join("adb.exe"),
+        );
+    }
+
+    if let Ok(userprofile) = std::env::var("USERPROFILE") {
+        candidates.push(
+            std::path::PathBuf::from(&userprofile)
+                .join("AppData")
+                .join("Local")
+                .join("Android")
+                .join("Sdk")
+                .join("platform-tools")
+                .join("adb.exe"),
+        );
+    }
+
+    candidates.push(std::path::PathBuf::from(
+        r"D:\platform-tools-latest-windows\platform-tools\adb.exe",
+    ));
+    candidates.push(std::path::PathBuf::from(r"C:\platform-tools\adb.exe"));
+    candidates.push(std::path::PathBuf::from(r"D:\platform-tools\adb.exe"));
+
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(parent) = exe_path.parent() {
+            candidates.push(parent.join("platform-tools").join("adb.exe"));
+            candidates.push(parent.join("adb.exe"));
+        }
+    }
+
+    for path in candidates {
+        if path.exists() {
+            return Some(path);
+        }
+    }
+
+    None
+}
+
+#[tauri::command]
+pub fn check_adb_status() -> AdbStatus {
+    match find_adb_path() {
+        Some(path) => {
+            let mut cmd = std::process::Command::new(&path);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd.creation_flags(0x0800_0000);
+            }
+            cmd.arg("version");
+            match cmd.output() {
+                Ok(out) if out.status.success() => {
+                    let text = String::from_utf8_lossy(&out.stdout).to_string();
+                    let first_line = text
+                        .lines()
+                        .next()
+                        .unwrap_or("Android Debug Bridge")
+                        .trim()
+                        .to_string();
+                    AdbStatus {
+                        installed: true,
+                        adb_path: Some(path.to_string_lossy().to_string()),
+                        version: Some(first_line),
+                        error: None,
+                    }
+                }
+                _ => AdbStatus {
+                    installed: true,
+                    adb_path: Some(path.to_string_lossy().to_string()),
+                    version: None,
+                    error: None,
+                },
+            }
+        }
+        None => AdbStatus {
+            installed: false,
+            adb_path: None,
+            version: None,
+            error: Some("Chưa cài đặt Android Debug Bridge (ADB) trên máy tính".to_string()),
+        },
+    }
+}
+
+#[tauri::command]
+pub fn get_adb_devices() -> Result<Vec<AdbDeviceInfo>, String> {
+    let adb_bin = match find_adb_path() {
+        Some(p) => p,
+        None => return Err("Chưa tìm thấy adb.exe trên máy tính".to_string()),
+    };
+
+    let mut cmd = std::process::Command::new(&adb_bin);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    cmd.args(["devices", "-l"]);
+
+    let output = cmd.output().map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let mut devices = Vec::new();
+    for line in stdout.lines().skip(1) {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.is_empty() {
+            continue;
+        }
+
+        let serial = parts[0].to_string();
+        let state = if parts.len() > 1 {
+            parts[1].to_string()
+        } else {
+            "unknown".to_string()
+        };
+
+        let mut brand = String::new();
+        let mut model = String::new();
+        let mut market_name = String::new();
+        let mut android_ver = String::new();
+        let mut battery_level: Option<i32> = None;
+
+        if state == "device" {
+            // Lấy brand
+            let mut c_brand = std::process::Command::new(&adb_bin);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                c_brand.creation_flags(0x0800_0000);
+            }
+            if let Ok(out) = c_brand
+                .args(["-s", &serial, "shell", "getprop", "ro.product.brand"])
+                .output()
+            {
+                brand = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            }
+
+            // Lấy model
+            let mut c_model = std::process::Command::new(&adb_bin);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                c_model.creation_flags(0x0800_0000);
+            }
+            if let Ok(out) = c_model
+                .args(["-s", &serial, "shell", "getprop", "ro.product.model"])
+                .output()
+            {
+                model = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            }
+
+            // Lấy market name
+            let mut c_mkt = std::process::Command::new(&adb_bin);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                c_mkt.creation_flags(0x0800_0000);
+            }
+            if let Ok(out) = c_mkt
+                .args(["-s", &serial, "shell", "getprop", "ro.product.marketname"])
+                .output()
+            {
+                let m = String::from_utf8_lossy(&out.stdout).trim().to_string();
+                if !m.is_empty() {
+                    market_name = m;
+                }
+            }
+
+            // Lấy android version
+            let mut c_ver = std::process::Command::new(&adb_bin);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                c_ver.creation_flags(0x0800_0000);
+            }
+            if let Ok(out) = c_ver
+                .args(["-s", &serial, "shell", "getprop", "ro.build.version.release"])
+                .output()
+            {
+                android_ver = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            }
+
+            // Lấy pin
+            let mut c_bat = std::process::Command::new(&adb_bin);
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                c_bat.creation_flags(0x0800_0000);
+            }
+            if let Ok(out) = c_bat
+                .args(["-s", &serial, "shell", "dumpsys", "battery"])
+                .output()
+            {
+                let bat_txt = String::from_utf8_lossy(&out.stdout);
+                for l in bat_txt.lines() {
+                    let trimmed = l.trim();
+                    if trimmed.starts_with("level:") {
+                        if let Some(num_str) = trimmed.split(':').nth(1) {
+                            if let Ok(lvl) = num_str.trim().parse::<i32>() {
+                                battery_level = Some(lvl);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            for part in &parts {
+                if let Some(m) = part.strip_prefix("model:") {
+                    model = m.replace('_', " ");
+                }
+            }
+        }
+
+        let display_name = if !market_name.is_empty() {
+            if !brand.is_empty() && !market_name.to_lowercase().starts_with(&brand.to_lowercase()) {
+                format!("{} {}", brand, market_name)
+            } else {
+                market_name.clone()
+            }
+        } else if !brand.is_empty() && !model.is_empty() {
+            format!("{} {}", brand, model)
+        } else if !model.is_empty() {
+            model.clone()
+        } else {
+            format!("Thiết bị Android ({})", serial)
+        };
+
+        devices.push(AdbDeviceInfo {
+            serial,
+            state,
+            brand,
+            model,
+            market_name,
+            display_name,
+            battery_level,
+            android_version: android_ver,
+        });
+    }
+
+    Ok(devices)
+}
+
+#[tauri::command]
+pub fn notify_phone_connected(serial: String, title: String, message: String) -> Result<bool, String> {
+    let adb_bin = match find_adb_path() {
+        Some(p) => p,
+        None => return Err("Chưa tìm thấy adb.exe trên máy tính".to_string()),
+    };
+
+    let mut cmd = std::process::Command::new(&adb_bin);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    cmd.args([
+        "-s",
+        &serial,
+        "shell",
+        "cmd",
+        "notification",
+        "post",
+        "-S",
+        "bigtext",
+        "-t",
+        &title,
+        "AutoLunexNotice",
+        &message,
+    ]);
+
+    let _ = cmd.output();
+    Ok(true)
+}

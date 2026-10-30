@@ -26,6 +26,8 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Emitter};
 use zeroize::Zeroize;
 
+pub mod adb;
+
 type HmacSha256 = Hmac<Sha256>;
 
 // ============================================================
@@ -1670,6 +1672,9 @@ pub fn run() {
       clear_golike_session,
       extract_golike_session,
       extract_dolike_session,
+      adb::check_adb_status,
+      adb::get_adb_devices,
+      adb::notify_phone_connected,
     ])
     .run(tauri::generate_context!())
     .expect("error while running tauri application");

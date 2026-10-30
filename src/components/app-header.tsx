@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { Logo } from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
+import { UsbDeviceHub } from "@/components/usb-device-hub";
 import { getCurrentOS, type OperatingSystem } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
@@ -310,6 +311,9 @@ export function AppHeader({
               </button>
             )
           ))}
+
+        {/* Quản lý thiết bị Android USB (ADB) */}
+        <UsbDeviceHub />
 
         {onNewClick && (
           <Button
