@@ -7,6 +7,8 @@ import {
   EyeOff,
   Flag,
   Key,
+  LayoutGrid,
+  LayoutList,
   Link2,
   LogOut,
   Play,
@@ -24,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { AboutDialog } from "@/components/about-dialog";
 import { AccountDetailDialog } from "@/components/account-detail-dialog";
+import { AccountGridView } from "@/components/account-grid-view";
 import { AddFacebookAccountDialog } from "@/components/add-facebook-account-dialog";
 import { AppHeader } from "@/components/app-header";
 import { AppSettingsDialog } from "@/components/app-settings-dialog";
@@ -137,6 +140,25 @@ export default function HomePage() {
   const { t, i18n } = useTranslation();
   const isVi = (i18n.language?.split("-")[0] || "vi") === "vi";
   const tr = (vi: string, en: string) => (isVi ? vi : en);
+
+  // Chế độ xem danh sách tài khoản: "table" (dạng dài/bảng) hoặc "grid" (dạng thẻ)
+  const [accountViewMode, setAccountViewMode] = useState<"table" | "grid">(() => {
+    if (typeof window === "undefined") return "table";
+    return (
+      (localStorage.getItem("autolunex_account_view_mode") as "table" | "grid") ||
+      "table"
+    );
+  });
+
+  const handleSetViewMode = (mode: "table" | "grid") => {
+    setAccountViewMode(mode);
+    try {
+      localStorage.setItem("autolunex_account_view_mode", mode);
+    } catch {
+      // ignore
+    }
+  };
+
   // License: always start locked, recheck saved key silently on mount
   const [savedLicenseKey, setSavedLicenseKey] = useState<string>(() => {
     if (typeof window === "undefined") return "";
@@ -2367,6 +2389,8 @@ export default function HomePage() {
         onDolikeLogoutClick={handleDolikeLogout}
         hideInstagram={currentPage === "nvc"}
         hideFacebook={currentPage === "dolike"}
+        viewMode={accountViewMode}
+        onViewModeChange={handleSetViewMode}
         onNewClick={() => setIsAddFacebookOpen(true)}
       />
 
@@ -2550,31 +2574,111 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Table View matching Image 2 */}
+              {/* Table / Grid View Container */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
-                {/* Table Header */}
-                <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
-                  <div className="flex items-center justify-center">
-                    <Checkbox
-                      checked={
-                        getAllSelectableIds().length > 0 &&
-                        selectedIds.length === getAllSelectableIds().length
-                      }
-                      onCheckedChange={toggleSelectAll}
-                    />
+                {/* Header thanh điều hướng chế độ xem */}
+                {accountViewMode === "grid" && filteredAccounts.length > 0 ? (
+                  <div className="flex items-center justify-between px-3.5 py-2 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/20 select-none shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <Checkbox
+                        checked={
+                          getAllSelectableIds().length > 0 &&
+                          selectedIds.length === getAllSelectableIds().length
+                        }
+                        onCheckedChange={toggleSelectAll}
+                      />
+                      <span className="text-xs font-semibold text-foreground">
+                        {tr("Chọn tất cả", "Select all")} ({filteredAccounts.length}{" "}
+                        {tr("tài khoản", "accounts")})
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground font-medium">
+                        {tr("Chế độ xem:", "View:")}
+                      </span>
+                      <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/50">
+                        <button
+                          type="button"
+                          onClick={() => handleSetViewMode("table")}
+                          title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
+                          className={cn(
+                            "p-1 rounded transition-colors cursor-pointer",
+                            accountViewMode === "table"
+                              ? "bg-background text-foreground shadow-2xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <LayoutList className="size-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetViewMode("grid")}
+                          title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
+                          className={cn(
+                            "p-1 rounded transition-colors cursor-pointer",
+                            accountViewMode === "grid"
+                              ? "bg-background text-foreground shadow-2xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <LayoutGrid className="size-3" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 hover:text-foreground cursor-pointer">
-                    <span>{tr("Tên & UID", "Name & UID")}</span>
-                    <span className="text-[10px]">▲</span>
+                ) : (
+                  /* Table Header */
+                  <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
+                    <div className="flex items-center justify-center">
+                      <Checkbox
+                        checked={
+                          getAllSelectableIds().length > 0 &&
+                          selectedIds.length === getAllSelectableIds().length
+                        }
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1 hover:text-foreground cursor-pointer">
+                      <span>{tr("Tên & UID", "Name & UID")}</span>
+                      <span className="text-[10px]">▲</span>
+                    </div>
+                    <div>{tr("LIÊN KẾT", "LINKED")}</div>
+                    <div>Proxy / VPN</div>
+                    <div>{tr("TRẠNG THÁI", "STATUS")}</div>
+                    <div>{tr("HÀNH ĐỘNG", "ACTION / STATE")}</div>
+                    <div className="flex items-center justify-end gap-2 pr-1">
+                      <span>{tr("Thao tác", "Actions")}</span>
+                      <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/50">
+                        <button
+                          type="button"
+                          onClick={() => handleSetViewMode("table")}
+                          title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
+                          className={cn(
+                            "p-1 rounded transition-colors cursor-pointer",
+                            accountViewMode === "table"
+                              ? "bg-background text-foreground shadow-2xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <LayoutList className="size-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetViewMode("grid")}
+                          title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
+                          className={cn(
+                            "p-1 rounded transition-colors cursor-pointer",
+                            accountViewMode === "grid"
+                              ? "bg-background text-foreground shadow-2xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <LayoutGrid className="size-3" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div>{tr("LIÊN KẾT", "LINKED")}</div>
-                  <div>Proxy / VPN</div>
-                  <div>{tr("TRẠNG THÁI", "STATUS")}</div>
-                  <div>{tr("HÀNH ĐỘNG", "ACTION / STATE")}</div>
-                  <div className="text-right pr-2">
-                    {tr("Thao tác", "Actions")}
-                  </div>
-                </div>
+                )}
 
                 {/* Table Rows or Empty State */}
                 {filteredAccounts.length === 0 ? (
@@ -2695,6 +2799,28 @@ export default function HomePage() {
                       </div>
                     )}
                   </div>
+                ) : accountViewMode === "grid" ? (
+                  <AccountGridView
+                    accounts={filteredAccounts}
+                    selectedIds={selectedIds}
+                    onToggleSelectOne={toggleSelectOne}
+                    checkingIds={checkingIds}
+                    runnerStates={runnerStates}
+                    currentPage={currentPage}
+                    nvcLinkedUids={nvcLinkedUids}
+                    nvcLinkingIds={nvcLinkingIds}
+                    onLinkNvcAccount={(acc) => void handleLinkNvcAccount(acc)}
+                    onCheckAccount={(acc) => void handleCheckAccount(acc)}
+                    onRunAccount={handleRunAccount}
+                    onDeleteAccount={handleDeleteAccount}
+                    onDetailAccount={(acc) => {
+                      setDetailAccount(acc);
+                      setIsDetailOpen(true);
+                    }}
+                    onCheckPage={handleCheckPage}
+                    onRunPage={handleRunPage}
+                    tr={tr}
+                  />
                 ) : (
                   <div className="flex-1 min-h-0 divide-y divide-border/30 overflow-y-auto">
                     {filteredAccounts.map((acc) => {
@@ -3589,31 +3715,111 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Table View matching XSMM */}
+              {/* Table / Grid View Container matching XSMM */}
               <div className="flex flex-1 flex-col rounded-lg border border-border/60 bg-background overflow-hidden shadow-xs">
-                {/* Table Header đồng bộ chuẩn NVC và XSMM */}
-                <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
-                  <div className="flex items-center justify-center">
-                    <Checkbox
-                      checked={
-                        getAllSelectableIds().length > 0 &&
-                        selectedIds.length === getAllSelectableIds().length
-                      }
-                      onCheckedChange={toggleSelectAll}
-                    />
+                {/* Header thanh điều hướng chế độ xem */}
+                {accountViewMode === "grid" && filteredAccounts.length > 0 ? (
+                  <div className="flex items-center justify-between px-3.5 py-2 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-muted/20 select-none shrink-0">
+                    <div className="flex items-center gap-2.5">
+                      <Checkbox
+                        checked={
+                          getAllSelectableIds().length > 0 &&
+                          selectedIds.length === getAllSelectableIds().length
+                        }
+                        onCheckedChange={toggleSelectAll}
+                      />
+                      <span className="text-xs font-semibold text-foreground">
+                        {tr("Chọn tất cả", "Select all")} ({filteredAccounts.length}{" "}
+                        {tr("tài khoản", "accounts")})
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] text-muted-foreground font-medium">
+                        {tr("Chế độ xem:", "View:")}
+                      </span>
+                      <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/50">
+                        <button
+                          type="button"
+                          onClick={() => handleSetViewMode("table")}
+                          title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
+                          className={cn(
+                            "p-1 rounded transition-colors cursor-pointer",
+                            accountViewMode === "table"
+                              ? "bg-background text-foreground shadow-2xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <LayoutList className="size-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetViewMode("grid")}
+                          title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
+                          className={cn(
+                            "p-1 rounded transition-colors cursor-pointer",
+                            accountViewMode === "grid"
+                              ? "bg-background text-foreground shadow-2xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <LayoutGrid className="size-3" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1 hover:text-foreground cursor-pointer">
-                    <span>{tr("Tên & UID", "Name & UID")}</span>
-                    <span className="text-[10px]">▲</span>
+                ) : (
+                  /* Table Header đồng bộ chuẩn NVC và XSMM */
+                  <div className="grid grid-cols-[40px_2.8fr_1.2fr_1.5fr_1.2fr_1.5fr_125px] items-center px-3 py-2.5 text-xs font-semibold text-muted-foreground border-b border-border/60 bg-background select-none shrink-0">
+                    <div className="flex items-center justify-center">
+                      <Checkbox
+                        checked={
+                          getAllSelectableIds().length > 0 &&
+                          selectedIds.length === getAllSelectableIds().length
+                        }
+                        onCheckedChange={toggleSelectAll}
+                      />
+                    </div>
+                    <div className="flex items-center gap-1 hover:text-foreground cursor-pointer">
+                      <span>{tr("Tên & UID", "Name & UID")}</span>
+                      <span className="text-[10px]">▲</span>
+                    </div>
+                    <div>{tr("LIÊN KẾT", "LINKED")}</div>
+                    <div>Proxy / VPN</div>
+                    <div>{tr("TRẠNG THÁI", "STATUS")}</div>
+                    <div>{tr("HÀNH ĐỘNG", "ACTION / STATE")}</div>
+                    <div className="flex items-center justify-end gap-2 pr-1">
+                      <span>{tr("Thao tác", "Actions")}</span>
+                      <div className="flex items-center gap-0.5 bg-muted/60 p-0.5 rounded-md border border-border/50">
+                        <button
+                          type="button"
+                          onClick={() => handleSetViewMode("table")}
+                          title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
+                          className={cn(
+                            "p-1 rounded transition-colors cursor-pointer",
+                            accountViewMode === "table"
+                              ? "bg-background text-foreground shadow-2xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <LayoutList className="size-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSetViewMode("grid")}
+                          title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
+                          className={cn(
+                            "p-1 rounded transition-colors cursor-pointer",
+                            accountViewMode === "grid"
+                              ? "bg-background text-foreground shadow-2xs font-semibold"
+                              : "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          <LayoutGrid className="size-3" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div>{tr("LIÊN KẾT", "LINKED")}</div>
-                  <div>Proxy / VPN</div>
-                  <div>{tr("TRẠNG THÁI", "STATUS")}</div>
-                  <div>{tr("HÀNH ĐỘNG", "ACTION / STATE")}</div>
-                  <div className="text-right pr-2">
-                    {tr("Thao tác", "Actions")}
-                  </div>
-                </div>
+                )}
 
                 {/* Table Rows or Empty State */}
                 {filteredAccounts.length === 0 ? (
@@ -3682,6 +3888,28 @@ export default function HomePage() {
                       </div>
                     )}
                   </div>
+                ) : accountViewMode === "grid" ? (
+                  <AccountGridView
+                    accounts={filteredAccounts}
+                    selectedIds={selectedIds}
+                    onToggleSelectOne={toggleSelectOne}
+                    checkingIds={checkingIds}
+                    runnerStates={runnerStates}
+                    currentPage={currentPage}
+                    nvcLinkedUids={nvcLinkedUids}
+                    nvcLinkingIds={nvcLinkingIds}
+                    onLinkNvcAccount={(acc) => void handleLinkNvcAccount(acc)}
+                    onCheckAccount={(acc) => void handleCheckAccount(acc)}
+                    onRunAccount={handleRunAccount}
+                    onDeleteAccount={handleDeleteAccount}
+                    onDetailAccount={(acc) => {
+                      setDetailAccount(acc);
+                      setIsDetailOpen(true);
+                    }}
+                    onCheckPage={handleCheckPage}
+                    onRunPage={handleRunPage}
+                    tr={tr}
+                  />
                 ) : (
                   <div className="flex-1 min-h-0 divide-y divide-border/30 overflow-y-auto">
                     {filteredAccounts.map((acc) => {
