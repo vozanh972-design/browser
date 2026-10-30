@@ -11,7 +11,6 @@ import {
   EyeOff,
   Flag,
   Key,
-  Plus,
   RefreshCw,
   ShieldCheck,
   Smartphone,
@@ -181,9 +180,6 @@ export function AccountDetailDialog({
   const [currentTikTokAccounts, setCurrentTikTokAccounts] = useState<TikTokAccountItem[]>(
     account?.tiktokAccounts || [],
   );
-  const [isAddingTikTok, setIsAddingTikTok] = useState(false);
-  const [newUsername, setNewUsername] = useState("");
-  const [newNickname, setNewNickname] = useState("");
 
   useEffect(() => {
     setCurrentAvatar(account?.avatar);
@@ -367,43 +363,6 @@ export function AccountDetailDialog({
     setTimeout(() => {
       setCopiedKey((prev) => (prev === key ? null : prev));
     }, 1800);
-  };
-
-  const handleAddTikTokAccount = () => {
-    let username = newUsername.trim();
-    if (!username) {
-      showErrorToast(tr("Vui lòng nhập username TikTok", "Please enter TikTok username"));
-      return;
-    }
-    if (!username.startsWith("@")) {
-      username = `@${username}`;
-    }
-
-    if (currentTikTokAccounts.some((a) => a.username.toLowerCase() === username.toLowerCase())) {
-      showErrorToast(tr("Tài khoản này đã tồn tại trên thiết bị!", "Account already exists on this device!"));
-      return;
-    }
-
-    const isFirst = currentTikTokAccounts.length === 0;
-    const newAcc: TikTokAccountItem = {
-      id: `tt_${Date.now()}`,
-      username,
-      nickname: newNickname.trim() || (isFirst ? "Tài khoản chính" : "Tài khoản phụ"),
-      isCurrent: isFirst,
-      status: "live",
-    };
-
-    const nextList = [...currentTikTokAccounts, newAcc];
-    setCurrentTikTokAccounts(nextList);
-    onUpdateMedia?.({
-      tiktokAccounts: nextList,
-      ...(isFirst ? { name: username } : {}),
-    });
-
-    setNewUsername("");
-    setNewNickname("");
-    setIsAddingTikTok(false);
-    showSuccessToast(tr(`Đã thêm ${username} vào máy!`, `Added ${username} to device!`));
   };
 
   const handleSetCurrentTikTok = (targetAcc: TikTokAccountItem) => {
@@ -728,7 +687,7 @@ export function AccountDetailDialog({
         {/* Scrollable Details */}
         <ScrollArea className="max-h-[380px] px-6 py-2">
           {isUsbDevice ? (
-            <div className="flex flex-col gap-3.5 pb-4">
+            <div className="flex flex-col gap-3.5 pb-2">
               {/* Header danh sách tài khoản TikTok */}
               <div className="flex items-center justify-between pb-1.5 border-b border-border/50">
                 <div className="flex items-center gap-2">
@@ -744,71 +703,7 @@ export function AccountDetailDialog({
                     </span>
                   </div>
                 </div>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={isAddingTikTok ? "secondary" : "outline"}
-                  onClick={() => setIsAddingTikTok((prev) => !prev)}
-                  className="h-7 text-[11px] font-semibold gap-1 px-2.5 cursor-pointer border-border hover:bg-muted"
-                >
-                  <Plus className="size-3.5 text-pink-400" />
-                  <span>{isAddingTikTok ? "Đóng form" : "Thêm acc"}</span>
-                </Button>
               </div>
-
-              {/* Form thêm tài khoản nhanh */}
-              {isAddingTikTok && (
-                <div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-3 flex flex-col gap-2.5 transition-all">
-                  <div className="flex items-center justify-between text-xs font-bold text-pink-400">
-                    <span>Thêm tài khoản TikTok vào máy</span>
-                    <span className="text-[10px] text-muted-foreground font-normal">
-                      Nhập @username và tên gợi nhớ
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      placeholder="Username TikTok (VD: @kenh_tiktok)"
-                      value={newUsername}
-                      onChange={(e) => setNewUsername(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAddTikTokAccount()}
-                      className="h-8 px-2.5 text-xs rounded-lg border border-border bg-background focus:border-pink-500 focus:outline-none"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Ghi chú / Tên hiển thị (Tùy chọn)"
-                      value={newNickname}
-                      onChange={(e) => setNewNickname(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleAddTikTokAccount()}
-                      className="h-8 px-2.5 text-xs rounded-lg border border-border bg-background focus:border-pink-500 focus:outline-none"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setIsAddingTikTok(false);
-                        setNewUsername("");
-                        setNewNickname("");
-                      }}
-                      className="h-7 text-xs px-2.5"
-                    >
-                      Hủy
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleAddTikTokAccount}
-                      className="h-7 text-xs px-3 bg-pink-600 hover:bg-pink-700 text-white font-medium"
-                    >
-                      Lưu tài khoản
-                    </Button>
-                  </div>
-                </div>
-              )}
 
               {/* Danh sách các tài khoản */}
               {currentTikTokAccounts.length === 0 ? (
@@ -820,7 +715,7 @@ export function AccountDetailDialog({
                     Chưa có tài khoản TikTok nào trên máy
                   </p>
                   <p className="text-[11px] text-muted-foreground max-w-sm">
-                    Bấm <strong>&quot;Kiểm tra acc&quot;</strong> ở ngoài danh sách thiết bị để tự động mở TikTok và nhận diện nick, hoặc bấm nút <strong>&quot;+ Thêm acc&quot;</strong> ở trên để nhập tài khoản.
+                    Bấm <strong>&quot;Kiểm tra acc&quot;</strong> ở ngoài danh sách thiết bị để tự động mở TikTok và nhận diện tài khoản.
                   </p>
                 </div>
               ) : (
@@ -895,25 +790,6 @@ export function AccountDetailDialog({
                   ))}
                 </div>
               )}
-
-              {/* Dòng định danh serial máy nhỏ gọn ở đáy */}
-              <div className="mt-2 pt-2.5 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
-                <span className="font-mono">
-                  Serial thiết bị: <span className="text-foreground">{account.uid}</span>
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleCopy(account.uid, "serial", "Serial")}
-                  className="inline-flex items-center gap-1 hover:text-foreground cursor-pointer"
-                >
-                  {copiedKey === "serial" ? (
-                    <Check className="size-3 text-emerald-500" />
-                  ) : (
-                    <Copy className="size-3" />
-                  )}
-                  <span>Sao chép serial</span>
-                </button>
-              </div>
             </div>
           ) : (
             <div className="flex flex-col gap-3 pb-4">
