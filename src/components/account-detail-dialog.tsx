@@ -11,9 +11,11 @@ import {
   EyeOff,
   Flag,
   Key,
+  Plus,
   RefreshCw,
   ShieldCheck,
   Smartphone,
+  Trash2,
   Usb,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -40,6 +42,15 @@ import {
 import { showErrorToast, showSuccessToast } from "@/lib/toast-utils";
 import { cn } from "@/lib/utils";
 
+export interface TikTokAccountItem {
+  id: string;
+  username: string;
+  nickname?: string;
+  avatar?: string;
+  isCurrent?: boolean;
+  status?: "live" | "die" | "ready" | string;
+}
+
 export interface AccountDetailData {
   id: string;
   uid: string;
@@ -59,6 +70,7 @@ export interface AccountDetailData {
   isLive?: boolean;
   rawText: string;
   pages?: FacebookPageItem[];
+  tiktokAccounts?: TikTokAccountItem[];
 }
 
 interface AccountDetailDialogProps {
@@ -72,6 +84,7 @@ interface AccountDetailDialogProps {
     token?: string;
     name?: string;
     pages?: FacebookPageItem[];
+    tiktokAccounts?: TikTokAccountItem[];
   }) => void;
   isChecking?: boolean;
 }
@@ -95,8 +108,8 @@ function DialogAvatar({
   if (hasError) {
     if (isUsbDevice) {
       return (
-        <div className="size-full flex items-center justify-center bg-emerald-500/15 text-emerald-400">
-          <Smartphone className="size-10" />
+        <div className="size-full flex items-center justify-center bg-pink-500/15 text-pink-400">
+          <TiktokIcon className="size-9" />
         </div>
       );
     }
@@ -164,18 +177,43 @@ export function AccountDetailDialog({
   );
   const [isFetchingToken, setIsFetchingToken] = useState(false);
 
+  // TikTok Accounts on Device
+  const [currentTikTokAccounts, setCurrentTikTokAccounts] = useState<TikTokAccountItem[]>(
+    account?.tiktokAccounts || [],
+  );
+  const [isAddingTikTok, setIsAddingTikTok] = useState(false);
+  const [newUsername, setNewUsername] = useState("");
+  const [newNickname, setNewNickname] = useState("");
+
   useEffect(() => {
     setCurrentAvatar(account?.avatar);
     setCurrentCover(account?.cover);
     setCurrentToken(account?.token);
     setCurrentName(account?.name);
     setCurrentPages(account?.pages || []);
+    if (account?.tiktokAccounts && account.tiktokAccounts.length > 0) {
+      setCurrentTikTokAccounts(account.tiktokAccounts);
+    } else if (account?.name && account.name.startsWith("@")) {
+      setCurrentTikTokAccounts([
+        {
+          id: `tt_${account.uid}_main`,
+          username: account.name,
+          nickname: "Tài khoản chính",
+          isCurrent: true,
+          status: "live",
+        },
+      ]);
+    } else {
+      setCurrentTikTokAccounts([]);
+    }
   }, [
     account?.avatar,
     account?.cover,
     account?.token,
     account?.name,
     account?.pages,
+    account?.tiktokAccounts,
+    account?.uid,
   ]);
 
   const handleFetchToken = async () => {
@@ -331,6 +369,76 @@ export function AccountDetailDialog({
     }, 1800);
   };
 
+  const handleAddTikTokAccount = () => {
+    let username = newUsername.trim();
+    if (!username) {
+      showErrorToast(tr("Vui lòng nhập username TikTok", "Please enter TikTok username"));
+      return;
+    }
+    if (!username.startsWith("@")) {
+      username = `@${username}`;
+    }
+
+    if (currentTikTokAccounts.some((a) => a.username.toLowerCase() === username.toLowerCase())) {
+      showErrorToast(tr("Tài khoản này đã tồn tại trên thiết bị!", "Account already exists on this device!"));
+      return;
+    }
+
+    const isFirst = currentTikTokAccounts.length === 0;
+    const newAcc: TikTokAccountItem = {
+      id: `tt_${Date.now()}`,
+      username,
+      nickname: newNickname.trim() || (isFirst ? "Tài khoản chính" : "Tài khoản phụ"),
+      isCurrent: isFirst,
+      status: "live",
+    };
+
+    const nextList = [...currentTikTokAccounts, newAcc];
+    setCurrentTikTokAccounts(nextList);
+    onUpdateMedia?.({
+      tiktokAccounts: nextList,
+      ...(isFirst ? { name: username } : {}),
+    });
+
+    setNewUsername("");
+    setNewNickname("");
+    setIsAddingTikTok(false);
+    showSuccessToast(tr(`Đã thêm ${username} vào máy!`, `Added ${username} to device!`));
+  };
+
+  const handleSetCurrentTikTok = (targetAcc: TikTokAccountItem) => {
+    const nextList = currentTikTokAccounts.map((a) => ({
+      ...a,
+      isCurrent: a.id === targetAcc.id || a.username === targetAcc.username,
+    }));
+    setCurrentTikTokAccounts(nextList);
+    setCurrentName(targetAcc.username);
+    onUpdateMedia?.({
+      tiktokAccounts: nextList,
+      name: targetAcc.username,
+    });
+    showSuccessToast(tr(`Đã chọn ${targetAcc.username} làm tài khoản hoạt động!`, `Selected ${targetAcc.username} as active account!`));
+  };
+
+  const handleRemoveTikTokAccount = (idOrUsername: string) => {
+    const nextList = currentTikTokAccounts.filter(
+      (a) => a.id !== idOrUsername && a.username !== idOrUsername,
+    );
+    if (nextList.length > 0 && !nextList.some((a) => a.isCurrent)) {
+      nextList[0].isCurrent = true;
+    }
+    const currentAcc = nextList.find((a) => a.isCurrent);
+    setCurrentTikTokAccounts(nextList);
+    if (currentAcc) {
+      setCurrentName(currentAcc.username);
+    }
+    onUpdateMedia?.({
+      tiktokAccounts: nextList,
+      name: currentAcc ? currentAcc.username : account.uid,
+    });
+    showSuccessToast(tr("Đã xóa tài khoản khỏi máy!", "Removed account from device!"));
+  };
+
   const handleSelectAvatar = async () => {
     if (!account.token) return;
     try {
@@ -434,23 +542,12 @@ export function AccountDetailDialog({
   const isInstagram = account.platform === "instagram";
   const isTikTok = account.platform === "tiktok";
   const isUsbDevice = account.tag?.includes("USB") || account.id?.startsWith("adb_");
-  const androidVerMatch = account.note?.match(/Android\s*([0-9.]+)/i);
-  const androidVer = androidVerMatch
-    ? `Android ${androidVerMatch[1]}`
-    : account.note?.includes("Android")
-      ? "Android"
-      : "Android";
-  const batteryMatch = account.note?.match(/Pin:\s*([0-9%]+)/i);
-  const batteryLevel = batteryMatch
-    ? batteryMatch[1]
-    : account.note?.split("|")[0]?.replace("Pin:", "")?.trim() || "100%";
-  const modelMatch =
-    account.note?.match(/Mã máy:\s*([^|]+)/i) ||
-    account.note?.match(/Model:\s*([^|]+)/i);
-  const modelCode = modelMatch ? modelMatch[1].trim() : account.uid;
 
   const activeTok = currentToken || account.token;
-  const displayName = currentName || account.name || account.uid;
+  const activeTikTokAcc = currentTikTokAccounts.find((a) => a.isCurrent) || currentTikTokAccounts[0];
+  const displayName = isUsbDevice
+    ? activeTikTokAcc?.username || currentName || account.name || account.uid
+    : currentName || account.name || account.uid;
   const avatarUrl =
     account.isLive === false ||
     account.status === "die" ||
@@ -467,7 +564,9 @@ export function AccountDetailDialog({
         <DialogHeader className="sr-only">
           <DialogTitle>
             {isUsbDevice
-              ? `Thông tin thiết bị ${displayName}`
+              ? (activeTikTokAcc
+                  ? `Tài khoản TikTok ${activeTikTokAcc.username} trên máy`
+                  : `Tài khoản TikTok trên máy ${account.uid}`)
               : `Chi tiết tài khoản ${displayName}`}
           </DialogTitle>
         </DialogHeader>
@@ -477,7 +576,7 @@ export function AccountDetailDialog({
           className={cn(
             "relative h-32 w-full overflow-hidden group",
             isUsbDevice
-              ? "bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700"
+              ? "bg-gradient-to-r from-zinc-950 via-slate-900 to-zinc-950 border-b border-border/40"
               : "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600",
           )}
         >
@@ -557,9 +656,13 @@ export function AccountDetailDialog({
                     {displayName}
                   </h3>
                   {isUsbDevice ? (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                      <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>{androidVer}</span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-pink-500/15 text-pink-400 border border-pink-500/30">
+                      <TiktokIcon className="size-3 text-pink-400" />
+                      <span>
+                        {currentTikTokAccounts.length > 0
+                          ? `${currentTikTokAccounts.length} Acc TikTok`
+                          : "TikTok VN"}
+                      </span>
                     </span>
                   ) : account.isLive === true ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
@@ -580,12 +683,12 @@ export function AccountDetailDialog({
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
                   <span>
-                    {isUsbDevice ? "Serial ID: " : "UID: "}
+                    {isUsbDevice ? "Serial máy: " : "UID: "}
                     {account.uid}
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(account.uid, "uid", isUsbDevice ? "Serial ID" : "UID")}
+                    onClick={() => handleCopy(account.uid, "uid", isUsbDevice ? "Serial máy" : "UID")}
                     className="p-1 hover:text-foreground cursor-pointer rounded transition-colors"
                     title={tr("Sao chép", "Copy")}
                   >
@@ -625,99 +728,191 @@ export function AccountDetailDialog({
         {/* Scrollable Details */}
         <ScrollArea className="max-h-[380px] px-6 py-2">
           {isUsbDevice ? (
-            <div className="flex flex-col gap-3 pb-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {/* Mã máy / Model */}
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Cpu className="size-3.5 text-blue-400" />
-                    <span>Mã máy / Model</span>
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">
-                    {modelCode}
-                  </span>
+            <div className="flex flex-col gap-3.5 pb-4">
+              {/* Header danh sách tài khoản TikTok */}
+              <div className="flex items-center justify-between pb-1.5 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                  <div className="size-6 rounded-md bg-pink-500/15 text-pink-400 flex items-center justify-center">
+                    <TiktokIcon className="size-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-foreground">
+                      Tài khoản TikTok trên thiết bị
+                    </span>
+                    <span className="ml-2 text-[11px] text-muted-foreground font-medium">
+                      ({currentTikTokAccounts.length} tài khoản)
+                    </span>
+                  </div>
                 </div>
 
-                {/* Mức Pin */}
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <BatteryCharging className="size-3.5 text-amber-400" />
-                    <span>Mức Pin thiết bị</span>
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">
-                    {batteryLevel} (Đang sạc qua USB)
-                  </span>
-                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={isAddingTikTok ? "secondary" : "outline"}
+                  onClick={() => setIsAddingTikTok((prev) => !prev)}
+                  className="h-7 text-[11px] font-semibold gap-1 px-2.5 cursor-pointer border-border hover:bg-muted"
+                >
+                  <Plus className="size-3.5 text-pink-400" />
+                  <span>{isAddingTikTok ? "Đóng form" : "Thêm acc"}</span>
+                </Button>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {/* Hệ điều hành */}
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Smartphone className="size-3.5 text-purple-400" />
-                    <span>Hệ điều hành Android</span>
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">
-                    {androidVer}
-                  </span>
+              {/* Form thêm tài khoản nhanh */}
+              {isAddingTikTok && (
+                <div className="rounded-xl border border-pink-500/30 bg-pink-500/5 p-3 flex flex-col gap-2.5 transition-all">
+                  <div className="flex items-center justify-between text-xs font-bold text-pink-400">
+                    <span>Thêm tài khoản TikTok vào máy</span>
+                    <span className="text-[10px] text-muted-foreground font-normal">
+                      Nhập @username và tên gợi nhớ
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input
+                      type="text"
+                      placeholder="Username TikTok (VD: @kenh_tiktok)"
+                      value={newUsername}
+                      onChange={(e) => setNewUsername(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddTikTokAccount()}
+                      className="h-8 px-2.5 text-xs rounded-lg border border-border bg-background focus:border-pink-500 focus:outline-none"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Ghi chú / Tên hiển thị (Tùy chọn)"
+                      value={newNickname}
+                      onChange={(e) => setNewNickname(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAddTikTokAccount()}
+                      className="h-8 px-2.5 text-xs rounded-lg border border-border bg-background focus:border-pink-500 focus:outline-none"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setIsAddingTikTok(false);
+                        setNewUsername("");
+                        setNewNickname("");
+                      }}
+                      className="h-7 text-xs px-2.5"
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleAddTikTokAccount}
+                      className="h-7 text-xs px-3 bg-pink-600 hover:bg-pink-700 text-white font-medium"
+                    >
+                      Lưu tài khoản
+                    </Button>
+                  </div>
                 </div>
+              )}
 
-                {/* Cổng kết nối */}
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                    <Usb className="size-3.5 text-emerald-400" />
-                    <span>Phương thức kết nối</span>
-                  </span>
-                  <span className="text-xs font-semibold text-emerald-400">
-                    Cáp USB ADB (Đã bật gỡ lỗi)
-                  </span>
+              {/* Danh sách các tài khoản */}
+              {currentTikTokAccounts.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-border/80 bg-muted/15 p-6 flex flex-col items-center justify-center text-center gap-2">
+                  <div className="size-10 rounded-full bg-pink-500/10 text-pink-400 flex items-center justify-center">
+                    <TiktokIcon className="size-5" />
+                  </div>
+                  <p className="text-xs font-semibold text-foreground">
+                    Chưa có tài khoản TikTok nào trên máy
+                  </p>
+                  <p className="text-[11px] text-muted-foreground max-w-sm">
+                    Bấm <strong>&quot;Kiểm tra acc&quot;</strong> ở ngoài danh sách thiết bị để tự động mở TikTok và nhận diện nick, hoặc bấm nút <strong>&quot;+ Thêm acc&quot;</strong> ở trên để nhập tài khoản.
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {currentTikTokAccounts.map((acc, idx) => (
+                    <div
+                      key={acc.id || acc.username || idx}
+                      className={cn(
+                        "rounded-xl border p-3 flex items-center justify-between gap-3 transition-all",
+                        acc.isCurrent
+                          ? "border-pink-500/40 bg-pink-500/[0.04] shadow-2xs"
+                          : "border-border/70 bg-muted/20 hover:bg-muted/30"
+                      )}
+                    >
+                      {/* Avatar & Username */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="size-9 rounded-full bg-gradient-to-tr from-rose-500/20 to-cyan-500/20 border border-border flex items-center justify-center shrink-0 text-pink-400 font-bold text-xs">
+                          {acc.username.replace("@", "").charAt(0).toUpperCase() || "T"}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-foreground truncate">
+                              {acc.username}
+                            </span>
+                            {acc.isCurrent ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                <Check className="size-2.5" />
+                                <span>Đang dùng</span>
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleSetCurrentTikTok(acc)}
+                                className="text-[10px] font-medium text-pink-400 hover:text-pink-300 underline cursor-pointer"
+                              >
+                                Đặt làm nick chính
+                              </button>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                            <span>{acc.nickname || "Tài khoản TikTok"}</span>
+                            <span>•</span>
+                            <span className="text-emerald-500 font-medium">Hoạt động (Live)</span>
+                          </div>
+                        </div>
+                      </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                {/* Trạng thái cấp quyền */}
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Trạng thái cấp quyền
-                  </span>
-                  <span className="text-xs font-semibold text-emerald-400">
-                    Authorized • Đã cho phép từ máy tính
-                  </span>
+                      {/* Nút thao tác Copy / Xóa */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(acc.username, `tt_${idx}`, "Username")}
+                          className="p-1.5 rounded-lg border border-border/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          title="Sao chép @username"
+                        >
+                          {copiedKey === `tt_${idx}` ? (
+                            <Check className="size-3.5 text-emerald-500" />
+                          ) : (
+                            <Copy className="size-3.5" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTikTokAccount(acc.id || acc.username)}
+                          className="p-1.5 rounded-lg border border-border/60 hover:border-rose-500/40 hover:bg-rose-500/10 text-muted-foreground hover:text-rose-400 transition-colors cursor-pointer"
+                          title="Xóa tài khoản khỏi máy"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              )}
 
-                {/* Nền tảng mục tiêu */}
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Nền tảng mục tiêu
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">
-                    TikTok (Nuôi tài khoản, Follow & Like)
-                  </span>
-                </div>
-              </div>
-
-              {/* Chuỗi dữ liệu gốc (Raw Text) */}
-              <div className="rounded-xl border border-border/70 bg-muted/20 p-3 flex flex-col gap-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    Chuỗi định danh thiết bị
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(account.rawText || account.uid, "raw", "Raw")}
-                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer"
-                  >
-                    {copiedKey === "raw" ? (
-                      <Check className="size-3 text-emerald-500" />
-                    ) : (
-                      <Copy className="size-3" />
-                    )}
-                    <span>{tr("Sao chép", "Copy")}</span>
-                  </button>
-                </div>
-                <div className="font-mono text-xs select-all break-all text-muted-foreground bg-background/50 p-2 rounded-lg border border-border/40">
-                  {account.rawText || account.uid}
-                </div>
+              {/* Dòng định danh serial máy nhỏ gọn ở đáy */}
+              <div className="mt-2 pt-2.5 border-t border-border/40 flex items-center justify-between text-[11px] text-muted-foreground">
+                <span className="font-mono">
+                  Serial thiết bị: <span className="text-foreground">{account.uid}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleCopy(account.uid, "serial", "Serial")}
+                  className="inline-flex items-center gap-1 hover:text-foreground cursor-pointer"
+                >
+                  {copiedKey === "serial" ? (
+                    <Check className="size-3 text-emerald-500" />
+                  ) : (
+                    <Copy className="size-3" />
+                  )}
+                  <span>Sao chép serial</span>
+                </button>
               </div>
             </div>
           ) : (

@@ -74,7 +74,17 @@ import {
   type AdbDeviceInfo,
   getAdbDevices,
   launchTiktokApp,
+  detectTiktokUsername,
 } from "@/lib/adb-service";
+
+export interface TikTokAccountItem {
+  id: string;
+  username: string;
+  nickname?: string;
+  avatar?: string;
+  isCurrent?: boolean;
+  status?: "live" | "die" | "ready" | string;
+}
 
 export interface FacebookAccount {
   id: string;
@@ -96,6 +106,7 @@ export interface FacebookAccount {
   isLive?: boolean;
   rawText: string;
   pages?: FacebookPageItem[];
+  tiktokAccounts?: TikTokAccountItem[];
   dolikeEmail?: string;
   dolikeBalance?: string;
   dolikeLinked?: boolean;
@@ -1652,6 +1663,61 @@ export default function HomePage() {
               );
             } else if (res.success) {
               showSuccessToast(`Đã mở ứng dụng TikTok VN trên thiết bị ${devName}!`);
+              // Quét nhận diện username TikTok đang mở trên điện thoại
+              setTimeout(async () => {
+                const detectedUser = await detectTiktokUsername(targetAccount.uid);
+                if (detectedUser) {
+                  setAccounts((prev) => {
+                    const updated = prev.map((a) => {
+                      if (a.id === targetAccount.id) {
+                        const existingList = a.tiktokAccounts || [];
+                        const foundIdx = existingList.findIndex(
+                          (item) => item.username === detectedUser,
+                        );
+                        let nextList: TikTokAccountItem[];
+                        if (foundIdx >= 0) {
+                          nextList = existingList.map((item, idx) => ({
+                            ...item,
+                            isCurrent: idx === foundIdx,
+                          }));
+                        } else {
+                          nextList = [
+                            {
+                              id: detectedUser,
+                              username: detectedUser,
+                              nickname: detectedUser.replace(/^@/, ""),
+                              isCurrent: true,
+                              status: "live",
+                            },
+                            ...existingList.map((item) => ({
+                              ...item,
+                              isCurrent: false,
+                            })),
+                          ];
+                        }
+                        return {
+                          ...a,
+                          name: detectedUser,
+                          tiktokAccounts: nextList,
+                        };
+                      }
+                      return a;
+                    });
+                    try {
+                      localStorage.setItem(
+                        "autolunex_facebook_accounts_v1",
+                        JSON.stringify(updated),
+                      );
+                    } catch {
+                      // ignore
+                    }
+                    return updated;
+                  });
+                  showSuccessToast(
+                    `Đã nhận diện tài khoản TikTok: ${detectedUser}`,
+                  );
+                }
+              }, 2200);
             }
           });
 
@@ -4833,6 +4899,7 @@ export default function HomePage() {
                   token: updated.token || a.token,
                   name: updated.name || a.name,
                   pages: updated.pages || a.pages,
+                  tiktokAccounts: updated.tiktokAccounts || a.tiktokAccounts,
                 };
               }
               if (a.pages && a.pages.length > 0) {

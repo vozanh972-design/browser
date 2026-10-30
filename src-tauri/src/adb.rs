@@ -390,3 +390,38 @@ pub fn launch_tiktok_app(serial: String) -> Result<bool, String> {
     Ok(true)
 }
 
+#[tauri::command]
+pub fn detect_tiktok_username(serial: String) -> Result<Option<String>, String> {
+    let adb_bin = match find_adb_path() {
+        Some(p) => p,
+        None => return Err("Chưa tìm thấy adb.exe trên máy tính".to_string()),
+    };
+
+    let mut cmd = std::process::Command::new(&adb_bin);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    cmd.args([
+        "-s",
+        &serial,
+        "shell",
+        "uiautomator dump /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml",
+    ]);
+
+    if let Ok(output) = cmd.output() {
+        let text = String::from_utf8_lossy(&output.stdout);
+        for part in text.split("text=\"") {
+            if let Some((val, _)) = part.split_once('"') {
+                let trimmed = val.trim();
+                if trimmed.starts_with('@') && trimmed.len() >= 3 && trimmed.len() <= 32 {
+                    return Ok(Some(trimmed.to_string()));
+                }
+            }
+        }
+    }
+
+    Ok(None)
+}
+

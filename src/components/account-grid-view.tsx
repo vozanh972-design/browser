@@ -275,7 +275,9 @@ export function AccountGridView({
                   )}
                   title={acc.name || acc.uid}
                 >
-                  {acc.name || (isInstagram || isTikTok ? `@${acc.uid}` : acc.uid)}
+                  {acc.tiktokAccounts?.find((a) => a.isCurrent)?.username ||
+                    acc.name ||
+                    (isInstagram || isTikTok ? `@${acc.uid}` : acc.uid)}
                 </span>
               </div>
 
@@ -300,7 +302,6 @@ export function AccountGridView({
                     )}
                   </span>
                 ) : isUsbDevice ? (
-                  /* Với thiết bị Android USB: Hiển thị Android version, bỏ chữ Live */
                   isCheckpointOrDie ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-500/10 text-rose-500 border border-rose-500/25">
                       <span className="size-1.5 rounded-full bg-rose-500" />
@@ -309,7 +310,11 @@ export function AccountGridView({
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
                       <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>{androidVerText}</span>
+                      <span>
+                        {acc.tiktokAccounts && acc.tiktokAccounts.length > 1
+                          ? `${acc.tiktokAccounts.length} acc`
+                          : "Live"}
+                      </span>
                     </span>
                   )
                 ) : acc.isLive === true || acc.status === "live" ? (
@@ -352,11 +357,7 @@ export function AccountGridView({
                     referrerPolicy="no-referrer"
                   />
                 ) : isTikTok ? (
-                  isUsbDevice ? (
-                    <Smartphone className="size-3.5 text-emerald-400" />
-                  ) : (
-                    <TiktokIcon className="size-3 text-foreground" />
-                  )
+                  <TiktokIcon className="size-3 text-pink-400" />
                 ) : isInstagram ? (
                   <FaInstagram className="size-3.5 text-[#E1306C]" />
                 ) : (
@@ -373,7 +374,7 @@ export function AccountGridView({
                 className="flex items-center gap-1 text-[10.5px] font-mono text-muted-foreground hover:text-primary transition-colors text-left truncate flex-1 group/uid cursor-pointer"
                 title={tr("Nhấp để sao chép UID", "Click to copy UID")}
               >
-                <span className="truncate">UID: {acc.uid}</span>
+                <span className="truncate">{isUsbDevice ? `Máy: ${acc.uid}` : `UID: ${acc.uid}`}</span>
                 {copiedId === acc.uid ? (
                   <Check className="size-2.5 text-emerald-500 shrink-0" />
                 ) : (

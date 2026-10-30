@@ -98,6 +98,19 @@ export async function launchTiktokApp(
   }
 }
 
+/**
+ * Tự động đọc username TikTok đang mở trên màn hình thiết bị
+ */
+export async function detectTiktokUsername(
+  serial: string,
+): Promise<string | null> {
+  try {
+    return await invoke<string | null>("detect_tiktok_username", { serial });
+  } catch {
+    return null;
+  }
+}
+
 export interface DeviceWatcherHandlers {
   onDeviceConnected?: (device: AdbDeviceInfo) => void;
   onDeviceDisconnected?: (serial: string) => void;
