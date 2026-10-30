@@ -2601,12 +2601,7 @@ export default function HomePage() {
                           type="button"
                           onClick={() => handleSetViewMode("table")}
                           title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
-                          className={cn(
-                            "p-1 rounded transition-colors cursor-pointer",
-                            accountViewMode === "table"
-                              ? "bg-background text-foreground shadow-2xs font-semibold"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
+                          className="p-1 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
                         >
                           <LayoutList className="size-3" />
                         </button>
@@ -2614,12 +2609,7 @@ export default function HomePage() {
                           type="button"
                           onClick={() => handleSetViewMode("grid")}
                           title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
-                          className={cn(
-                            "p-1 rounded transition-colors cursor-pointer",
-                            accountViewMode === "grid"
-                              ? "bg-background text-foreground shadow-2xs font-semibold"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
+                          className="p-1 rounded transition-colors cursor-pointer bg-background text-foreground shadow-2xs font-semibold"
                         >
                           <LayoutGrid className="size-3" />
                         </button>
@@ -2653,12 +2643,7 @@ export default function HomePage() {
                           type="button"
                           onClick={() => handleSetViewMode("table")}
                           title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
-                          className={cn(
-                            "p-1 rounded transition-colors cursor-pointer",
-                            accountViewMode === "table"
-                              ? "bg-background text-foreground shadow-2xs font-semibold"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
+                          className="p-1 rounded transition-colors cursor-pointer bg-background text-foreground shadow-2xs font-semibold"
                         >
                           <LayoutList className="size-3" />
                         </button>
@@ -2666,12 +2651,7 @@ export default function HomePage() {
                           type="button"
                           onClick={() => handleSetViewMode("grid")}
                           title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
-                          className={cn(
-                            "p-1 rounded transition-colors cursor-pointer",
-                            accountViewMode === "grid"
-                              ? "bg-background text-foreground shadow-2xs font-semibold"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
+                          className="p-1 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
                         >
                           <LayoutGrid className="size-3" />
                         </button>
@@ -3742,12 +3722,7 @@ export default function HomePage() {
                           type="button"
                           onClick={() => handleSetViewMode("table")}
                           title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
-                          className={cn(
-                            "p-1 rounded transition-colors cursor-pointer",
-                            accountViewMode === "table"
-                              ? "bg-background text-foreground shadow-2xs font-semibold"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
+                          className="p-1 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
                         >
                           <LayoutList className="size-3" />
                         </button>
@@ -3755,12 +3730,7 @@ export default function HomePage() {
                           type="button"
                           onClick={() => handleSetViewMode("grid")}
                           title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
-                          className={cn(
-                            "p-1 rounded transition-colors cursor-pointer",
-                            accountViewMode === "grid"
-                              ? "bg-background text-foreground shadow-2xs font-semibold"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
+                          className="p-1 rounded transition-colors cursor-pointer bg-background text-foreground shadow-2xs font-semibold"
                         >
                           <LayoutGrid className="size-3" />
                         </button>
@@ -3794,12 +3764,7 @@ export default function HomePage() {
                           type="button"
                           onClick={() => handleSetViewMode("table")}
                           title={tr("Dạng dài (Bảng chi tiết)", "Table view")}
-                          className={cn(
-                            "p-1 rounded transition-colors cursor-pointer",
-                            accountViewMode === "table"
-                              ? "bg-background text-foreground shadow-2xs font-semibold"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
+                          className="p-1 rounded transition-colors cursor-pointer bg-background text-foreground shadow-2xs font-semibold"
                         >
                           <LayoutList className="size-3" />
                         </button>
@@ -3807,12 +3772,7 @@ export default function HomePage() {
                           type="button"
                           onClick={() => handleSetViewMode("grid")}
                           title={tr("Dạng thẻ (Card lưới)", "Card/Grid view")}
-                          className={cn(
-                            "p-1 rounded transition-colors cursor-pointer",
-                            accountViewMode === "grid"
-                              ? "bg-background text-foreground shadow-2xs font-semibold"
-                              : "text-muted-foreground hover:text-foreground",
-                          )}
+                          className="p-1 rounded transition-colors cursor-pointer text-muted-foreground hover:text-foreground"
                         >
                           <LayoutGrid className="size-3" />
                         </button>
