@@ -4874,6 +4874,7 @@ export default function HomePage() {
       <XsmmJobConfigDialog
         isOpen={isJobConfigOpen}
         onClose={() => setIsJobConfigOpen(false)}
+        platform={currentPlatform}
       />
 
       {/* Khóa bắt buộc cập nhật nếu phát hiện phiên bản cũ */}

@@ -21,31 +21,63 @@ import {
 interface XsmmJobConfigDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  platform?: "tiktok" | "facebook" | "instagram";
 }
 
 export function XsmmJobConfigDialog({
   isOpen,
   onClose,
+  platform = "instagram",
 }: XsmmJobConfigDialogProps) {
+  const isTikTok = platform === "tiktok";
   const [config, setConfig] = useState<XsmmJobConfig>(DEFAULT_XSMM_JOB_CONFIG);
 
   useEffect(() => {
     if (isOpen) {
-      setConfig(getStoredXsmmJobConfig());
+      const stored = getStoredXsmmJobConfig();
+      if (isTikTok) {
+        setConfig({
+          ...stored,
+          enableFollow: true,
+          enableLike: false,
+          enableComment: false,
+        });
+      } else {
+        setConfig(stored);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, isTikTok]);
 
   const handleSave = () => {
-    saveXsmmJobConfig(config);
+    if (isTikTok) {
+      saveXsmmJobConfig({
+        ...config,
+        enableFollow: true,
+        enableLike: false,
+        enableComment: false,
+      });
+    } else {
+      saveXsmmJobConfig(config);
+    }
     onClose();
   };
 
   const handleResetDefault = () => {
-    setConfig({ ...DEFAULT_XSMM_JOB_CONFIG });
+    if (isTikTok) {
+      setConfig({
+        ...DEFAULT_XSMM_JOB_CONFIG,
+        enableFollow: true,
+        enableLike: false,
+        enableComment: false,
+      });
+    } else {
+      setConfig({ ...DEFAULT_XSMM_JOB_CONFIG });
+    }
   };
 
-  const hasAtLeastOneJob =
-    config.enableFollow || config.enableLike || config.enableComment;
+  const hasAtLeastOneJob = isTikTok
+    ? true
+    : config.enableFollow || config.enableLike || config.enableComment;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -53,10 +85,12 @@ export function XsmmJobConfigDialog({
         {/* Header — macOS titlebar style */}
         <DialogHeader className="px-6 pt-5 pb-3 shrink-0">
           <DialogTitle className="text-sm font-semibold tracking-tight text-foreground">
-            Cài đặt chạy Job XSMM
+            Cài đặt chạy Job XSMM {isTikTok ? "(TikTok)" : ""}
           </DialogTitle>
           <p className="text-[11.5px] text-muted-foreground/75 mt-0.5">
-            Cấu hình loại nhiệm vụ, độ trễ và giới hạn tự động cho Instagram
+            {isTikTok
+              ? "Cấu hình loại nhiệm vụ, độ trễ và giới hạn tự động cho TikTok"
+              : "Cấu hình loại nhiệm vụ, độ trễ và giới hạn tự động cho Instagram"}
           </p>
         </DialogHeader>
 
@@ -95,56 +129,82 @@ export function XsmmJobConfigDialog({
               </button>
 
               {/* Thả Tym */}
-              <button
-                type="button"
-                onClick={() =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    enableLike: !prev.enableLike,
-                  }))
-                }
-                className={`flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  config.enableLike
-                    ? "bg-background text-foreground shadow-xs border border-border/50"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Heart
-                  className={`size-3.5 ${
-                    config.enableLike ? "text-rose-500 fill-rose-500/20" : ""
+              {isTikTok ? (
+                <div
+                  title="Chưa hỗ trợ nhiệm vụ Thả Tym cho TikTok XSMM"
+                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-medium opacity-35 cursor-not-allowed bg-muted/20 text-muted-foreground border border-transparent select-none"
+                >
+                  <Heart className="size-3.5 text-muted-foreground/60" />
+                  <span>Thả Tym</span>
+                  <span className="text-[9px] text-muted-foreground/75 italic">
+                    (Khóa)
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      enableLike: !prev.enableLike,
+                    }))
+                  }
+                  className={`flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    config.enableLike
+                      ? "bg-background text-foreground shadow-xs border border-border/50"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
-                />
-                <span>Thả Tym</span>
-                {config.enableLike && (
-                  <Check className="size-3 text-rose-500 ml-0.5" />
-                )}
-              </button>
+                >
+                  <Heart
+                    className={`size-3.5 ${
+                      config.enableLike ? "text-rose-500 fill-rose-500/20" : ""
+                    }`}
+                  />
+                  <span>Thả Tym</span>
+                  {config.enableLike && (
+                    <Check className="size-3 text-rose-500 ml-0.5" />
+                  )}
+                </button>
+              )}
 
               {/* Comment */}
-              <button
-                type="button"
-                onClick={() =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    enableComment: !prev.enableComment,
-                  }))
-                }
-                className={`flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  config.enableComment
-                    ? "bg-background text-foreground shadow-xs border border-border/50"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <MessageCircle
-                  className={`size-3.5 ${
-                    config.enableComment ? "text-amber-500" : ""
+              {isTikTok ? (
+                <div
+                  title="Chưa hỗ trợ nhiệm vụ Bình luận cho TikTok XSMM"
+                  className="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-medium opacity-35 cursor-not-allowed bg-muted/20 text-muted-foreground border border-transparent select-none"
+                >
+                  <MessageCircle className="size-3.5 text-muted-foreground/60" />
+                  <span>Bình luận</span>
+                  <span className="text-[9px] text-muted-foreground/75 italic">
+                    (Khóa)
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      enableComment: !prev.enableComment,
+                    }))
+                  }
+                  className={`flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                    config.enableComment
+                      ? "bg-background text-foreground shadow-xs border border-border/50"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
-                />
-                <span>Bình luận</span>
-                {config.enableComment && (
-                  <Check className="size-3 text-amber-500 ml-0.5" />
-                )}
-              </button>
+                >
+                  <MessageCircle
+                    className={`size-3.5 ${
+                      config.enableComment ? "text-amber-500" : ""
+                    }`}
+                  />
+                  <span>Bình luận</span>
+                  {config.enableComment && (
+                    <Check className="size-3 text-amber-500 ml-0.5" />
+                  )}
+                </button>
+              )}
             </div>
             {!hasAtLeastOneJob && (
               <p className="text-[11px] text-destructive px-1 pt-0.5">
@@ -343,7 +403,7 @@ export function XsmmJobConfigDialog({
           {/* Section: Cơ chế Gom Job & Cookie Check (XSMM V2) */}
           <div className="space-y-1.5">
             <span className="text-[11px] font-medium tracking-wide uppercase text-muted-foreground/60 px-0.5">
-              Cơ chế XSMM V2 (Gom Job & Cookie Check)
+              Cơ chế XSMM V2 {isTikTok ? "(Gom Job nhận xu)" : "(Gom Job & Cookie Check)"}
             </span>
             <div className="rounded-xl border border-border/40 bg-muted/20 dark:bg-white/[0.02] divide-y divide-border/30 overflow-hidden">
               {/* Số job Follow gom */}
@@ -380,32 +440,34 @@ export function XsmmJobConfigDialog({
               </div>
             </div>
 
-            {/* Cookie Check Jobs riêng */}
-            <div className="space-y-1 pt-1">
-              <div className="flex items-center justify-between px-0.5">
-                <span className="text-[11px] font-medium text-foreground">
-                  Cookie Check Jobs riêng (Tùy chọn)
-                </span>
-                <span className="text-[10px] text-muted-foreground/70">
-                  Tránh checkpoint nick chạy
-                </span>
+            {/* Cookie Check Jobs riêng (ẨN HOÀN TOÀN KHI Ở TIKTOK) */}
+            {!isTikTok && (
+              <div className="space-y-1 pt-1">
+                <div className="flex items-center justify-between px-0.5">
+                  <span className="text-[11px] font-medium text-foreground">
+                    Cookie Check Jobs riêng (Tùy chọn)
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/70">
+                    Tránh checkpoint nick chạy
+                  </span>
+                </div>
+                <Input
+                  placeholder="Để trống sẽ dùng trực tiếp Cookie nick đang làm"
+                  value={config.cookieCheck || ""}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      cookieCheck: e.target.value,
+                    }))
+                  }
+                  className="text-xs font-mono h-8 rounded-xl bg-muted/20 border-border/40 focus:border-border/60"
+                />
               </div>
-              <Input
-                placeholder="Để trống sẽ dùng trực tiếp Cookie nick đang làm"
-                value={config.cookieCheck || ""}
-                onChange={(e) =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    cookieCheck: e.target.value,
-                  }))
-                }
-                className="text-xs font-mono h-8 rounded-xl bg-muted/20 border-border/40 focus:border-border/60"
-              />
-            </div>
+            )}
           </div>
 
-          {/* Section: Danh sách comment tùy chỉnh (nếu bật) */}
-          {config.enableComment && (
+          {/* Section: Danh sách comment tùy chỉnh (nếu bật và không phải TikTok) */}
+          {!isTikTok && config.enableComment && (
             <div className="space-y-1.5 pt-0.5">
               <span className="text-[11px] font-medium tracking-wide uppercase text-muted-foreground/60 px-0.5">
                 Nội dung bình luận (mỗi dòng 1 comment)
