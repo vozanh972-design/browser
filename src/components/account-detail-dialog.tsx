@@ -49,7 +49,7 @@ export interface AccountDetailData {
   tag?: string;
   note?: string;
   proxy?: string;
-  platform?: "facebook" | "instagram";
+  platform?: "tiktok" | "facebook" | "instagram";
   status: "live" | "checkpoint" | "die" | "unverified";
   isLive?: boolean;
   rawText: string;

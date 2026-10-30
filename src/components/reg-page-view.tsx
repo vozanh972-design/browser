@@ -63,7 +63,7 @@ export interface FacebookAccount {
   tag?: string;
   note?: string;
   proxy?: string;
-  platform?: "facebook" | "instagram";
+  platform?: "tiktok" | "facebook" | "instagram";
   status: "live" | "checkpoint" | "die" | "unverified";
   rawText: string;
   pages?: FacebookPageItem[];
