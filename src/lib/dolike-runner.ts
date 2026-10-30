@@ -22,7 +22,7 @@ export interface AccountRunState {
   accountId: string;
   uid: string;
   name: string;
-  platform: "facebook" | "instagram";
+  platform: "tiktok" | "facebook" | "instagram";
   isRunning: boolean;
   status: string;
   successCount: number;
