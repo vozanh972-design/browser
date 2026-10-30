@@ -10,6 +10,7 @@ import {
   Play,
   RefreshCw,
   Smartphone,
+  Sparkles,
   Square,
   Trash2,
   Usb,
@@ -70,6 +71,28 @@ export function AccountGridView({
   tr,
 }: AccountGridViewProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [nurturingIds, setNurturingIds] = useState<string[]>([]);
+
+  const handleToggleNuoi = (acc: FacebookAccount) => {
+    const isNuoi = nurturingIds.includes(acc.id);
+    if (isNuoi) {
+      setNurturingIds((prev) => prev.filter((id) => id !== acc.id));
+      toast.success(
+        tr(
+          `Đã dừng kịch bản nuôi trên thiết bị ${acc.name || acc.uid}`,
+          `Stopped nurture farm on device ${acc.name || acc.uid}`,
+        ),
+      );
+    } else {
+      setNurturingIds((prev) => [...prev, acc.id]);
+      toast.success(
+        tr(
+          `Đang chạy kịch bản nuôi tài khoản TikTok trên thiết bị ${acc.name || acc.uid}...`,
+          `Running TikTok nurture farm on device ${acc.name || acc.uid}...`,
+        ),
+      );
+    }
+  };
 
   const handleCopyUid = (uid: string) => {
     if (!uid) return;
@@ -92,7 +115,9 @@ export function AccountGridView({
         const isRunning = runState?.isRunning ?? false;
         const isInstagram = acc.platform === "instagram";
         const isTikTok = acc.platform === "tiktok";
-        const isUsbDevice = acc.tag?.includes("USB") || acc.id.startsWith("adb_");
+        const isUsbDevice =
+          acc.tag?.includes("USB") || acc.id.startsWith("adb_") || isTikTok;
+        const isNurturing = nurturingIds.includes(acc.id);
         const androidVerMatch = acc.note?.match(/Android\s*([0-9.]+)/i);
         const androidVerText = androidVerMatch
           ? `Android ${androidVerMatch[1]}`
@@ -429,10 +454,17 @@ export function AccountGridView({
                       {runState.lastError}
                     </span>
                   ) : isUsbDevice ? (
-                    <span className="text-emerald-500 text-[10px] font-medium flex items-center justify-end gap-1">
-                      <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>{tr("Sẵn sàng", "Ready")}</span>
-                    </span>
+                    isNurturing ? (
+                      <span className="text-amber-400 text-[10px] font-medium flex items-center justify-end gap-1">
+                        <span className="size-1.5 rounded-full bg-amber-400 animate-pulse" />
+                        <span>{tr("Đang nuôi...", "Farming...")}</span>
+                      </span>
+                    ) : (
+                      <span className="text-emerald-500 text-[10px] font-medium flex items-center justify-end gap-1">
+                        <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span>{tr("Sẵn sàng", "Ready")}</span>
+                      </span>
+                    )
                   ) : (
                     <span className="text-muted-foreground text-[10px]">
                       {tr("Sẵn sàng", "Ready")}
@@ -483,7 +515,7 @@ export function AccountGridView({
                       onCheckAccount(acc);
                     }}
                     title={tr("Kiểm tra kết nối và thông số máy", "Check device")}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted/70 text-foreground text-[10.5px] font-medium transition-colors cursor-pointer shadow-2xs"
+                    className="flex items-center gap-1 px-2 py-1 rounded-lg border border-border/60 bg-muted/40 hover:bg-muted/70 text-foreground text-[10px] font-medium transition-colors cursor-pointer shadow-2xs shrink-0"
                   >
                     <RefreshCw
                       className={cn(
@@ -501,17 +533,55 @@ export function AccountGridView({
                     onClick={(e) => {
                       e.stopPropagation();
                       if (isCheckpointOrDie) return;
+                      handleToggleNuoi(acc);
+                    }}
+                    title={
+                      isCheckpointOrDie
+                        ? tr("Thiết bị đã ngắt kết nối", "Device disconnected")
+                        : isNurturing
+                          ? tr("Dừng nuôi tài khoản", "Stop nurturing")
+                          : tr("Chạy kịch bản nuôi tài khoản trên máy", "Run nurture farm")
+                    }
+                    className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer shadow-2xs shrink-0",
+                      isCheckpointOrDie
+                        ? "opacity-30 cursor-not-allowed bg-muted text-muted-foreground"
+                        : isNurturing
+                          ? "bg-amber-500/15 text-amber-500 border border-amber-500/30 hover:bg-amber-500/25"
+                          : "border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400",
+                    )}
+                  >
+                    {isNurturing ? (
+                      <>
+                        <Square className="size-2.5 fill-current text-amber-500" />
+                        <span>{tr("Dừng", "Stop")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-2.5 text-amber-400" />
+                        <span>{tr("Nuôi acc", "Nuôi acc")}</span>
+                      </>
+                    )}
+                  </button>
+
+                  {/* Nút 3: Chạy job */}
+                  <button
+                    type="button"
+                    disabled={isCheckpointOrDie}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isCheckpointOrDie) return;
                       onRunAccount(acc);
                     }}
                     title={
                       isCheckpointOrDie
                         ? tr("Thiết bị đã ngắt kết nối", "Device disconnected")
                         : isRunning
-                          ? tr("Dừng chạy", "Stop")
-                          : tr("Chạy nuôi tài khoản trên máy", "Run automation")
+                          ? tr("Dừng chạy job", "Stop job")
+                          : tr("Chạy nhận job làm nhiệm vụ", "Run job")
                     }
                     className={cn(
-                      "flex items-center gap-1 px-3 py-1 rounded-lg text-[10.5px] font-semibold transition-all cursor-pointer shadow-xs",
+                      "flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all cursor-pointer shadow-xs shrink-0",
                       isCheckpointOrDie
                         ? "opacity-30 cursor-not-allowed bg-muted text-muted-foreground"
                         : isRunning
@@ -527,7 +597,7 @@ export function AccountGridView({
                     ) : (
                       <>
                         <Play className="size-2.5 fill-current" />
-                        <span>{tr("Nuôi acc", "Nuôi acc")}</span>
+                        <span>{tr("Chạy job", "Chạy job")}</span>
                       </>
                     )}
                   </button>
