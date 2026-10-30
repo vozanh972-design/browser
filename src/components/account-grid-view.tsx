@@ -18,7 +18,8 @@ import { useState } from "react";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
-import { type FacebookAccount, type FacebookPageItem } from "@/lib/facebook-api";
+import { type FacebookAccount } from "@/app/page";
+import { type FacebookPageItem } from "@/lib/facebook-api";
 import { cn } from "@/lib/utils";
 import { type AccountRunState } from "@/lib/xsmm-runner";
 
