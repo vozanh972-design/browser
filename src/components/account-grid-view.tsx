@@ -2,6 +2,7 @@
 
 import {
   Check,
+  ChevronDown,
   CircleAlert,
   Copy,
   Flag,
@@ -19,6 +20,12 @@ import { useState } from "react";
 import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { type FacebookAccount } from "@/app/page";
 import { TiktokIcon } from "@/components/app-header";
 import { type FacebookPageItem } from "@/lib/facebook-api";
@@ -159,26 +166,104 @@ export function AccountGridView({
                   checked={isSelected}
                   onCheckedChange={() => onToggleSelectOne(acc.id)}
                 />
-                {/* Platform Badge */}
-                <div
-                  className={cn(
-                    "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold border shrink-0",
-                    isTikTok
-                      ? "bg-foreground/10 text-foreground border-border/50"
-                      : isInstagram
+                {/* Platform Badge / TikTok Flavor Selector */}
+                {isTikTok ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={(e) => e.stopPropagation()}
+                        title={tr(
+                          "Chọn phiên bản TikTok (Hiện tại: VN)",
+                          "Select TikTok version (Current: VN)",
+                        )}
+                        className="flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold border shrink-0 bg-foreground/10 text-foreground border-border/50 hover:bg-foreground/15 transition-colors cursor-pointer select-none"
+                      >
+                        <TiktokIcon className="size-2.5" />
+                        <span>VN</span>
+                        <ChevronDown className="size-2 text-muted-foreground opacity-70" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="start"
+                      className="w-48 text-xs select-none p-1.5"
+                    >
+                      <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                        {tr("Phiên bản TikTok", "TikTok Version")}
+                      </div>
+
+                      {/* 1. VN (Đang chọn) */}
+                      <DropdownMenuItem
+                        className="flex items-center justify-between text-xs font-medium cursor-pointer rounded-md px-2 py-1.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toast.info(
+                            tr(
+                              "Đang sử dụng phiên bản TikTok VN (com.ss.android.ugc.trill)",
+                              "Using TikTok VN (com.ss.android.ugc.trill)",
+                            ),
+                          );
+                        }}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground">
+                            1. VN
+                          </span>
+                          <span className="text-[9.5px] text-emerald-500 font-medium bg-emerald-500/10 px-1 py-0.5 rounded border border-emerald-500/20">
+                            {tr("Đang chọn", "Selected")}
+                          </span>
+                        </div>
+                        <Check className="size-3 text-emerald-500 shrink-0" />
+                      </DropdownMenuItem>
+
+                      {/* 2. Lite (Chưa hỗ trợ) */}
+                      <DropdownMenuItem
+                        disabled
+                        className="flex items-center justify-between text-xs opacity-50 cursor-not-allowed rounded-md px-2 py-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">2. Lite</span>
+                        </div>
+                        <span className="text-[9.5px] text-muted-foreground font-normal italic">
+                          {tr("Chưa hỗ trợ", "Not supported")}
+                        </span>
+                      </DropdownMenuItem>
+
+                      {/* 3. Studio (Chưa hỗ trợ) */}
+                      <DropdownMenuItem
+                        disabled
+                        className="flex items-center justify-between text-xs opacity-50 cursor-not-allowed rounded-md px-2 py-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="text-muted-foreground">
+                            3. Studio
+                          </span>
+                        </div>
+                        <span className="text-[9.5px] text-muted-foreground font-normal italic">
+                          {tr("Chưa hỗ trợ", "Not supported")}
+                        </span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <div
+                    className={cn(
+                      "flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold border shrink-0",
+                      isInstagram
                         ? "bg-[#E1306C]/10 text-[#E1306C] border-[#E1306C]/25"
                         : "bg-[#1877F2]/10 text-[#1877F2] border-[#1877F2]/25",
-                  )}
-                >
-                  {isTikTok ? (
-                    <TiktokIcon className="size-2.5" />
-                  ) : isInstagram ? (
-                    <FaInstagram className="size-2.5" />
-                  ) : (
-                    <FaFacebook className="size-2.5" />
-                  )}
-                  <span>{isTikTok ? "TT" : isInstagram ? "IG" : "FB"}</span>
-                </div>
+                    )}
+                  >
+                    {isInstagram ? (
+                      <FaInstagram className="size-2.5" />
+                    ) : (
+                      <FaFacebook className="size-2.5" />
+                    )}
+                    <span>{isInstagram ? "IG" : "FB"}</span>
+                  </div>
+                )}
 
                 {/* Tên hiển thị */}
                 <span
