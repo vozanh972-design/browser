@@ -1637,15 +1637,24 @@ export default function HomePage() {
         const devices = await getAdbDevices();
         const found = devices.find((d) => d.serial === targetAccount.uid);
         if (found && found.state === "device") {
-          // Tự động đánh thức màn hình & mở ứng dụng TikTok VN trên điện thoại
-          void launchTiktokApp(targetAccount.uid);
-
           const devName =
             found.display_name ||
             found.market_name ||
             found.model ||
             targetAccount.name;
           const devNote = `Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"} | Android ${found.android_version || "10+"} | Mã máy: ${found.model || "USB"}`;
+
+          // Điều khiển thiết bị mở TikTok VN, nếu chưa cài đặt thì thông báo người dùng cài đặt
+          void launchTiktokApp(targetAccount.uid).then((res) => {
+            if (res.notInstalled) {
+              showErrorToast(
+                `Vui lòng cài đặt TikTok để chạy! Thiết bị ${devName} chưa có ứng dụng TikTok (com.ss.android.ugc.trill).`,
+              );
+            } else if (res.success) {
+              showSuccessToast(`Đã mở ứng dụng TikTok VN trên thiết bị ${devName}!`);
+            }
+          });
+
           setAccounts((prev) => {
             const updated: FacebookAccount[] = prev.map((a) =>
               a.id === targetAccount.id
@@ -1666,7 +1675,7 @@ export default function HomePage() {
             return updated;
           });
           showSuccessToast(
-            `Thiết bị ${devName} kết nối tốt! Đang mở TikTok VN trên máy. (Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"})`,
+            `Thiết bị ${devName} kết nối ổn định! Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"}`,
           );
         } else if (found && found.state === "unauthorized") {
           showErrorToast(

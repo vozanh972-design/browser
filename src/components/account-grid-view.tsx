@@ -87,7 +87,17 @@ export function AccountGridView({
     } else {
       setNurturingIds((prev) => [...prev, acc.id]);
       if (acc.tag?.includes("USB") || acc.id.startsWith("adb_") || acc.platform === "tiktok") {
-        void launchTiktokApp(acc.uid);
+        void launchTiktokApp(acc.uid).then((res) => {
+          if (res.notInstalled) {
+            setNurturingIds((prev) => prev.filter((id) => id !== acc.id));
+            toast.error(
+              tr(
+                "Vui lòng cài đặt TikTok để chạy!",
+                "Please install TikTok to run!",
+              ),
+            );
+          }
+        });
       }
       toast.success(
         tr(

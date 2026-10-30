@@ -67,16 +67,34 @@ export async function notifyPhoneConnected(
   }
 }
 
+export interface LaunchTiktokResult {
+  success: boolean;
+  notInstalled?: boolean;
+  error?: string;
+}
+
 /**
  * Điều khiển thiết bị Android mở ứng dụng TikTok VN
  * Package: com.ss.android.ugc.trill
  * Activity: com.ss.android.ugc.aweme.splash.SplashActivity
  */
-export async function launchTiktokApp(serial: string): Promise<boolean> {
+export async function launchTiktokApp(
+  serial: string,
+): Promise<LaunchTiktokResult> {
   try {
-    return await invoke<boolean>("launch_tiktok_app", { serial });
-  } catch {
-    return false;
+    await invoke<boolean>("launch_tiktok_app", { serial });
+    return { success: true };
+  } catch (err: unknown) {
+    const msg =
+      typeof err === "string"
+        ? err
+        : err instanceof Error
+          ? err.message
+          : String(err);
+    if (msg.includes("NOT_INSTALLED")) {
+      return { success: false, notInstalled: true, error: "NOT_INSTALLED" };
+    }
+    return { success: false, error: msg };
   }
 }
 

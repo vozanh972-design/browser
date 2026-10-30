@@ -318,7 +318,24 @@ pub fn launch_tiktok_app(serial: String) -> Result<bool, String> {
         None => return Err("Chưa tìm thấy adb.exe trên máy tính".to_string()),
     };
 
-    // 1. Đánh thức màn hình thiết bị (nếu đang sleep/tắt)
+    // 1. Kiểm tra xem điện thoại đã cài đặt đúng ứng dụng TikTok VN (com.ss.android.ugc.trill) hay chưa
+    let mut cmd_check = std::process::Command::new(&adb_bin);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd_check.creation_flags(0x0800_0000);
+    }
+    cmd_check.args(["-s", &serial, "shell", "pm path com.ss.android.ugc.trill"]);
+    if let Ok(out) = cmd_check.output() {
+        let text = String::from_utf8_lossy(&out.stdout);
+        if !text.contains("package:") {
+            return Err("NOT_INSTALLED".to_string());
+        }
+    } else {
+        return Err("NOT_INSTALLED".to_string());
+    }
+
+    // 2. Đánh thức màn hình thiết bị (nếu đang sleep/tắt)
     let mut cmd_wake = std::process::Command::new(&adb_bin);
     #[cfg(windows)]
     {
@@ -328,7 +345,7 @@ pub fn launch_tiktok_app(serial: String) -> Result<bool, String> {
     cmd_wake.args(["-s", &serial, "shell", "input keyevent 224"]);
     let _ = cmd_wake.output();
 
-    // 2. Mở ứng dụng TikTok VN theo package và activity yêu cầu:
+    // 3. Mở ứng dụng TikTok VN theo package và activity yêu cầu:
     // com.ss.android.ugc.trill / com.ss.android.ugc.aweme.splash.SplashActivity
     let mut cmd_start = std::process::Command::new(&adb_bin);
     #[cfg(windows)]
@@ -347,7 +364,7 @@ pub fn launch_tiktok_app(serial: String) -> Result<bool, String> {
         let err_str = String::from_utf8_lossy(&output.stderr);
         let out_str = String::from_utf8_lossy(&output.stdout);
 
-        // Nếu báo lỗi hoặc chưa mở được activity, thử bằng monkey launcher cho com.ss.android.ugc.trill
+        // Nếu SplashActivity bị hạn chế quyền gọi trực tiếp, thử mở bằng launcher của chính com.ss.android.ugc.trill
         if err_str.contains("Error")
             || out_str.contains("Error")
             || err_str.contains("does not exist")
@@ -359,35 +376,14 @@ pub fn launch_tiktok_app(serial: String) -> Result<bool, String> {
                 use std::os::windows::process::CommandExt;
                 cmd_fallback.creation_flags(0x0800_0000);
             }
-            if let Ok(out_fb) = cmd_fallback
+            let _ = cmd_fallback
                 .args([
                     "-s",
                     &serial,
                     "shell",
                     "monkey -p com.ss.android.ugc.trill -c android.intent.category.LAUNCHER 1",
                 ])
-                .output()
-            {
-                let fb_err = String::from_utf8_lossy(&out_fb.stderr);
-                let fb_out = String::from_utf8_lossy(&out_fb.stdout);
-                // Nếu máy dùng bản quốc tế com.zhiliaoapp.musically
-                if fb_err.contains("No activities found") || fb_out.contains("No activities found") {
-                    let mut cmd_intl = std::process::Command::new(&adb_bin);
-                    #[cfg(windows)]
-                    {
-                        use std::os::windows::process::CommandExt;
-                        cmd_intl.creation_flags(0x0800_0000);
-                    }
-                    let _ = cmd_intl
-                        .args([
-                            "-s",
-                            &serial,
-                            "shell",
-                            "monkey -p com.zhiliaoapp.musically -c android.intent.category.LAUNCHER 1",
-                        ])
-                        .output();
-                }
-            }
+                .output();
         }
     }
 
