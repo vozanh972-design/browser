@@ -214,6 +214,14 @@ export function AccountDetailDialog({
 
   const handleFetchToken = async () => {
     if (!account) return;
+    if (
+      account.platform === "tiktok" ||
+      account.platform === "instagram" ||
+      account.tag?.includes("USB") ||
+      account.id?.startsWith("adb_")
+    ) {
+      return;
+    }
     setIsFetchingToken(true);
     try {
       let uid = account.uid;
@@ -348,10 +356,16 @@ export function AccountDetailDialog({
   };
 
   useEffect(() => {
-    if (isOpen && account && account.platform !== "instagram") {
+    if (
+      isOpen &&
+      account &&
+      account.platform === "facebook" &&
+      !account.tag?.includes("USB") &&
+      !account.id?.startsWith("adb_")
+    ) {
       void handleFetchToken();
     }
-  }, [isOpen, account?.id]);
+  }, [isOpen, account?.id, account?.platform]);
 
   if (!account) return null;
 
@@ -500,7 +514,10 @@ export function AccountDetailDialog({
 
   const isInstagram = account.platform === "instagram";
   const isTikTok = account.platform === "tiktok";
-  const isUsbDevice = account.tag?.includes("USB") || account.id?.startsWith("adb_");
+  const isUsbDevice =
+    account.platform === "tiktok" ||
+    account.tag?.includes("USB") ||
+    account.id?.startsWith("adb_");
 
   const activeTok = currentToken || account.token;
   const activeTikTokAcc = currentTikTokAccounts.find((a) => a.isCurrent) || currentTikTokAccounts[0];

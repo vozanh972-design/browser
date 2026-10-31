@@ -1744,7 +1744,7 @@ export default function HomePage() {
                     }
                     return {
                       ...a,
-                      name: detectedUser,
+                      name: devName || a.name,
                       tiktokAccounts: nextList,
                     };
                   }

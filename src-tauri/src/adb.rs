@@ -406,27 +406,64 @@ fn parse_bounds(s: &str) -> Option<(i32, i32, i32, i32)> {
     Some((x1, y1, x2, y2))
 }
 
-#[tauri::command]
-pub fn click_tiktok_profile_tab(serial: String) -> Result<bool, String> {
+fn run_adb_with_timeout(
+    adb_bin: &std::path::Path,
+    serial: &str,
+    args: &[&str],
+    timeout_ms: u64,
+) -> std::io::Result<std::process::Output> {
+    let mut cmd = std::process::Command::new(adb_bin);
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000);
+    }
+    cmd.arg("-s").arg(serial).args(args);
+    cmd.stdout(std::process::Stdio::piped()).stderr(std::process::Stdio::piped());
+
+    let mut child = cmd.spawn()?;
+    let start = std::time::Instant::now();
+    loop {
+        match child.try_wait()? {
+            Some(status) => {
+                let mut stdout = Vec::new();
+                let mut stderr = Vec::new();
+                if let Some(mut out) = child.stdout.take() {
+                    let _ = std::io::Read::read_to_end(&mut out, &mut stdout);
+                }
+                if let Some(mut err) = child.stderr.take() {
+                    let _ = std::io::Read::read_to_end(&mut err, &mut stderr);
+                }
+                return Ok(std::process::Output {
+                    status,
+                    stdout,
+                    stderr,
+                });
+            }
+            None => {
+                if start.elapsed().as_millis() as u64 >= timeout_ms {
+                    let _ = child.kill();
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::TimedOut,
+                        "ADB command timed out",
+                    ));
+                }
+                std::thread::sleep(std::time::Duration::from_millis(80));
+            }
+        }
+    }
+}
+
+fn click_tiktok_profile_tab_internal(serial: &str) -> Result<bool, String> {
     let adb_bin = match find_adb_path() {
         Some(p) => p,
         None => return Err("Chưa tìm thấy adb.exe trên máy tính".to_string()),
     };
 
-    let run_adb = |args: &[&str]| -> std::io::Result<std::process::Output> {
-        let mut cmd = std::process::Command::new(&adb_bin);
-        #[cfg(windows)]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x0800_0000);
-        }
-        cmd.arg("-s").arg(&serial).args(args).output()
-    };
-
-    // 1. Lấy độ phân giải màn hình thực tế của thiết bị
+    // 1. Lấy độ phân giải màn hình thực tế của thiết bị với timeout 3s
     let mut screen_w = 1080;
     let mut screen_h = 2400;
-    if let Ok(out) = run_adb(&["shell", "wm size"]) {
+    if let Ok(out) = run_adb_with_timeout(&adb_bin, serial, &["shell", "wm size"], 3000) {
         let text = String::from_utf8_lossy(&out.stdout);
         for line in text.lines() {
             if let Some((_, size_part)) = line.split_once(':') {
@@ -441,21 +478,33 @@ pub fn click_tiktok_profile_tab(serial: String) -> Result<bool, String> {
         }
     }
 
-    // 2. Chờ ban đầu 2.5s để máy yếu kịp nạp bộ nhớ và vào giao diện chính
-    std::thread::sleep(std::time::Duration::from_millis(2500));
+    // 2. Chờ 1.8s để máy load giao diện
+    std::thread::sleep(std::time::Duration::from_millis(1800));
 
-    // Bộ lọc giới hạn vị trí nút Hồ sơ:
-    // Nút Hồ sơ ở thanh điều hướng dưới cùng: Y >= 78% chiều cao màn hình, X >= 55% chiều rộng màn hình.
-    // Avatar tròn của video ở cạnh phải nằm ở khoảng Y = 35% - 65% -> BỊ LOẠI BỎ 100%, KHÔNG BAO GIỜ BẤM NHẦM!
+    // Bộ lọc vị trí tab Hồ sơ: Y >= 78% chiều cao, X >= 55% chiều rộng.
+    // Loại trừ 100% avatar tròn video bên phải (vốn ở Y = 35% - 65%)
     let min_y = (screen_h as f64 * 0.78) as i32;
     let min_x = (screen_w as f64 * 0.55) as i32;
 
-    // Vòng lặp chờ giao diện ổn định (thử tối đa 6 lần, mỗi lần cách nhau 2.5s = tối đa ~15s cho máy yếu/mạng chậm)
-    for _attempt in 1..=6 {
-        let dump_res = run_adb(&["shell", "uiautomator dump /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml"]);
+    // Vòng lặp quét tìm nút Hồ sơ (tối đa 5 lần, mỗi lần quét có timeout 3.5s)
+    for _attempt in 1..=5 {
+        // Dùng uiautomator dump --compressed để tăng tốc và tránh nghẽn khi video TikTok đang chạy
+        let dump_res = run_adb_with_timeout(
+            &adb_bin,
+            serial,
+            &["shell", "uiautomator dump --compressed /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml"],
+            3500,
+        ).or_else(|_| {
+            run_adb_with_timeout(
+                &adb_bin,
+                serial,
+                &["shell", "uiautomator dump /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml"],
+                3500,
+            )
+        });
+
         if let Ok(out) = dump_res {
             let xml = String::from_utf8_lossy(&out.stdout);
-
             let mut target_tap: Option<(i32, i32)> = None;
 
             for part in xml.split("<node ") {
@@ -476,7 +525,6 @@ pub fn click_tiktok_profile_tab(serial: String) -> Result<bool, String> {
                         if let Some(end_quote) = rest.find('"') {
                             let bounds_str = &rest[..end_quote];
                             if let Some((x1, y1, x2, y2)) = parse_bounds(bounds_str) {
-                                // Kiểm tra chặt chẽ: Nằm ở thanh đáy dưới cùng bên phải
                                 if y1 >= min_y && x1 >= min_x {
                                     let cx = (x1 + x2) / 2;
                                     let cy = (y1 + y2) / 2;
@@ -489,25 +537,26 @@ pub fn click_tiktok_profile_tab(serial: String) -> Result<bool, String> {
                 }
             }
 
-            // Nếu tìm thấy nút Hồ sơ -> Thực hiện click và DỪNG NGAY
             if let Some((tap_x, tap_y)) = target_tap {
                 let tap_cmd = format!("input tap {} {}", tap_x, tap_y);
-                let _ = run_adb(&["shell", &tap_cmd]);
+                let _ = run_adb_with_timeout(&adb_bin, serial, &["shell", &tap_cmd], 2500);
                 return Ok(true);
             }
         }
 
-        // Nghỉ 2.5s để máy yếu kịp render xong giao diện
-        std::thread::sleep(std::time::Duration::from_millis(2500));
+        std::thread::sleep(std::time::Duration::from_millis(1500));
     }
 
-    // Nếu sau 6 lần quét text không có (do TikTok phiên bản mới không set accessibility text),
-    // Fallback: Tìm nút có clickable="true" ở góc đáy cực phải (Y >= 88%, X >= 75%)
+    // Fallback nếu TikTok phiên bản tùy biến không có accessibility text:
     let fallback_min_y = (screen_h as f64 * 0.88) as i32;
     let fallback_min_x = (screen_w as f64 * 0.75) as i32;
-
-    let dump_res = run_adb(&["shell", "uiautomator dump /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml"]);
-    if let Ok(out) = dump_res {
+    let dump_fallback = run_adb_with_timeout(
+        &adb_bin,
+        serial,
+        &["shell", "cat /sdcard/autolunex_ui.xml"],
+        2500,
+    );
+    if let Ok(out) = dump_fallback {
         let xml = String::from_utf8_lossy(&out.stdout);
         for part in xml.split("<node ") {
             if part.contains("clickable=\"true\"") {
@@ -520,7 +569,7 @@ pub fn click_tiktok_profile_tab(serial: String) -> Result<bool, String> {
                                 let cx = (x1 + x2) / 2;
                                 let cy = (y1 + y2) / 2;
                                 let tap_cmd = format!("input tap {} {}", cx, cy);
-                                let _ = run_adb(&["shell", &tap_cmd]);
+                                let _ = run_adb_with_timeout(&adb_bin, serial, &["shell", &tap_cmd], 2500);
                                 return Ok(true);
                             }
                         }
@@ -530,43 +579,64 @@ pub fn click_tiktok_profile_tab(serial: String) -> Result<bool, String> {
         }
     }
 
-    // Không tìm thấy sau tất cả các bước thử
     Err("Không tìm thấy nút Hồ sơ ở thanh điều hướng dưới cùng".to_string())
 }
 
 #[tauri::command]
-pub fn detect_tiktok_username(serial: String) -> Result<Option<String>, String> {
+pub async fn click_tiktok_profile_tab(serial: String) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        click_tiktok_profile_tab_internal(&serial)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+fn detect_tiktok_username_internal(serial: &str) -> Result<Option<String>, String> {
     let adb_bin = match find_adb_path() {
         Some(p) => p,
         None => return Err("Chưa tìm thấy adb.exe trên máy tính".to_string()),
     };
 
-    let mut cmd = std::process::Command::new(&adb_bin);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x0800_0000);
-    }
-    cmd.args([
-        "-s",
-        &serial,
-        "shell",
-        "uiautomator dump /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml",
-    ]);
+    // Thử 3 lần (cách nhau 1.2s) để máy kịp load trang cá nhân
+    for _ in 1..=3 {
+        std::thread::sleep(std::time::Duration::from_millis(1200));
+        let dump_res = run_adb_with_timeout(
+            &adb_bin,
+            serial,
+            &["shell", "uiautomator dump --compressed /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml"],
+            3500,
+        ).or_else(|_| {
+            run_adb_with_timeout(
+                &adb_bin,
+                serial,
+                &["shell", "uiautomator dump /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml"],
+                3500,
+            )
+        });
 
-    if let Ok(output) = cmd.output() {
-        let text = String::from_utf8_lossy(&output.stdout);
-        for part in text.split("text=\"") {
-            if let Some((val, _)) = part.split_once('"') {
-                let trimmed = val.trim();
-                if trimmed.starts_with('@') && trimmed.len() >= 3 && trimmed.len() <= 32 {
-                    return Ok(Some(trimmed.to_string()));
+        if let Ok(output) = dump_res {
+            let text = String::from_utf8_lossy(&output.stdout);
+            for part in text.split("text=\"") {
+                if let Some((val, _)) = part.split_once('"') {
+                    let trimmed = val.trim();
+                    if trimmed.starts_with('@') && trimmed.len() >= 3 && trimmed.len() <= 32 {
+                        return Ok(Some(trimmed.to_string()));
+                    }
                 }
             }
         }
     }
 
     Ok(None)
+}
+
+#[tauri::command]
+pub async fn detect_tiktok_username(serial: String) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        detect_tiktok_username_internal(&serial)
+    })
+    .await
+    .map_err(|e| e.to_string())?
 }
 
 

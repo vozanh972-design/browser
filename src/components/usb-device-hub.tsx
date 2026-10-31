@@ -140,15 +140,9 @@ export function UsbDeviceHub({ accounts }: { accounts?: FacebookAccount[] } = {}
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full size-1.5 bg-emerald-500" />
             </span>
-            {tiktokUsername ? (
-              <span className="max-w-[130px] truncate font-semibold text-emerald-400">
-                {tiktokUsername}
-              </span>
-            ) : (
-              <span className="max-w-[110px] truncate font-semibold">
-                {readyDevices[0].display_name || readyDevices[0].model}
-              </span>
-            )}
+            <span className="max-w-[120px] truncate font-semibold text-emerald-400">
+              {readyDevices[0].display_name || readyDevices[0].model || "Thiết bị USB"}
+            </span>
             {readyDevices.length > 1 && (
               <span className="rounded bg-emerald-500/20 px-1 text-[10px] font-bold">
                 +{readyDevices.length - 1}

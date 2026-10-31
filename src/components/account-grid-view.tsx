@@ -156,21 +156,36 @@ export function AccountGridView({
         const runState = runnerStates.get(acc.id);
         const isRunning = runState?.isRunning ?? false;
         const isInstagram = acc.platform === "instagram";
-        const isTikTok = acc.platform === "tiktok";
-        const currentTikTokUser = isTikTok
-          ? acc.tiktokAccounts?.find((a) => a.isCurrent)?.username ||
-            (acc.name?.startsWith("@") ? acc.name : null)
-          : null;
-        const activeAction = liveActionStatus?.[acc.id] || nurtureActions[acc.id];
         const isUsbDevice =
           acc.tag?.includes("USB") || acc.id.startsWith("adb_") || isTikTok;
+        const currentTikTokUser = isTikTok
+          ? acc.tiktokAccounts?.find((a) => a.isCurrent)?.username ||
+            acc.tiktokAccounts?.[0]?.username ||
+            (acc.name?.startsWith("@") ? acc.name : null)
+          : null;
+        const machineModelMatch = acc.note?.match(/Mã máy:\s*([^|]+)/i);
+        const tagModelMatch = acc.tag?.match(/USB\s*\|\s*([^|]+)/i);
+        const rawModel = acc.rawText?.includes("USB_ADB")
+          ? acc.rawText.split("|")[1]?.trim()
+          : null;
+        const cleanModel =
+          machineModelMatch?.[1]?.trim() ||
+          (tagModelMatch?.[1]?.trim() && tagModelMatch[1].trim() !== "Device"
+            ? tagModelMatch[1].trim()
+            : null) ||
+          (rawModel && rawModel !== "Device" ? rawModel : null);
+
+        const machineName = isUsbDevice
+          ? cleanModel ||
+            (acc.name && !acc.name.startsWith("@") ? acc.name : null) ||
+            `Thiết bị ${acc.uid}`
+          : acc.name;
+        const activeAction = liveActionStatus?.[acc.id] || nurtureActions[acc.id];
         const isNurturing = nurturingIds.includes(acc.id);
         const androidVerMatch = acc.note?.match(/Android\s*([0-9.]+)/i);
         const androidVerText = androidVerMatch
           ? `Android ${androidVerMatch[1]}`
-          : acc.note?.includes("Android")
-            ? "Android"
-            : "Android";
+          : "Android 14";
         const hasPages = acc.pages && acc.pages.length > 0;
 
         return (
@@ -299,11 +314,11 @@ export function AccountGridView({
                       ? "text-muted-foreground line-through"
                       : "text-foreground",
                   )}
-                  title={acc.name || acc.uid}
+                  title={isUsbDevice ? (machineName || acc.uid) : (acc.name || acc.uid)}
                 >
-                  {acc.tiktokAccounts?.find((a) => a.isCurrent)?.username ||
-                    acc.name ||
-                    (isInstagram || isTikTok ? `@${acc.uid}` : acc.uid)}
+                  {isUsbDevice
+                    ? machineName
+                    : acc.name || (isInstagram ? `@${acc.uid}` : acc.uid)}
                 </span>
               </div>
 
@@ -336,11 +351,7 @@ export function AccountGridView({
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/10 text-emerald-500 border border-emerald-500/25">
                       <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                      <span>
-                        {acc.tiktokAccounts && acc.tiktokAccounts.length > 1
-                          ? `${acc.tiktokAccounts.length} acc`
-                          : "Live"}
-                      </span>
+                      <span>{androidVerText}</span>
                     </span>
                   )
                 ) : acc.isLive === true || acc.status === "live" ? (
