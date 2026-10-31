@@ -99,6 +99,27 @@ export async function launchTiktokApp(
 }
 
 /**
+ * Tự động tìm và bấm vào nút Hồ sơ ở thanh điều hướng dưới cùng của TikTok
+ * (Tự quét bounds thực tế của máy, không cố định tọa độ, không chạm vào avatar tròn)
+ */
+export async function clickTiktokProfileTab(
+  serial: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const ok = await invoke<boolean>("click_tiktok_profile_tab", { serial });
+    return { success: !!ok };
+  } catch (err: unknown) {
+    const msg =
+      typeof err === "string"
+        ? err
+        : err instanceof Error
+          ? err.message
+          : String(err);
+    return { success: false, error: msg };
+  }
+}
+
+/**
  * Tự động đọc username TikTok đang mở trên màn hình thiết bị
  */
 export async function detectTiktokUsername(

@@ -1676,6 +1676,7 @@ pub fn run() {
       adb::get_adb_devices,
       adb::notify_phone_connected,
       adb::launch_tiktok_app,
+      adb::click_tiktok_profile_tab,
       adb::detect_tiktok_username,
     ])
     .run(tauri::generate_context!())

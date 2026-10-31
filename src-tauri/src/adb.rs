@@ -390,6 +390,150 @@ pub fn launch_tiktok_app(serial: String) -> Result<bool, String> {
     Ok(true)
 }
 
+fn parse_bounds(s: &str) -> Option<(i32, i32, i32, i32)> {
+    let parts: Vec<&str> = s.split("][").collect();
+    if parts.len() != 2 {
+        return None;
+    }
+    let left = parts[0].trim_start_matches('[');
+    let right = parts[1].trim_end_matches(']');
+    let (x1_s, y1_s) = left.split_once(',')?;
+    let (x2_s, y2_s) = right.split_once(',')?;
+    let x1 = x1_s.parse().ok()?;
+    let y1 = y1_s.parse().ok()?;
+    let x2 = x2_s.parse().ok()?;
+    let y2 = y2_s.parse().ok()?;
+    Some((x1, y1, x2, y2))
+}
+
+#[tauri::command]
+pub fn click_tiktok_profile_tab(serial: String) -> Result<bool, String> {
+    let adb_bin = match find_adb_path() {
+        Some(p) => p,
+        None => return Err("Chưa tìm thấy adb.exe trên máy tính".to_string()),
+    };
+
+    let run_adb = |args: &[&str]| -> std::io::Result<std::process::Output> {
+        let mut cmd = std::process::Command::new(&adb_bin);
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x0800_0000);
+        }
+        cmd.arg("-s").arg(&serial).args(args).output()
+    };
+
+    // 1. Lấy độ phân giải màn hình thực tế của thiết bị
+    let mut screen_w = 1080;
+    let mut screen_h = 2400;
+    if let Ok(out) = run_adb(&["shell", "wm size"]) {
+        let text = String::from_utf8_lossy(&out.stdout);
+        for line in text.lines() {
+            if let Some((_, size_part)) = line.split_once(':') {
+                let size_part = size_part.trim();
+                if let Some((w_s, h_s)) = size_part.split_once('x') {
+                    if let (Ok(w), Ok(h)) = (w_s.trim().parse::<i32>(), h_s.trim().parse::<i32>()) {
+                        screen_w = w;
+                        screen_h = h;
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. Chờ ban đầu 2.5s để máy yếu kịp nạp bộ nhớ và vào giao diện chính
+    std::thread::sleep(std::time::Duration::from_millis(2500));
+
+    // Bộ lọc giới hạn vị trí nút Hồ sơ:
+    // Nút Hồ sơ ở thanh điều hướng dưới cùng: Y >= 78% chiều cao màn hình, X >= 55% chiều rộng màn hình.
+    // Avatar tròn của video ở cạnh phải nằm ở khoảng Y = 35% - 65% -> BỊ LOẠI BỎ 100%, KHÔNG BAO GIỜ BẤM NHẦM!
+    let min_y = (screen_h as f64 * 0.78) as i32;
+    let min_x = (screen_w as f64 * 0.55) as i32;
+
+    // Vòng lặp chờ giao diện ổn định (thử tối đa 6 lần, mỗi lần cách nhau 2.5s = tối đa ~15s cho máy yếu/mạng chậm)
+    for _attempt in 1..=6 {
+        let dump_res = run_adb(&["shell", "uiautomator dump /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml"]);
+        if let Ok(out) = dump_res {
+            let xml = String::from_utf8_lossy(&out.stdout);
+
+            let mut target_tap: Option<(i32, i32)> = None;
+
+            for part in xml.split("<node ") {
+                if part.is_empty() {
+                    continue;
+                }
+
+                let is_profile_node = part.contains("text=\"Hồ sơ\"")
+                    || part.contains("content-desc=\"Hồ sơ\"")
+                    || part.contains("text=\"Profile\"")
+                    || part.contains("content-desc=\"Profile\"")
+                    || part.contains("text=\"Tôi\"")
+                    || part.contains("content-desc=\"Tôi\"");
+
+                if is_profile_node {
+                    if let Some(bounds_idx) = part.find("bounds=\"[") {
+                        let rest = &part[bounds_idx + 8..];
+                        if let Some(end_quote) = rest.find('"') {
+                            let bounds_str = &rest[..end_quote];
+                            if let Some((x1, y1, x2, y2)) = parse_bounds(bounds_str) {
+                                // Kiểm tra chặt chẽ: Nằm ở thanh đáy dưới cùng bên phải
+                                if y1 >= min_y && x1 >= min_x {
+                                    let cx = (x1 + x2) / 2;
+                                    let cy = (y1 + y2) / 2;
+                                    target_tap = Some((cx, cy));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Nếu tìm thấy nút Hồ sơ -> Thực hiện click và DỪNG NGAY
+            if let Some((tap_x, tap_y)) = target_tap {
+                let tap_cmd = format!("input tap {} {}", tap_x, tap_y);
+                let _ = run_adb(&["shell", &tap_cmd]);
+                return Ok(true);
+            }
+        }
+
+        // Nghỉ 2.5s để máy yếu kịp render xong giao diện
+        std::thread::sleep(std::time::Duration::from_millis(2500));
+    }
+
+    // Nếu sau 6 lần quét text không có (do TikTok phiên bản mới không set accessibility text),
+    // Fallback: Tìm nút có clickable="true" ở góc đáy cực phải (Y >= 88%, X >= 75%)
+    let fallback_min_y = (screen_h as f64 * 0.88) as i32;
+    let fallback_min_x = (screen_w as f64 * 0.75) as i32;
+
+    let dump_res = run_adb(&["shell", "uiautomator dump /sdcard/autolunex_ui.xml && cat /sdcard/autolunex_ui.xml"]);
+    if let Ok(out) = dump_res {
+        let xml = String::from_utf8_lossy(&out.stdout);
+        for part in xml.split("<node ") {
+            if part.contains("clickable=\"true\"") {
+                if let Some(bounds_idx) = part.find("bounds=\"[") {
+                    let rest = &part[bounds_idx + 8..];
+                    if let Some(end_quote) = rest.find('"') {
+                        let bounds_str = &rest[..end_quote];
+                        if let Some((x1, y1, x2, y2)) = parse_bounds(bounds_str) {
+                            if y1 >= fallback_min_y && x1 >= fallback_min_x && x2 <= screen_w && y2 <= screen_h {
+                                let cx = (x1 + x2) / 2;
+                                let cy = (y1 + y2) / 2;
+                                let tap_cmd = format!("input tap {} {}", cx, cy);
+                                let _ = run_adb(&["shell", &tap_cmd]);
+                                return Ok(true);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Không tìm thấy sau tất cả các bước thử
+    Err("Không tìm thấy nút Hồ sơ ở thanh điều hướng dưới cùng".to_string())
+}
+
 #[tauri::command]
 pub fn detect_tiktok_username(serial: String) -> Result<Option<String>, String> {
     let adb_bin = match find_adb_path() {
@@ -424,4 +568,5 @@ pub fn detect_tiktok_username(serial: String) -> Result<Option<String>, String> 
 
     Ok(None)
 }
+
 

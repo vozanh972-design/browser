@@ -75,6 +75,7 @@ import {
   type AdbDeviceInfo,
   getAdbDevices,
   launchTiktokApp,
+  clickTiktokProfileTab,
   detectTiktokUsername,
 } from "@/lib/adb-service";
 
@@ -1657,70 +1658,86 @@ export default function HomePage() {
           const devNote = `Pin: ${found.battery_level !== null ? `${found.battery_level}%` : "Sẵn sàng"} | Android ${found.android_version || "10+"} | Mã máy: ${found.model || "USB"}`;
 
           // Điều khiển thiết bị mở TikTok VN, nếu chưa cài đặt thì thông báo người dùng cài đặt
-          void launchTiktokApp(targetAccount.uid).then((res) => {
+          void (async () => {
+            const res = await launchTiktokApp(targetAccount.uid);
             if (res.notInstalled) {
               showErrorToast(
                 `Vui lòng cài đặt TikTok để chạy! Thiết bị ${devName} chưa có ứng dụng TikTok (com.ss.android.ugc.trill).`,
               );
-            } else if (res.success) {
-              showSuccessToast(`Đã mở ứng dụng TikTok VN trên thiết bị ${devName}!`);
-              // Quét nhận diện username TikTok đang mở trên điện thoại
-              setTimeout(async () => {
-                const detectedUser = await detectTiktokUsername(targetAccount.uid);
-                if (detectedUser) {
-                  setAccounts((prev) => {
-                    const updated = prev.map((a) => {
-                      if (a.id === targetAccount.id) {
-                        const existingList = a.tiktokAccounts || [];
-                        const foundIdx = existingList.findIndex(
-                          (item) => item.username === detectedUser,
-                        );
-                        let nextList: TikTokAccountItem[];
-                        if (foundIdx >= 0) {
-                          nextList = existingList.map((item, idx) => ({
-                            ...item,
-                            isCurrent: idx === foundIdx,
-                          }));
-                        } else {
-                          nextList = [
-                            {
-                              id: detectedUser,
-                              username: detectedUser,
-                              nickname: detectedUser.replace(/^@/, ""),
-                              isCurrent: true,
-                              status: "live",
-                            },
-                            ...existingList.map((item) => ({
-                              ...item,
-                              isCurrent: false,
-                            })),
-                          ];
-                        }
-                        return {
-                          ...a,
-                          name: detectedUser,
-                          tiktokAccounts: nextList,
-                        };
-                      }
-                      return a;
-                    });
-                    try {
-                      localStorage.setItem(
-                        "autolunex_facebook_accounts_v1",
-                        JSON.stringify(updated),
-                      );
-                    } catch {
-                      // ignore
-                    }
-                    return updated;
-                  });
-                  showSuccessToast(
-                    `Đã nhận diện tài khoản TikTok: ${detectedUser}`,
-                  );
-                }
-              }, 2200);
+              return;
             }
-          });
+            if (!res.success) {
+              showErrorToast(`Không thể mở TikTok trên thiết bị ${devName}: ${res.error || "Lỗi khởi động"}`);
+              return;
+            }
+
+            showSuccessToast(`Đã mở TikTok VN trên ${devName}! Đang đợi giao diện ổn định...`);
+
+            // Tự động tìm và bấm nút Hồ sơ ở thanh điều hướng dưới cùng (không cố định tọa độ, không click avatar tròn)
+            const clickRes = await clickTiktokProfileTab(targetAccount.uid);
+            if (!clickRes.success) {
+              showErrorToast(
+                clickRes.error || `Không tìm thấy nút Hồ sơ ở thanh dưới cùng trên thiết bị ${devName}`,
+              );
+              return;
+            }
+
+            showSuccessToast(`Đã bấm vào tab Hồ sơ trên ${devName}! Đang nhận diện tài khoản...`);
+
+            // Quét nhận diện username TikTok đang mở trên trang cá nhân
+            const detectedUser = await detectTiktokUsername(targetAccount.uid);
+            if (detectedUser) {
+              setAccounts((prev) => {
+                const updated = prev.map((a) => {
+                  if (a.id === targetAccount.id) {
+                    const existingList = a.tiktokAccounts || [];
+                    const foundIdx = existingList.findIndex(
+                      (item) => item.username === detectedUser,
+                    );
+                    let nextList: TikTokAccountItem[];
+                    if (foundIdx >= 0) {
+                      nextList = existingList.map((item, idx) => ({
+                        ...item,
+                        isCurrent: idx === foundIdx,
+                      }));
+                    } else {
+                      nextList = [
+                        {
+                          id: detectedUser,
+                          username: detectedUser,
+                          nickname: detectedUser.replace(/^@/, ""),
+                          isCurrent: true,
+                          status: "live",
+                        },
+                        ...existingList.map((item) => ({
+                          ...item,
+                          isCurrent: false,
+                        })),
+                      ];
+                    }
+                    return {
+                      ...a,
+                      name: detectedUser,
+                      tiktokAccounts: nextList,
+                    };
+                  }
+                  return a;
+                });
+                try {
+                  localStorage.setItem(
+                    "autolunex_facebook_accounts_v1",
+                    JSON.stringify(updated),
+                  );
+                } catch {
+                  // ignore
+                }
+                return updated;
+              });
+              showSuccessToast(
+                `Đã nhận diện thành công tài khoản TikTok: ${detectedUser}`,
+              );
+            }
+          })();
 
           setAccounts((prev) => {
             const updated: FacebookAccount[] = prev.map((a) =>
