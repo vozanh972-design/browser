@@ -1545,6 +1545,10 @@ export default function HomePage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isJobConfigOpen, setIsJobConfigOpen] = useState(false);
   const [checkingIds, setCheckingIds] = useState<string[]>([]);
+  const [liveActionStatus, setLiveActionStatus] = useState<Record<string, string>>({});
+  const updateAccountAction = (id: string, actionText: string) => {
+    setLiveActionStatus((prev) => ({ ...prev, [id]: actionText }));
+  };
 
   // Ref để track UIDs đã được resolve — mỗi UID chỉ gọi API 1 lần, tránh loop vô tận
   // khi setAccounts() trigger lại effect này.
@@ -1659,34 +1663,57 @@ export default function HomePage() {
 
           // Điều khiển thiết bị mở TikTok VN, nếu chưa cài đặt thì thông báo người dùng cài đặt
           void (async () => {
+            updateAccountAction(targetAccount.id, "Đang mở TikTok VN...");
             const res = await launchTiktokApp(targetAccount.uid);
             if (res.notInstalled) {
+              updateAccountAction(targetAccount.id, "Chưa cài TikTok");
               showErrorToast(
                 `Vui lòng cài đặt TikTok để chạy! Thiết bị ${devName} chưa có ứng dụng TikTok (com.ss.android.ugc.trill).`,
               );
+              setCheckingIds((prev) => prev.filter((id) => id !== targetAccount.id));
               return;
             }
             if (!res.success) {
+              updateAccountAction(targetAccount.id, "Lỗi mở app");
               showErrorToast(`Không thể mở TikTok trên thiết bị ${devName}: ${res.error || "Lỗi khởi động"}`);
+              setCheckingIds((prev) => prev.filter((id) => id !== targetAccount.id));
               return;
             }
 
+            updateAccountAction(targetAccount.id, "Đợi giao diện ổn định...");
             showSuccessToast(`Đã mở TikTok VN trên ${devName}! Đang đợi giao diện ổn định...`);
+
+            // Đổi text khi bắt đầu quét tìm nút
+            const scanTimer = setTimeout(() => {
+              updateAccountAction(targetAccount.id, "Đang quét tìm nút Hồ sơ...");
+            }, 1800);
 
             // Tự động tìm và bấm nút Hồ sơ ở thanh điều hướng dưới cùng (không cố định tọa độ, không click avatar tròn)
             const clickRes = await clickTiktokProfileTab(targetAccount.uid);
+            clearTimeout(scanTimer);
+
             if (!clickRes.success) {
+              updateAccountAction(targetAccount.id, clickRes.error || "Không thấy nút Hồ sơ");
               showErrorToast(
                 clickRes.error || `Không tìm thấy nút Hồ sơ ở thanh dưới cùng trên thiết bị ${devName}`,
               );
+              setCheckingIds((prev) => prev.filter((id) => id !== targetAccount.id));
               return;
             }
 
+            updateAccountAction(targetAccount.id, "Đang click nút Hồ sơ...");
             showSuccessToast(`Đã bấm vào tab Hồ sơ trên ${devName}! Đang nhận diện tài khoản...`);
+
+            const readTimer = setTimeout(() => {
+              updateAccountAction(targetAccount.id, "Đang đọc @username...");
+            }, 1000);
 
             // Quét nhận diện username TikTok đang mở trên trang cá nhân
             const detectedUser = await detectTiktokUsername(targetAccount.uid);
+            clearTimeout(readTimer);
+
             if (detectedUser) {
+              updateAccountAction(targetAccount.id, `Đã nhận diện: ${detectedUser}`);
               setAccounts((prev) => {
                 const updated = prev.map((a) => {
                   if (a.id === targetAccount.id) {
@@ -1736,7 +1763,24 @@ export default function HomePage() {
               showSuccessToast(
                 `Đã nhận diện thành công tài khoản TikTok: ${detectedUser}`,
               );
+              setTimeout(() => {
+                setLiveActionStatus((prev) => {
+                  const n = { ...prev };
+                  delete n[targetAccount.id];
+                  return n;
+                });
+              }, 4000);
+            } else {
+              updateAccountAction(targetAccount.id, "Không đọc được username");
+              setTimeout(() => {
+                setLiveActionStatus((prev) => {
+                  const n = { ...prev };
+                  delete n[targetAccount.id];
+                  return n;
+                });
+              }, 4000);
             }
+            setCheckingIds((prev) => prev.filter((id) => id !== targetAccount.id));
           })();
 
           setAccounts((prev) => {
@@ -2826,6 +2870,7 @@ export default function HomePage() {
       <AppHeader
         activePlatform={currentPlatform}
         onPlatformChange={setCurrentPlatform}
+        accounts={accounts}
         pageTitle={getPageTitle(currentPage)}
         showXsmm={currentPage === "profiles"}
         xsmmAccount={xsmmAccount}
@@ -4463,6 +4508,7 @@ export default function HomePage() {
                     }}
                     onCheckPage={handleCheckPage}
                     onRunPage={handleRunPage}
+                    liveActionStatus={liveActionStatus}
                     tr={tr}
                   />
                 ) : (

@@ -54,6 +54,7 @@ interface AccountGridViewProps {
   onDetailAccount: (acc: FacebookAccount) => void;
   onCheckPage?: (acc: FacebookAccount, page: FacebookPageItem) => void;
   onRunPage?: (acc: FacebookAccount, page: FacebookPageItem) => void;
+  liveActionStatus?: Record<string, string>;
   tr: (vi: string, en: string) => string;
 }
 
@@ -76,15 +77,22 @@ export function AccountGridView({
   onRunAccount,
   onDeleteAccount,
   onDetailAccount,
+  liveActionStatus = {},
   tr,
 }: AccountGridViewProps) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [nurturingIds, setNurturingIds] = useState<string[]>([]);
+  const [nurtureActions, setNurtureActions] = useState<Record<string, string>>({});
 
   const handleToggleNuoi = (acc: FacebookAccount) => {
     const isNuoi = nurturingIds.includes(acc.id);
     if (isNuoi) {
       setNurturingIds((prev) => prev.filter((id) => id !== acc.id));
+      setNurtureActions((prev) => {
+        const next = { ...prev };
+        delete next[acc.id];
+        return next;
+      });
       toast.success(
         tr(
           `Đã dừng kịch bản nuôi trên thiết bị ${acc.name || acc.uid}`,
@@ -93,17 +101,30 @@ export function AccountGridView({
       );
     } else {
       setNurturingIds((prev) => [...prev, acc.id]);
+      setNurtureActions((prev) => ({ ...prev, [acc.id]: "Đang mở TikTok..." }));
       if (acc.tag?.includes("USB") || acc.id.startsWith("adb_") || acc.platform === "tiktok") {
         void launchTiktokApp(acc.uid).then((res) => {
           if (res.notInstalled) {
             setNurturingIds((prev) => prev.filter((id) => id !== acc.id));
+            setNurtureActions((prev) => ({ ...prev, [acc.id]: "Chưa cài TikTok" }));
             toast.error(
               tr(
                 "Vui lòng cài đặt TikTok để chạy!",
                 "Please install TikTok to run!",
               ),
             );
+            return;
           }
+          setNurtureActions((prev) => ({ ...prev, [acc.id]: "Đang lướt video 1/5..." }));
+          setTimeout(() => {
+            setNurtureActions((prev) => ({ ...prev, [acc.id]: "Đang thả tim video..." }));
+          }, 3500);
+          setTimeout(() => {
+            setNurtureActions((prev) => ({ ...prev, [acc.id]: "Đang lướt video 2/5..." }));
+          }, 7000);
+          setTimeout(() => {
+            setNurtureActions((prev) => ({ ...prev, [acc.id]: "Đang lướt video 3/5..." }));
+          }, 11000);
         });
       }
       toast.success(
@@ -136,6 +157,11 @@ export function AccountGridView({
         const isRunning = runState?.isRunning ?? false;
         const isInstagram = acc.platform === "instagram";
         const isTikTok = acc.platform === "tiktok";
+        const currentTikTokUser = isTikTok
+          ? acc.tiktokAccounts?.find((a) => a.isCurrent)?.username ||
+            (acc.name?.startsWith("@") ? acc.name : null)
+          : null;
+        const activeAction = liveActionStatus?.[acc.id] || nurtureActions[acc.id];
         const isUsbDevice =
           acc.tag?.includes("USB") || acc.id.startsWith("adb_") || isTikTok;
         const isNurturing = nurturingIds.includes(acc.id);
@@ -369,13 +395,26 @@ export function AccountGridView({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleCopyUid(acc.uid);
+                  handleCopyUid(isTikTok && currentTikTokUser ? currentTikTokUser : acc.uid);
                 }}
                 className="flex items-center gap-1 text-[10.5px] font-mono text-muted-foreground hover:text-primary transition-colors text-left truncate flex-1 group/uid cursor-pointer"
-                title={tr("Nhấp để sao chép UID", "Click to copy UID")}
+                title={
+                  isTikTok && currentTikTokUser
+                    ? tr(
+                        `Tài khoản: ${currentTikTokUser} (Mã máy: ${acc.uid}) • Nhấp để sao chép`,
+                        `Account: ${currentTikTokUser} (Machine: ${acc.uid}) • Click to copy`,
+                      )
+                    : tr("Nhấp để sao chép", "Click to copy")
+                }
               >
-                <span className="truncate">{isUsbDevice ? `Máy: ${acc.uid}` : `UID: ${acc.uid}`}</span>
-                {copiedId === acc.uid ? (
+                <span className="truncate font-medium">
+                  {isTikTok
+                    ? currentTikTokUser || `Chưa check nick (${acc.name || acc.uid})`
+                    : isUsbDevice
+                      ? `Máy: ${acc.uid}`
+                      : `UID: ${acc.uid}`}
+                </span>
+                {copiedId === (isTikTok && currentTikTokUser ? currentTikTokUser : acc.uid) ? (
                   <Check className="size-2.5 text-emerald-500 shrink-0" />
                 ) : (
                   <Copy className="size-2.5 opacity-0 group-hover/uid:opacity-100 shrink-0 text-primary" />
@@ -532,6 +571,14 @@ export function AccountGridView({
                   {isCheckpointOrDie ? (
                     <span className="text-rose-500 text-[10px]">
                       {isUsbDevice ? "Đã ngắt USB" : acc.status === "checkpoint" ? "Checkpoint" : "Die"}
+                    </span>
+                  ) : activeAction ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 text-primary text-[10px] font-semibold truncate animate-pulse"
+                      title={activeAction}
+                    >
+                      <RefreshCw className="size-2.5 animate-spin shrink-0 text-primary" />
+                      <span className="truncate">{activeAction}</span>
                     </span>
                   ) : isRunning ? (
                     <span

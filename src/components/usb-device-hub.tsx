@@ -17,11 +17,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { type AdbDeviceInfo, getAdbDevices, startAdbDeviceWatcher } from "@/lib/adb-service";
+import type { FacebookAccount } from "@/app/page";
 import { cn } from "@/lib/utils";
 import { AdbInstallDialog } from "./adb-install-dialog";
 import { UsbBottomSheet } from "./usb-bottom-sheet";
 
-export function UsbDeviceHub() {
+export function UsbDeviceHub({ accounts }: { accounts?: FacebookAccount[] } = {}) {
   const [devices, setDevices] = useState<AdbDeviceInfo[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isInstallDialogOpen, setIsInstallDialogOpen] = useState(false);
@@ -88,6 +89,34 @@ export function UsbDeviceHub() {
   const readyDevices = devices.filter((d) => d.state === "device");
   const unauthorizedDevices = devices.filter((d) => d.state === "unauthorized");
 
+  // Tìm username TikTok tương ứng với thiết bị đầu tiên nếu đã được nhận diện
+  const firstDevice = readyDevices[0];
+  let tiktokUsername: string | null = null;
+  if (firstDevice) {
+    const accList: FacebookAccount[] = accounts || (() => {
+      try {
+        const saved = localStorage.getItem("autolunex_facebook_accounts_v1");
+        return saved ? JSON.parse(saved) : [];
+      } catch {
+        return [];
+      }
+    })();
+    const matchedAcc = accList.find(
+      (a) => a.uid === firstDevice.serial || a.id === `adb_${firstDevice.serial}`,
+    );
+    if (matchedAcc) {
+      tiktokUsername =
+        matchedAcc.tiktokAccounts?.find((t) => t.isCurrent)?.username ||
+        (matchedAcc.name?.startsWith("@") ? matchedAcc.name : null);
+    }
+  }
+
+  const deviceTooltip = firstDevice
+    ? tiktokUsername
+      ? `${tiktokUsername} • Thiết bị: ${firstDevice.display_name || firstDevice.model || firstDevice.serial} (Pin: ${firstDevice.battery_level !== null ? `${firstDevice.battery_level}%` : "Sẵn sàng"})`
+      : `Thiết bị: ${firstDevice.display_name || firstDevice.model || firstDevice.serial} (Pin: ${firstDevice.battery_level !== null ? `${firstDevice.battery_level}%` : "Sẵn sàng"})`
+    : "Quản lý thiết bị điện thoại kết nối qua cổng USB (ADB)";
+
   return (
     <>
       {/* Nút bấm hiển thị trạng thái USB trên thanh Header */}
@@ -102,7 +131,7 @@ export function UsbDeviceHub() {
               ? "bg-amber-500/10 text-amber-500 border-amber-500/30 hover:bg-amber-500/20 animate-pulse"
               : "bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60 hover:text-foreground",
         )}
-        title="Quản lý thiết bị điện thoại kết nối qua cổng USB (ADB)"
+        title={deviceTooltip}
       >
         <Smartphone className="size-3.5" />
         {readyDevices.length > 0 ? (
@@ -111,9 +140,15 @@ export function UsbDeviceHub() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full size-1.5 bg-emerald-500" />
             </span>
-            <span className="max-w-[110px] truncate font-semibold">
-              {readyDevices[0].display_name || readyDevices[0].model}
-            </span>
+            {tiktokUsername ? (
+              <span className="max-w-[130px] truncate font-semibold text-emerald-400">
+                {tiktokUsername}
+              </span>
+            ) : (
+              <span className="max-w-[110px] truncate font-semibold">
+                {readyDevices[0].display_name || readyDevices[0].model}
+              </span>
+            )}
             {readyDevices.length > 1 && (
               <span className="rounded bg-emerald-500/20 px-1 text-[10px] font-bold">
                 +{readyDevices.length - 1}

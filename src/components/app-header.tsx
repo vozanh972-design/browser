@@ -7,6 +7,7 @@ import { FaFacebook, FaInstagram } from "react-icons/fa";
 import { Logo } from "@/components/icons/logo";
 import { Button } from "@/components/ui/button";
 import { UsbDeviceHub } from "@/components/usb-device-hub";
+import type { FacebookAccount } from "@/app/page";
 import { getCurrentOS, type OperatingSystem } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
@@ -64,12 +65,14 @@ interface AppHeaderProps {
   hideTiktok?: boolean;
   hideInstagram?: boolean;
   hideFacebook?: boolean;
+  accounts?: FacebookAccount[];
 }
 
 export function AppHeader({
   pageTitle,
   activePlatform = "facebook",
   onPlatformChange,
+  accounts,
   xsmmAccount,
   onXsmmLoginClick,
   onXsmmLogoutClick,
@@ -313,7 +316,7 @@ export function AppHeader({
           ))}
 
         {/* Quản lý thiết bị Android USB (ADB) */}
-        <UsbDeviceHub />
+        <UsbDeviceHub accounts={accounts} />
 
         {onNewClick && activePlatform !== "tiktok" && (
           <Button
