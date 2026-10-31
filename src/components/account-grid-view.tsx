@@ -156,6 +156,7 @@ export function AccountGridView({
         const runState = runnerStates.get(acc.id);
         const isRunning = runState?.isRunning ?? false;
         const isInstagram = acc.platform === "instagram";
+        const isTikTok = acc.platform === "tiktok";
         const isUsbDevice =
           acc.tag?.includes("USB") || acc.id.startsWith("adb_") || isTikTok;
         const currentTikTokUser = isTikTok
